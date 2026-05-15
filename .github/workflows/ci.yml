@@ -28,5 +28,68 @@ jobs:
       - name: Build with Maven (no tests)
         run: mvn clean package -DskipTests
 
-      - name: Verify JAR exists
-        run: ls -lah target/
+      # =========================
+      # DISCORD NOTIFICATION
+      # ========================
+
+      - name: Discord notification (success)
+        if: success()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d "{
+            \"embeds\": [{
+              \"title\": \"✅ CI Passed\",
+              \"color\": 5763719,
+              \"fields\": [
+                {
+                  \"name\": \"Repository\",
+                  \"value\": \"${{ github.repository }}\",
+                  \"inline\": true
+                },
+                {
+                  \"name\": \"Branch\",
+                  \"value\": \"${{ github.ref_name }}\",
+                  \"inline\": true
+                },
+                {
+                  \"name\": \"Commit\",
+                  \"value\": \"${{ github.sha }}\"
+                }
+              ]
+            }]
+          }" \
+          $DISCORD_WEBHOOK
+
+      - name: Discord notification (failure)
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d "{
+            \"embeds\": [{
+              \"title\": \"❌ CI Failed\",
+              \"color\": 15548997,
+              \"fields\": [
+                {
+                  \"name\": \"Repository\",
+                  \"value\": \"${{ github.repository }}\",
+                  \"inline\": true
+                },
+                {
+                  \"name\": \"Branch\",
+                  \"value\": \"${{ github.ref_name }}\",
+                  \"inline\": true
+                },
+                {
+                  \"name\": \"Commit\",
+                  \"value\": \"${{ github.sha }}\"
+                }
+              ]
+            }]
+          }" \
+          $DISCORD_WEBHOOK
