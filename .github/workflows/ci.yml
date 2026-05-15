@@ -22,7 +22,7 @@ jobs:
           cache: "maven"
 
       - name: Build with Maven (no tests)
-        run: ./mvnw clean package -DskipTests
+        run: mvn clean package -DskipTests
 
       - name: Verify JAR exists
         run: ls -lah target/
