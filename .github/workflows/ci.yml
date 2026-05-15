@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: scipubtts
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,7 +26,6 @@ jobs:
           cache: "maven"
 
       - name: Build with Maven (no tests)
-        working-directory: scipubtts
         run: mvn clean package -DskipTests
 
       - name: Verify JAR exists
