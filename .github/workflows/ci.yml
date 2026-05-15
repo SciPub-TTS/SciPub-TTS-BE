@@ -28,7 +28,7 @@ jobs:
       - name: Build with Maven (no tests)
         run: mvn clean package -DskipTests
 
-    # =========================
+      # =========================
       # DISCORD NOTIFICATION
       # ========================
 
