@@ -22,6 +22,7 @@ jobs:
           cache: "maven"
 
       - name: Build with Maven (no tests)
+        working-directory: scipubtts
         run: mvn clean package -DskipTests
 
       - name: Verify JAR exists
