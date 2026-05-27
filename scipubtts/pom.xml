@@ -131,10 +131,10 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- Flyway Core for Database Migration -->
+		<!-- Spring Boot Starter for Flyway Migration -->
 		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
 		<!-- PostgreSQL extension for Flyway -->
 		<dependency>
