@@ -22,6 +22,11 @@ import org.springframework.security.oauth2.client.web.HttpSessionOAuth2Authoriza
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -71,6 +76,23 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             DaoAuthenticationProvider daoAuthenticationProvider) throws Exception {
 
@@ -86,10 +108,12 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(daoAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/search/history/**").authenticated()
                         .requestMatchers(
                                 "/", "/error", "/favicon.ico",
                                 "/register",
                                 "/api/auth/**",
+                                "/api/search/**",
                                 "/oauth2/**",
                                 "/verify-email",
                                 "/login/**",
@@ -121,3 +145,4 @@ public class SecurityConfig {
 //                        )
 //                                .successHandler(oAuth2AuthenticationSuccessHandler)
 //                );
+
