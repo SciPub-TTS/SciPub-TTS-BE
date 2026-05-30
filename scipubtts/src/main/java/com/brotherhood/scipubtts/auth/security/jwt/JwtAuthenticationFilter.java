@@ -2,12 +2,16 @@ package com.brotherhood.scipubtts.auth.security.jwt;
 
 import com.brotherhood.scipubtts.auth.security.CustomUserDetailsService;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -20,12 +24,12 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
-    private final CustomUserDetailsService customUserDetailService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     public JwtAuthenticationFilter(JwtTokenService jwtTokenService,
-                                   CustomUserDetailsService customUserDetailService) {
+                                   CustomUserDetailsService customUserDetailsService) {
         this.jwtTokenService = jwtTokenService;
-        this.customUserDetailService = customUserDetailService;
+        this.customUserDetailsService = customUserDetailsService;
     }
 
     @Override
@@ -33,23 +37,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String bearer = request.getHeader("Authorization");
+        String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
+
         if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
             String token = bearer.substring(7);
 
-            if (jwtTokenService.validate(token)
-                    && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UUID userId = jwtTokenService.getUserId(token);
-                UserPrincipal principal = (UserPrincipal) customUserDetailService.loadUserById(userId);
+            try {
+                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UUID userId = jwtTokenService.getUserId(token);
+                    UserPrincipal principal =
+                            (UserPrincipal) customUserDetailsService.loadUserById(userId);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                principal, null, principal.getAuthorities());
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    principal,
+                                    null,
+                                    principal.getAuthorities()
+                            );
 
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (ExpiredJwtException ex) {
+                request.setAttribute("auth_error", "Access token đã hết hạn");
+            } catch (JwtException | IllegalArgumentException | UsernameNotFoundException ex) {
+                request.setAttribute("auth_error", "Access token không hợp lệ");
             }
         }
+
         filterChain.doFilter(request, response);
     }
 }

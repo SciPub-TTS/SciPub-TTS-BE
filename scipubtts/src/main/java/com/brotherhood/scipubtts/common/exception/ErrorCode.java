@@ -115,7 +115,33 @@ public enum ErrorCode {
     TEAM_PERFORMANCE_EMPTY(HttpStatus.INTERNAL_SERVER_ERROR,
             "Lỗi thống kê: không có dữ liệu hiệu suất đội"),
     CITY_DATA_EMPTY(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Lỗi thống kê: không có dữ liệu thành phố");
+            "Lỗi thống kê: không có dữ liệu thành phố"),
+
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "Bạn cần đăng nhập để truy cập tài nguyên này"),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập tài nguyên này"),
+
+    ACCOUNT_BANNED(HttpStatus.FORBIDDEN, "Tài khoản đã bị khóa"),
+    EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "Vui lòng xác thực email trước khi đăng nhập"),
+    LOCAL_PASSWORD_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "Tài khoản này không hỗ trợ mật khẩu cục bộ"),
+
+    REFRESH_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "Thiếu refresh token"),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "Refresh token không hợp lệ"),
+    REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "Refresh token đã hết hạn"),
+    REFRESH_TOKEN_REVOKED(HttpStatus.UNAUTHORIZED, "Refresh token đã bị thu hồi"),
+
+    CURRENT_PASSWORD_INVALID(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng"),
+    PASSWORD_CONFIRMATION_NOT_MATCH(HttpStatus.BAD_REQUEST, "Xác nhận mật khẩu không khớp"),
+    PASSWORD_REUSE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "Mật khẩu mới không được trùng mật khẩu hiện tại"),
+    PASSWORD_TOO_WEAK(HttpStatus.BAD_REQUEST, "Mật khẩu chưa đạt chính sách tối thiểu"),
+
+    PASSWORD_RESET_CODE_INVALID(HttpStatus.BAD_REQUEST, "Mã xác thực không hợp lệ"),
+    PASSWORD_RESET_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "Mã xác thực đã hết hạn"),
+    PASSWORD_RESET_CODE_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã nhập sai quá số lần cho phép"),
+    PASSWORD_RESET_GRANT_INVALID(HttpStatus.BAD_REQUEST, "Reset grant token không hợp lệ"),
+    PASSWORD_RESET_GRANT_EXPIRED(HttpStatus.BAD_REQUEST, "Reset grant token đã hết hạn"),
+
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "Bạn thao tác quá nhanh, vui lòng thử lại sau"),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng");
 
 
     private final HttpStatus status;
