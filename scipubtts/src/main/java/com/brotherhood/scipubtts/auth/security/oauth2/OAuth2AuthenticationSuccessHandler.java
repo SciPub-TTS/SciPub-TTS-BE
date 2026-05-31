@@ -1,11 +1,15 @@
 package com.brotherhood.scipubtts.auth.security.oauth2;
 
+import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
+import com.brotherhood.scipubtts.auth.service.AuthSessionService;
+import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.auth.security.jwt.JwtTokenService;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -18,41 +22,58 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-    private final JwtTokenService jwtTokenService;
+    private final AuthSessionService authSessionService;
     private final UserRepository userRepository;
 
     private final AuthorizationRequestRepository<OAuth2AuthorizationRequest>
             authorizationRequestRepository =
             new HttpSessionOAuth2AuthorizationRequestRepository();
 
-    @Value("${app.frontend.oauth2-success-url:http://localhost:3000/oauth2/success}")
+    @Value("${app.frontend.oauth2-success-url:http://localhost:5173/oauth2/success}")
     private String frontendSuccessUrl;
 
-    public OAuth2AuthenticationSuccessHandler(
-            JwtTokenService jwtTokenService,
-            UserRepository userRepository
-    ) {
-        this.jwtTokenService = jwtTokenService;
-        this.userRepository = userRepository;
-    }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication
+    ) throws IOException, ServletException {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
-        String token = jwtTokenService.generateAccessToken(principal);
-        String targetUrl = UriComponentsBuilder
-                .fromUriString(frontendSuccessUrl)
-                .queryParam("token", token)
-                .build()
-                .toUriString();
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new IllegalStateException("OAuth2 user not found"));
+
+        AuthResponse authResponse = authSessionService.issueSession(
+                user,
+                false,
+                request,
+                response
+        );
+
+        String targetUrl = frontendSuccessUrl;
+//        User click "Continue with Google"
+//        ↓
+//        Google redirect về /oauth2/callback (Spring Security tự xử lý)
+//        ↓
+//        OAuth2AuthenticationSuccessHandler.onAuthenticationSuccess()
+//          → authSessionService.issueSession() → set HttpOnly refresh cookie
+//          → sendRedirect("http://localhost:5173/oauth2/success")  ← No token
+//              ↓
+//        FE OAuth2SuccessPage mount
+//          → POST /api/auth/refresh (browser tự attach cookie)
+//          → backend trả accessToken
+//          → lưu vào localStorage
+//              ↓
+//          → GET /api/auth/me
+//          → lưu user vào storage
+//              ↓
+//          → navigate("/")
+
 
         authorizationRequestRepository.removeAuthorizationRequest(request, response);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
-
-
     }
 }

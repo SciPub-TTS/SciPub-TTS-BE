@@ -1,9 +1,13 @@
-package com.brotherhood.scipubtts.auth.service;
+package com.brotherhood.scipubtts.auth.service.impl;
 
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.RefreshTokenResult;
+import com.brotherhood.scipubtts.auth.service.AuthService;
+import com.brotherhood.scipubtts.auth.service.AuthSessionService;
+import com.brotherhood.scipubtts.auth.service.RefreshCookieService;
+import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.email.service.EmailService;
@@ -38,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenService jwtTokenService;
     private final EmailService mailService;
+    private final AuthSessionService authSessionService;
 
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
@@ -141,23 +146,29 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        RefreshTokenResult refreshResult =
-                refreshTokenService.issue(user, request.rememberMe(), httpRequest);
-
-        refreshCookieService.addRefreshCookie(
-                httpResponse,
-                refreshResult.rawToken(),
-                refreshResult.rememberMe(),
-                Duration.between(OffsetDateTime.now(), refreshResult.expiresAt())
+        return authSessionService.issueSession(
+                user,
+                request.rememberMe(),
+                httpRequest,
+                httpResponse
         );
-
-        String accessToken = jwtTokenService.generateAccessToken(UserPrincipal.create(user));
-
-        return new AuthResponse(
-                accessToken,
-                "Bearer",
-                jwtTokenService.getAccessTokenExpiresInSeconds()
-        );
+//        RefreshTokenResult refreshResult =
+//                refreshTokenService.issue(user, request.rememberMe(), httpRequest);
+//
+//        refreshCookieService.addRefreshCookie(
+//                httpResponse,
+//                refreshResult.rawToken(),
+//                refreshResult.rememberMe(),
+//                Duration.between(OffsetDateTime.now(), refreshResult.expiresAt())
+//        );
+//
+//        String accessToken = jwtTokenService.generateAccessToken(UserPrincipal.create(user));
+//
+//        return new AuthResponse(
+//                accessToken,
+//                "Bearer",
+//                jwtTokenService.getAccessTokenExpiresInSeconds()
+//        );
     }
 
     @Override
