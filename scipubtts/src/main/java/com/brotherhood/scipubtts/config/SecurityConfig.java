@@ -100,6 +100,16 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
+                ).oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(auth ->
+                                auth.authorizationRequestRepository(
+                                        authorizationRequestRepository()
+                                )
+                        )
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 );
 
 
@@ -110,14 +120,3 @@ public class SecurityConfig {
 }
 
 
-//                .oauth2Login(oauth2 -> oauth2
-//        .authorizationEndpoint(auth ->
-//        auth.authorizationRequestRepository(
-//        authorizationRequestRepository()
-//                                )
-//                                        )
-//                                        .userInfoEndpoint(userInfo ->
-//        userInfo.userService(customOAuth2UserService)
-//                        )
-//                                .successHandler(oAuth2AuthenticationSuccessHandler)
-//                );
