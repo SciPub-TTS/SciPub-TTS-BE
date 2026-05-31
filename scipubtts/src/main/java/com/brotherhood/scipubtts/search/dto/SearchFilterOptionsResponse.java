@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.search.dto;
 import java.util.List;
 
 public record SearchFilterOptionsResponse(
+        long totalWorks,
         YearRange year,
         List<FacetOption> type,
         ToggleFilter openAccess,

@@ -129,9 +129,11 @@ public class SearchServiceImpl implements SearchService {
         );
 
         int currentYear = Year.now().getValue();
+        long totalWorks = fetchTotalWorksCount();
         int maxCitation = fetchMaximumCitationCount();
 
         return new SearchFilterOptionsResponse(
+                totalWorks,
                 new SearchFilterOptionsResponse.YearRange(MIN_YEAR, currentYear),
                 typeOptions,
                 new SearchFilterOptionsResponse.ToggleFilter("is_oa", false),
@@ -622,6 +624,17 @@ public class SearchServiceImpl implements SearchService {
         }
 
         return options;
+    }
+
+    private long fetchTotalWorksCount() {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("per_page", "1");
+        queryParams.put("select", "id");
+
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        Map<String, Object> meta = getMap(response, "meta");
+
+        return getLong(meta, "count", 0L);
     }
 
     private int fetchMaximumCitationCount() {
