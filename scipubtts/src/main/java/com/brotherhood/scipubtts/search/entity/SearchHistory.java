@@ -7,19 +7,21 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import lombok.Data;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "search_history")
+@Data
 public class SearchHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private UUID userId;
 
     @Column(name = "query_text", nullable = false)
@@ -32,39 +34,5 @@ public class SearchHistory {
     void prePersist() {
         this.createdAt = OffsetDateTime.now();
     }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
 }
-
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- JPA annotations: @Entity, @Table, @Id, @GeneratedValue, @Column, @PrePersist.
-File nay lam gi:
-- Mapping bang search_history sang object Java.
-Flow chay:
-- Service tao entity -> repository save -> Hibernate tao SQL insert/update.
-*/
 

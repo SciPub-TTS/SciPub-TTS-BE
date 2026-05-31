@@ -4,6 +4,7 @@ import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -20,6 +21,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getErrorCode().getStatus()).body(
                 new ResponseObject(
                         ex.getErrorCode().getStatus().value(),
+                        ex.getMessage(),
+                        null
+                )
+        );
+    }
+
+    @ExceptionHandler(OAuth2AuthenticationException.class)
+    public ResponseEntity<ResponseObject> handleOAuth2AuthenticationException(OAuth2AuthenticationException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                new ResponseObject(
+                        401,
                         ex.getMessage(),
                         null
                 )

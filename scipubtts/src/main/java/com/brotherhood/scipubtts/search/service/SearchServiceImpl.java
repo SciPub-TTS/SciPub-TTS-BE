@@ -7,35 +7,56 @@ import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
 import com.brotherhood.scipubtts.search.entity.SearchHistory;
 import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class SearchServiceImpl implements SearchService {
 
-    private static final int DEFAULT_LIMIT = 10;
-    private static final int MAX_LIMIT = 100;
-    private static final int MIN_LIMIT = 1;
+    // Maximum number of filter options requested from OpenAlex at one time.
+    private static final int FILTER_OPTION_LIMIT = 100;
 
+    // Maximum per_page value accepted for OpenAlex works requests.
+    private static final int WORKS_PER_PAGE_LIMIT = 100;
+
+    // First page used by OpenAlex pagination.
     private static final int DEFAULT_PAGE = 1;
-    private static final int DEFAULT_PER_PAGE = 100;
+
+    // Number of works returned when the client does not send perPage.
+    private static final int DEFAULT_WORKS_PER_PAGE = 20;
+
+    // Number of recent searches returned when the client does not send a limit.
     private static final int DEFAULT_RECENT_SEARCH_LIMIT = 5;
+
+    // Maximum recent-search rows the client is allowed to request.
     private static final int MAX_RECENT_SEARCH_LIMIT = 20;
+
+    // Lowest publication year accepted by the search filters.
     private static final int MIN_YEAR = 1900;
+
+    // Lowest citation count accepted by the search filters.
     private static final int MIN_CITATION = 0;
+
+    // Pattern used to remove HTML tags from OpenAlex text fields.
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("(?is)<[^>]+>");
+
+    // Pattern used to collapse repeated whitespace after text cleanup.
+    private static final Pattern MULTI_WHITESPACE_PATTERN = Pattern.compile("\\s+");
+
+    // Fields requested from OpenAlex /works so the response stays small.
     private static final String WORKS_SELECT_FIELDS =
             "id,display_name,abstract_inverted_index,doi,publication_year,cited_by_count,type,primary_topic,primary_location,authorships,open_access,best_oa_location,has_content";
 
@@ -54,11 +75,19 @@ public class SearchServiceImpl implements SearchService {
     public SearchFilterOptionsResponse getFilterOptions(String keyword, int limit, int page) {
         int normalizedLimit = normalizeLimit(limit);
         int normalizedPage = normalizeOptionPage(page);
-        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        String normalizedKeyword = "";
+        if (keyword != null) {
+            normalizedKeyword = keyword.trim();
+        }
 
         List<SearchFilterOptionsResponse.FacetOption> typeOptions = fetchGroupedWorkOptions("type", normalizedLimit, normalizedPage);
         List<SearchFilterOptionsResponse.FacetOption> subFieldOptions = fetchGroupedWorkOptions("primary_topic.subfield.id", normalizedLimit, normalizedPage);
-        List<SearchFilterOptionsResponse.FacetOption> countryOptions = fetchGroupedWorkOptions("institutions.country_code", normalizedLimit, normalizedPage);
+        List<SearchFilterOptionsResponse.FacetOption> countryOptions;
+        if (StringUtils.hasText(normalizedKeyword)) {
+            countryOptions = fetchCountryOptions(normalizedKeyword, normalizedLimit, normalizedPage);
+        } else {
+            countryOptions = fetchGroupedWorkOptions("institutions.country_code", normalizedLimit, normalizedPage);
+        }
         List<SearchFilterOptionsResponse.EntityOption> sourceOptions = fetchEntityOptions(
                 "/sources",
                 normalizedKeyword,
@@ -120,15 +149,16 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public SearchWorksResponse searchWorks(SearchWorksQueryRequest request) {
-        SearchWorksQueryRequest safeRequest = request == null ? new SearchWorksQueryRequest() : request;
+        SearchWorksQueryRequest safeRequest = request;
+        if (safeRequest == null) {
+            safeRequest = SearchWorksQueryRequest.empty();
+        }
 
         int page = normalizePage(safeRequest.getPage());
         int perPage = normalizePerPage(safeRequest.getPerPage());
 
-        // Flow step 1: convert the UI's 12 filters into one OpenAlex filter string.
         String appliedFilter = buildOpenAlexFilter(safeRequest);
 
-        // Flow step 2: add text search/sort/pagination and call OpenAlex /works.
         Map<String, String> queryParams = new LinkedHashMap<>();
         if (StringUtils.hasText(safeRequest.getQuery())) {
             queryParams.put("search", safeRequest.getQuery().trim());
@@ -143,9 +173,8 @@ public class SearchServiceImpl implements SearchService {
         queryParams.put("per_page", String.valueOf(perPage));
         queryParams.put("select", WORKS_SELECT_FIELDS);
 
-        JsonNode openAlexResponse = openAlexClient.get("/works", queryParams);
+        Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
 
-        // Flow step 3: map OpenAlex payload into FE-friendly DTO.
         return mapWorksResponse(openAlexResponse, appliedFilter, appliedSort, page, perPage);
     }
 
@@ -159,14 +188,9 @@ public class SearchServiceImpl implements SearchService {
                 );
 
         List<SearchHistoryItemResponse> response = new ArrayList<>();
+
         for (SearchHistoryRepository.RecentSearchProjection recentSearch : recentSearches) {
-            response.add(new SearchHistoryItemResponse(
-                    recentSearch.getContent(),
-                    recentSearch.getContent(),
-                    recentSearch.getLatestCreatedAt() == null
-                            ? null
-                            : recentSearch.getLatestCreatedAt().toString()
-            ));
+            response.add(mapRecentSearch(recentSearch));
         }
 
         return response;
@@ -197,44 +221,65 @@ public class SearchServiceImpl implements SearchService {
         searchHistoryRepository.deleteByUserIdAndContentIgnoreCase(userId, normalizedQuery);
     }
 
+    private SearchHistoryItemResponse mapRecentSearch(
+            SearchHistoryRepository.RecentSearchProjection recentSearch
+    ) {
+        String savedAt = null;
+        if (recentSearch.getLatestCreatedAt() != null) {
+            savedAt = recentSearch.getLatestCreatedAt().toString();
+        }
+
+        return new SearchHistoryItemResponse(
+                recentSearch.getContent(),
+                recentSearch.getContent(),
+                savedAt
+        );
+    }
+
     private SearchWorksResponse mapWorksResponse(
-            JsonNode response,
+            Map<String, Object> response,
             String appliedFilter,
             String appliedSort,
             int fallbackPage,
             int fallbackPerPage
     ) {
-        JsonNode meta = response.path("meta");
-        long totalCount = meta.path("count").asLong(0L);
-        int page = meta.path("page").asInt(fallbackPage);
-        int perPage = meta.path("per_page").asInt(fallbackPerPage);
-        long dbResponseTimeMs = meta.path("db_response_time_ms").asLong(0L);
-        double costUsd = meta.path("cost_usd").asDouble(0.0);
+        Map<String, Object> meta = getMap(response, "meta");
+        long totalCount = getLong(meta, "count", 0L);
+        int page = getInt(meta, "page", fallbackPage);
+        int perPage = getInt(meta, "per_page", fallbackPerPage);
+        long dbResponseTimeMs = getLong(meta, "db_response_time_ms", 0L);
+        double costUsd = getDouble(meta, "cost_usd", 0.0);
 
         List<SearchWorksResponse.WorkItem> items = new ArrayList<>();
-        JsonNode results = response.path("results");
+        List<Map<String, Object>> results = getMapList(response, "results");
 
-        if (results.isArray()) {
-            for (JsonNode result : results) {
-                items.add(new SearchWorksResponse.WorkItem(
-                        result.path("id").asText(null),
-                        result.path("display_name").asText(null),
-                        deriveAbstractText(result.path("abstract_inverted_index")),
-                        result.path("doi").asText(null),
-                        nullableInt(result.path("publication_year")),
-                        nullableInt(result.path("cited_by_count")),
-                        nullableBoolean(result.path("open_access").path("is_oa")),
-                        nullableBoolean(result.path("has_content").path("pdf")),
-                        derivePdfUrl(result),
-                        deriveHasOrcid(result.path("authorships")),
-                        result.path("type").asText(null),
-                        result.path("primary_topic").path("display_name").asText(null),
-                        result.path("primary_topic").path("subfield").path("display_name").asText(null),
-                        result.path("primary_location").path("source").path("id").asText(null),
-                        result.path("primary_location").path("source").path("display_name").asText(null),
-                        mapAuthorNames(result.path("authorships"))
-                ));
-            }
+        for (Map<String, Object> result : results) {
+            Map<String, Object> openAccess = getMap(result, "open_access");
+            Map<String, Object> hasContent = getMap(result, "has_content");
+            Map<String, Object> primaryTopic = getMap(result, "primary_topic");
+            Map<String, Object> subField = getMap(primaryTopic, "subfield");
+            Map<String, Object> primaryLocation = getMap(result, "primary_location");
+            Map<String, Object> source = getMap(primaryLocation, "source");
+            List<Map<String, Object>> authorships = getMapList(result, "authorships");
+
+            items.add(new SearchWorksResponse.WorkItem(
+                    getString(result, "id"),
+                    sanitizeDisplayText(getString(result, "display_name")),
+                    deriveAbstractText(getMap(result, "abstract_inverted_index")),
+                    getString(result, "doi"),
+                    getInteger(result, "publication_year"),
+                    getInteger(result, "cited_by_count"),
+                    getBoolean(openAccess, "is_oa"),
+                    getBoolean(hasContent, "pdf"),
+                    derivePdfUrl(result),
+                    deriveHasOrcid(authorships),
+                    sanitizeDisplayText(getString(result, "type")),
+                    sanitizeDisplayText(getString(primaryTopic, "display_name")),
+                    sanitizeDisplayText(getString(subField, "display_name")),
+                    getString(source, "id"),
+                    sanitizeDisplayText(getString(source, "display_name")),
+                    mapAuthorNames(authorships)
+            ));
         }
 
         SearchWorksResponse.Meta responseMeta = new SearchWorksResponse.Meta(
@@ -250,15 +295,12 @@ public class SearchServiceImpl implements SearchService {
         return new SearchWorksResponse(responseMeta, items);
     }
 
-    private List<String> mapAuthorNames(JsonNode authorships) {
-        if (!authorships.isArray()) {
-            return List.of();
-        }
-
+    private List<String> mapAuthorNames(List<Map<String, Object>> authorships) {
         List<String> names = new ArrayList<>();
 
-        for (JsonNode authorship : authorships) {
-            String name = authorship.path("author").path("display_name").asText("").trim();
+        for (Map<String, Object> authorship : authorships) {
+            Map<String, Object> author = getMap(authorship, "author");
+            String name = sanitizeDisplayText(getString(author, "display_name"));
             if (!name.isBlank()) {
                 names.add(name);
             }
@@ -287,7 +329,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private void addYearFilter(SearchWorksQueryRequest request, List<String> filterParts) {
-        String yearMode = normalizeMode(request.getYearMode(), "range");
+        String yearMode = normalizeMode(request.getYearMode());
 
         if ("exact".equals(yearMode) && request.getYearExact() != null) {
             filterParts.add("publication_year:" + request.getYearExact());
@@ -312,7 +354,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private void addCitationFilter(SearchWorksQueryRequest request, List<String> filterParts) {
-        String citationMode = normalizeMode(request.getCitationMode(), "range");
+        String citationMode = normalizeMode(request.getCitationMode());
 
         if ("exact".equals(citationMode) && request.getCitationExact() != null) {
             filterParts.add("cited_by_count:" + request.getCitationExact());
@@ -366,9 +408,10 @@ public class SearchServiceImpl implements SearchService {
             return;
         }
 
-        List<String> limitedValues = values.size() > MAX_LIMIT
-                ? values.subList(0, MAX_LIMIT)
-                : values;
+        List<String> limitedValues = values;
+        if (values.size() > FILTER_OPTION_LIMIT) {
+            limitedValues = values.subList(0, FILTER_OPTION_LIMIT);
+        }
 
         filterParts.add(field + ":" + String.join("|", limitedValues));
     }
@@ -439,7 +482,10 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private String resolveSort(String requestedSort, boolean hasSearchQuery) {
-        String defaultSort = hasSearchQuery ? "relevance_score:desc" : "cited_by_count:desc";
+        String defaultSort = "cited_by_count:desc";
+        if (hasSearchQuery) {
+            defaultSort = "relevance_score:desc";
+        }
 
         if (!StringUtils.hasText(requestedSort)) {
             return defaultSort;
@@ -449,16 +495,13 @@ public class SearchServiceImpl implements SearchService {
 
         if ("most cited".equals(normalizedSort)
                 || "most_cited".equals(normalizedSort)
-                || "cited_by_count:desc".equals(normalizedSort)) {
+                || "cited_by_count:desc".equals(normalizedSort)
+                || "trending".equals(normalizedSort)) {
             return "cited_by_count:desc";
         }
 
         if ("latest".equals(normalizedSort) || "publication_year:desc".equals(normalizedSort)) {
             return "publication_year:desc";
-        }
-
-        if ("trending".equals(normalizedSort)) {
-            return "cited_by_count:desc";
         }
 
         if ("relevance".equals(normalizedSort) || "relevance_score:desc".equals(normalizedSort)) {
@@ -479,19 +522,15 @@ public class SearchServiceImpl implements SearchService {
         queryParams.put("page", String.valueOf(page));
         queryParams.put("sort", "count:desc");
 
-        JsonNode response = openAlexClient.get("/works", queryParams);
-        JsonNode groups = response.path("group_by");
-
-        if (!groups.isArray()) {
-            return List.of();
-        }
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> groups = getMapList(response, "group_by");
 
         List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
 
-        for (JsonNode group : groups) {
-            String key = group.path("key").asText("");
-            String label = group.path("key_display_name").asText("");
-            long count = group.path("count").asLong(0L);
+        for (Map<String, Object> group : groups) {
+            String key = getString(group, "key");
+            String label = sanitizeDisplayText(getString(group, "key_display_name"));
+            long count = getLong(group, "count", 0L);
 
             if (key.isBlank() || label.isBlank()) {
                 continue;
@@ -527,29 +566,59 @@ public class SearchServiceImpl implements SearchService {
             queryParams.put("sort", defaultSort);
         }
 
-        JsonNode response = openAlexClient.get(path, queryParams);
-        JsonNode results = response.path("results");
-
-        if (!results.isArray()) {
-            return List.of();
-        }
+        Map<String, Object> response = openAlexClient.get(path, queryParams);
+        List<Map<String, Object>> results = getMapList(response, "results");
 
         List<SearchFilterOptionsResponse.EntityOption> options = new ArrayList<>();
 
-        for (JsonNode result : results) {
-            String id = result.path("id").asText("");
-            String label = result.path("display_name").asText("");
+        for (Map<String, Object> result : results) {
+            String id = getString(result, "id");
+            String label = sanitizeDisplayText(getString(result, "display_name"));
 
             if (id.isBlank() || label.isBlank()) {
                 continue;
             }
 
             Long count = null;
-            if (countField != null && result.has(countField) && !result.get(countField).isNull()) {
-                count = result.get(countField).asLong();
+            if (countField != null && result.get(countField) != null) {
+                count = getLong(result, countField, 0L);
             }
 
             options.add(new SearchFilterOptionsResponse.EntityOption(id, label, count));
+        }
+
+        return options;
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> fetchCountryOptions(
+            String keyword,
+            int limit,
+            int page
+    ) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("per_page", String.valueOf(limit));
+        queryParams.put("page", String.valueOf(page));
+        queryParams.put("select", "id,display_name,works_count");
+
+        if (StringUtils.hasText(keyword)) {
+            queryParams.put("search", keyword);
+        }
+
+        Map<String, Object> response = openAlexClient.get("/countries", queryParams);
+        List<Map<String, Object>> results = getMapList(response, "results");
+        List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
+
+        for (Map<String, Object> result : results) {
+            String id = getString(result, "id");
+            String label = sanitizeDisplayText(getString(result, "display_name"));
+            long count = getLong(result, "works_count", 0L);
+            String value = normalizeCountryOptionValue(id);
+
+            if (value.isBlank() || label.isBlank()) {
+                continue;
+            }
+
+            options.add(new SearchFilterOptionsResponse.FacetOption(value, label, count));
         }
 
         return options;
@@ -561,23 +630,31 @@ public class SearchServiceImpl implements SearchService {
         queryParams.put("sort", "cited_by_count:desc");
         queryParams.put("select", "cited_by_count");
 
-        JsonNode response = openAlexClient.get("/works", queryParams);
-        JsonNode results = response.path("results");
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> results = getMapList(response, "results");
 
-        if (!results.isArray() || results.isEmpty()) {
+        if (results.isEmpty()) {
             return 0;
         }
 
-        int maxCitationCount = results.get(0).path("cited_by_count").asInt(0);
-        return Math.max(maxCitationCount, 0);
+        int maxCitationCount = getInt(results.get(0), "cited_by_count", 0);
+        if (maxCitationCount < 0) {
+            return 0;
+        }
+
+        return maxCitationCount;
     }
 
     private int normalizeLimit(int limit) {
         if (limit <= 0) {
-            return DEFAULT_LIMIT;
+            return FILTER_OPTION_LIMIT;
         }
 
-        return Math.min(Math.max(limit, MIN_LIMIT), MAX_LIMIT);
+        if (limit > FILTER_OPTION_LIMIT) {
+            return FILTER_OPTION_LIMIT;
+        }
+
+        return limit;
     }
 
     private int normalizeOptionPage(int page) {
@@ -598,10 +675,14 @@ public class SearchServiceImpl implements SearchService {
 
     private int normalizePerPage(Integer perPage) {
         if (perPage == null || perPage <= 0) {
-            return DEFAULT_PER_PAGE;
+            return DEFAULT_WORKS_PER_PAGE;
         }
 
-        return Math.min(perPage, MAX_LIMIT);
+        if (perPage > WORKS_PER_PAGE_LIMIT) {
+            return WORKS_PER_PAGE_LIMIT;
+        }
+
+        return perPage;
     }
 
     private int normalizeRecentSearchLimit(int limit) {
@@ -609,7 +690,11 @@ public class SearchServiceImpl implements SearchService {
             return DEFAULT_RECENT_SEARCH_LIMIT;
         }
 
-        return Math.min(limit, MAX_RECENT_SEARCH_LIMIT);
+        if (limit > MAX_RECENT_SEARCH_LIMIT) {
+            return MAX_RECENT_SEARCH_LIMIT;
+        }
+
+        return limit;
     }
 
     private String normalizeGroupedValue(String groupBy, String rawKey) {
@@ -628,21 +713,23 @@ public class SearchServiceImpl implements SearchService {
         return rawKey;
     }
 
-    private String normalizeMode(String mode, String fallback) {
+    private String normalizeCountryOptionValue(String rawValue) {
+        String value = extractLastSegment(rawValue);
+        return value.toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeMode(String mode) {
         if (!StringUtils.hasText(mode)) {
-            return fallback;
+            return "range";
         }
 
         return mode.trim().toLowerCase(Locale.ROOT);
     }
 
-    private Boolean deriveHasOrcid(JsonNode authorships) {
-        if (!authorships.isArray()) {
-            return null;
-        }
-
-        for (JsonNode authorship : authorships) {
-            String orcid = authorship.path("author").path("orcid").asText("").trim();
+    private Boolean deriveHasOrcid(List<Map<String, Object>> authorships) {
+        for (Map<String, Object> authorship : authorships) {
+            Map<String, Object> author = getMap(authorship, "author");
+            String orcid = getString(author, "orcid").trim();
             if (!orcid.isBlank()) {
                 return true;
             }
@@ -651,18 +738,21 @@ public class SearchServiceImpl implements SearchService {
         return false;
     }
 
-    private String derivePdfUrl(JsonNode work) {
-        String bestOaPdfUrl = work.path("best_oa_location").path("pdf_url").asText("").trim();
+    private String derivePdfUrl(Map<String, Object> work) {
+        Map<String, Object> bestOaLocation = getMap(work, "best_oa_location");
+        Map<String, Object> openAccess = getMap(work, "open_access");
+
+        String bestOaPdfUrl = getString(bestOaLocation, "pdf_url").trim();
         if (!bestOaPdfUrl.isBlank()) {
             return bestOaPdfUrl;
         }
 
-        String openAccessUrl = work.path("open_access").path("oa_url").asText("").trim();
+        String openAccessUrl = getString(openAccess, "oa_url").trim();
         if (!openAccessUrl.isBlank()) {
             return openAccessUrl;
         }
 
-        String bestOaLandingPageUrl = work.path("best_oa_location").path("landing_page_url").asText("").trim();
+        String bestOaLandingPageUrl = getString(bestOaLocation, "landing_page_url").trim();
         if (!bestOaLandingPageUrl.isBlank()) {
             return bestOaLandingPageUrl;
         }
@@ -670,24 +760,18 @@ public class SearchServiceImpl implements SearchService {
         return null;
     }
 
-    private String deriveAbstractText(JsonNode abstractInvertedIndex) {
-        if (abstractInvertedIndex == null || !abstractInvertedIndex.isObject()) {
+    private String deriveAbstractText(Map<String, Object> abstractInvertedIndex) {
+        if (abstractInvertedIndex == null || abstractInvertedIndex.isEmpty()) {
             return null;
         }
 
         TreeMap<Integer, String> orderedTokens = new TreeMap<>();
-        Iterator<Map.Entry<String, JsonNode>> fieldIterator = abstractInvertedIndex.fields();
-        while (fieldIterator.hasNext()) {
-            Map.Entry<String, JsonNode> entry = fieldIterator.next();
+        for (Map.Entry<String, Object> entry : abstractInvertedIndex.entrySet()) {
             String token = entry.getKey();
-            JsonNode positions = entry.getValue();
+            List<Object> positions = getObjectList(entry.getValue());
 
-            if (!positions.isArray()) {
-                continue;
-            }
-
-            for (JsonNode positionNode : positions) {
-                int position = positionNode.asInt(-1);
+            for (Object positionValue : positions) {
+                int position = toInt(positionValue, -1);
                 if (position >= 0) {
                     orderedTokens.putIfAbsent(position, token);
                 }
@@ -698,23 +782,166 @@ public class SearchServiceImpl implements SearchService {
             return null;
         }
 
-        return String.join(" ", orderedTokens.values());
+        return sanitizeDisplayText(String.join(" ", orderedTokens.values()));
     }
 
-    private Integer nullableInt(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
+    private String sanitizeDisplayText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return value;
+        }
+
+        String unescaped = HtmlUtils.htmlUnescape(value);
+        String withoutHtmlTags = HTML_TAG_PATTERN.matcher(unescaped).replaceAll(" ");
+        return MULTI_WHITESPACE_PATTERN.matcher(withoutHtmlTags).replaceAll(" ").trim();
+    }
+
+    private Map<String, Object> getMap(Map<String, Object> source, String key) {
+        if (source == null) {
+            return new LinkedHashMap<>();
+        }
+
+        Object value = source.get(key);
+        if (!(value instanceof Map<?, ?> rawMap)) {
+            return new LinkedHashMap<>();
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+            if (entry.getKey() instanceof String keyName) {
+                result.put(keyName, entry.getValue());
+            }
+        }
+
+        return result;
+    }
+
+    private List<Map<String, Object>> getMapList(Map<String, Object> source, String key) {
+        if (source == null) {
+            return List.of();
+        }
+
+        return getMapListFromObject(source.get(key));
+    }
+
+    private List<Map<String, Object>> getMapListFromObject(Object value) {
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        if (!(value instanceof List<?> rawList)) {
+            return result;
+        }
+
+        for (Object item : rawList) {
+            if (item instanceof Map<?, ?> rawMap) {
+                Map<String, Object> itemMap = new LinkedHashMap<>();
+
+                for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+                    if (entry.getKey() instanceof String keyName) {
+                        itemMap.put(keyName, entry.getValue());
+                    }
+                }
+
+                result.add(itemMap);
+            }
+        }
+
+        return result;
+    }
+
+    private List<Object> getObjectList(Object value) {
+        List<Object> result = new ArrayList<>();
+
+        if (!(value instanceof List<?> rawList)) {
+            return result;
+        }
+
+        for (Object item : rawList) {
+            result.add(item);
+        }
+
+        return result;
+    }
+
+    private String getString(Map<String, Object> source, String key) {
+        if (source == null || source.get(key) == null) {
+            return "";
+        }
+
+        return String.valueOf(source.get(key));
+    }
+
+    private Integer getInteger(Map<String, Object> source, String key) {
+        if (source == null || source.get(key) == null) {
             return null;
         }
 
-        return node.asInt();
+        return toInt(source.get(key), 0);
     }
 
-    private Boolean nullableBoolean(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
+    private Boolean getBoolean(Map<String, Object> source, String key) {
+        if (source == null || source.get(key) == null) {
             return null;
         }
 
-        return node.asBoolean();
+        Object value = source.get(key);
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+
+        return Boolean.valueOf(String.valueOf(value));
+    }
+
+    private int getInt(Map<String, Object> source, String key, int defaultValue) {
+        if (source == null || source.get(key) == null) {
+            return defaultValue;
+        }
+
+        return toInt(source.get(key), defaultValue);
+    }
+
+    private long getLong(Map<String, Object> source, String key, long defaultValue) {
+        if (source == null || source.get(key) == null) {
+            return defaultValue;
+        }
+
+        Object value = source.get(key);
+        if (value instanceof Number numberValue) {
+            return numberValue.longValue();
+        }
+
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
+    private double getDouble(Map<String, Object> source, String key, double defaultValue) {
+        if (source == null || source.get(key) == null) {
+            return defaultValue;
+        }
+
+        Object value = source.get(key);
+        if (value instanceof Number numberValue) {
+            return numberValue.doubleValue();
+        }
+
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
+    private int toInt(Object value, int defaultValue) {
+        if (value instanceof Number numberValue) {
+            return numberValue.intValue();
+        }
+
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
     }
 
     private String extractLastSegment(String value) {
@@ -732,15 +959,4 @@ public class SearchServiceImpl implements SearchService {
     }
 
 }
-
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- @Service, @Transactional, helper method, for-loop, if/else.
-- Map<String, String> de build query params OpenAlex.
-File nay lam gi:
-- Chua business logic chinh: build filter, goi OpenAlex, map ket qua, xu ly history.
-Flow chay:
-- Nhan DTO -> normalize input -> goi OpenAlexClient/repository -> map response -> tra ve.
-*/
 

@@ -33,13 +33,3 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
     long deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
 }
 
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- JpaRepository, @Query JPQL, projection interface.
-File nay lam gi:
-- Truy van DB cho recent history va delete history.
-Flow chay:
-- Service goi repository de lay query gan day hoac xoa theo user + query.
-*/
-

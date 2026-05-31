@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.email.service;
 
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -19,7 +21,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendVerificationEmail(String to, String verifyLink) {
         // validate basic email
         if (to == null || !to.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            throw new RuntimeException("Invalid email address: " + to);
+            throw new BusinessException(ErrorCode.INVALID_EMAIL, to);
         }
 
         SimpleMailMessage message = new SimpleMailMessage();

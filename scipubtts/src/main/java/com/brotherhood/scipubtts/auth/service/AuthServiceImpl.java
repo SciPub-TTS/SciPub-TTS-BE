@@ -1,6 +1,8 @@
 package com.brotherhood.scipubtts.auth.service;
 
 import com.brotherhood.scipubtts.auth.dto.RegisterLocalRequest;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.email.service.EmailService;
 import com.brotherhood.scipubtts.email.entity.EmailVerificationToken;
 import com.brotherhood.scipubtts.email.repository.EmailVerificationTokenRepository;
@@ -50,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public String registerLocal(RegisterLocalRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email already exists");
+            throw new BusinessException(ErrorCode.EMAIL_EXISTED);
         }
 
         User user = User.builder()
@@ -93,14 +95,14 @@ public class AuthServiceImpl implements AuthService {
     public String verifyEmail(String token) {
 
         EmailVerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
 
         if (verificationToken.isUsed()) {
-            throw new RuntimeException("Verification token already used");
+            throw new BusinessException(ErrorCode.TOKEN_ALREADY_USED);
         }
 
         if (verificationToken.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            throw new RuntimeException("Verification token expired");
+            throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
         }
 
         User user = verificationToken.getUser();
@@ -127,18 +129,18 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public String loginLocal(String email, String rawPassword) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Email or password is invalid"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         if (user.isBanned()) {
-            throw new IllegalStateException("Account is banned");
+            throw new BusinessException(ErrorCode.AUTH_BANNED, "admin@scipubtts.com");
         }
 
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-            throw new IllegalStateException("This account was created with Google login");
+            throw new BusinessException(ErrorCode.OAUTH2_ACCOUNT);
         }
 
         if (!user.isEmailVerified()) {
-            throw new IllegalStateException("Please verify email before login");
+            throw new BusinessException(ErrorCode.UNVERIFIED_EMAIL);
         }
 
         authenticationManager.authenticate(

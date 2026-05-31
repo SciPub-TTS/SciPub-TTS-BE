@@ -21,13 +21,3 @@ public interface SearchService {
     void deleteSearchHistory(UUID userId, String query);
 }
 
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- Java interface de khai bao method.
-File nay lam gi:
-- Dinh nghia contract cho module search.
-Flow chay:
-- Controller chi phu thuoc interface; logic thuc te nam o SearchServiceImpl.
-*/
-

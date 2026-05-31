@@ -38,13 +38,3 @@ public record SearchWorksResponse(
     }
 }
 
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- Java record (immutable data holder).
-File nay lam gi:
-- Dinh nghia format response search works cho FE.
-Flow chay:
-- Service map OpenAlex JSON vao record nay -> Controller tra ve.
-*/
-

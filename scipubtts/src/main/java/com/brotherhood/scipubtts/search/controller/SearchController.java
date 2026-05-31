@@ -1,6 +1,8 @@
 package com.brotherhood.scipubtts.search.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
@@ -83,8 +85,8 @@ public class SearchController {
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody SearchHistorySaveRequest request
     ) {
-        request.setUserId(requireUserId(userPrincipal));
-        searchService.saveSearchHistory(request);
+        SearchHistorySaveRequest updatedRequest = request.withUserId(requireUserId(userPrincipal));
+        searchService.saveSearchHistory(updatedRequest);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(200, "Saved search history", null)
@@ -105,21 +107,10 @@ public class SearchController {
 
     private UUID requireUserId(UserPrincipal userPrincipal) {
         if (userPrincipal == null || userPrincipal.getId() == null) {
-            throw new IllegalArgumentException("User is not authenticated");
+            throw new BusinessException(ErrorCode.USER_NOT_AUTHENTICATED);
         }
 
         return userPrincipal.getId();
     }
 }
 
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- @RestController, @RequestMapping, @GetMapping/@PostMapping/@DeleteMapping.
-- @AuthenticationPrincipal de lay user dang login.
-- ResponseEntity + ResponseObject de tra response thong nhat.
-File nay lam gi:
-- Nhan request HTTP cho search works, filter options, va search history.
-Flow chay:
-- FE goi API -> Controller nhan va lay user -> goi SearchService -> tra ket qua.
-*/

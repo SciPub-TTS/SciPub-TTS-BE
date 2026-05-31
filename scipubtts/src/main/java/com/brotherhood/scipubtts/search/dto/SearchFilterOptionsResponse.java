@@ -35,13 +35,3 @@ public record SearchFilterOptionsResponse(
     }
 }
 
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- Nested records de gom nhom filter options.
-File nay lam gi:
-- Dinh nghia schema options cho 12 filter tren UI.
-Flow chay:
-- Service lay option tu OpenAlex -> map vao record -> FE dung de do filter.
-*/
-

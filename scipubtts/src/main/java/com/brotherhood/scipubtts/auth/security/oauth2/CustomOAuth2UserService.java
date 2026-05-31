@@ -4,6 +4,8 @@ import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -45,7 +47,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         if (!StringUtils.hasText(email)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
-                    "Email not found from Google");
+                    ErrorCode.OAUTH2_EMAIL_NOT_FOUND.getMessage());
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
@@ -64,7 +66,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         } else {
             if (user.isBanned()) {
                 throw new OAuth2AuthenticationException(new OAuth2Error("account_banned"),
-                        "Account is banned");
+                        ErrorCode.OAUTH2_ACCOUNT_BANNED.getMessage());
             }
             if (!StringUtils.hasText(user.getFirstName())) {
                 user.setFirstName(givenName);

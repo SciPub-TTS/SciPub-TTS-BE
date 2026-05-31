@@ -1,6 +1,8 @@
 package com.brotherhood.scipubtts.search.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -36,7 +38,7 @@ public class OpenAlexClient {
         this.objectMapper = objectMapper;
     }
 
-    public JsonNode get(String path, Map<String, String> queryParams) {
+    public Map<String, Object> get(String path, Map<String, String> queryParams) {
         UriComponentsBuilder uriBuilder = UriComponentsBuilder
                 .fromUriString(openAlexBaseUrl + path);
 
@@ -58,9 +60,10 @@ public class OpenAlexClient {
         String responseBody = performGetWithRetry(uri);
 
         try {
-            return objectMapper.readTree(responseBody);
+            return objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {
+            });
         } catch (Exception exception) {
-            throw new IllegalStateException("Cannot parse OpenAlex response", exception);
+            throw new BusinessException(ErrorCode.OPENALEX_PARSE_ERROR);
         }
     }
 
@@ -92,7 +95,7 @@ public class OpenAlexClient {
             backoff *= 2;
         }
 
-        throw new IllegalStateException("OpenAlex request failed after retries", lastException);
+        throw new BusinessException(ErrorCode.OPENALEX_REQUEST_FAILED);
     }
 
     private boolean isRetryableStatus(int statusCode) {
@@ -104,19 +107,8 @@ public class OpenAlexClient {
             Thread.sleep(millis);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Retry interrupted", exception);
+            throw new BusinessException(ErrorCode.RETRY_INTERRUPTED);
         }
     }
 }
-
-/*
-SEARCH_FILE_NOTE
-Syntax su dung:
-- @Component, RestClient, UriComponentsBuilder.
-- Retry with exponential backoff bang vong for + sleep.
-File nay lam gi:
-- Goi API OpenAlex tu BE.
-Flow chay:
-- Service dua path/params -> client build URL -> call GET -> parse JSON -> tra JsonNode.
-*/
 

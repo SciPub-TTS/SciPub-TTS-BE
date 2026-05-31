@@ -58,8 +58,34 @@ public enum ErrorCode {
             "Email đã tồn tại"),
     INVALID_TOKEN(HttpStatus.BAD_REQUEST,
             "Token không hợp lệ"),
+    TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST,
+            "Token xác thực đã được sử dụng"),
+    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
+            "Token xác thực đã hết hạn"),
     UNVERIFIED_EMAIL(HttpStatus.BAD_REQUEST,
-            "Please verify email before login"),
+            "Vui lòng xác thực email trước khi đăng nhập"),
+    OAUTH2_ACCOUNT(HttpStatus.BAD_REQUEST,
+            "Tài khoản này được tạo bằng Google login, vui lòng sử dụng Google để đăng nhập"),
+    USER_NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED,
+            "Người dùng chưa được xác thực"),
+
+    // ===== EMAIL =====
+    INVALID_EMAIL(HttpStatus.BAD_REQUEST,
+            "Địa chỉ email không hợp lệ: %s"),
+
+    // ===== SEARCH / OPENALEX =====
+    OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Không thể phân tích phản hồi từ OpenAlex"),
+    OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
+            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+    RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Quá trình thử lại bị gián đoạn"),
+
+    // ===== OAUTH2 =====
+    OAUTH2_EMAIL_NOT_FOUND(HttpStatus.BAD_REQUEST,
+            "Không tìm thấy email từ Google"),
+    OAUTH2_ACCOUNT_BANNED(HttpStatus.FORBIDDEN,
+            "Tài khoản hiện tại đang bị khoá"),
 
     // ===== SYSTEM / DATABASE =====
     UNSUPPORTED_DATE_TYPE(HttpStatus.INTERNAL_SERVER_ERROR,
