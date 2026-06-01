@@ -38,7 +38,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
         String email = (String) oAuth2User.getAttributes().get("email");
-        Boolean emailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
         String fullName = (String) oAuth2User.getAttributes().get("name");
         String givenName = (String) oAuth2User.getAttributes().get("given_name");
         String familyName = (String) oAuth2User.getAttributes().get("family_name");
@@ -58,7 +57,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setLastName(familyName);
             user.setRole(Role.RESEARCHER);
             user.setPasswordHash(null);
-            user.setEmailVerified(Boolean.TRUE.equals(emailVerified));
+            user.setEmailVerified(false);
             user.setGoogleLinked(true);
             user.setBanned(false);
         } else {
@@ -71,9 +70,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             }
             if (!StringUtils.hasText(user.getLastName())) {
                 user.setLastName(familyName);
-            }
-            if (Boolean.TRUE.equals(emailVerified)) {
-                user.setEmailVerified(true);
             }
             user.setGoogleLinked(true);
         }

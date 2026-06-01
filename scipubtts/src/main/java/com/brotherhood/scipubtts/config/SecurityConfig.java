@@ -89,6 +89,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/", "/error", "/favicon.ico",
                                 "/register",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/api/auth/oauth2/**",
                                 "/api/auth/**",
                                 "/oauth2/**",
                                 "/verify-email",
@@ -100,7 +103,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
-                ).oauth2Login(oauth2 -> oauth2
+                )
+                .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(auth ->
                                 auth.authorizationRequestRepository(
                                         authorizationRequestRepository()

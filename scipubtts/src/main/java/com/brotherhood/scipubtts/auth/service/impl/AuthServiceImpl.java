@@ -38,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenService jwtTokenService;
     private final EmailService mailService;
+    private final AuthSessionService authSessionService;
 
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
@@ -141,23 +142,30 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        RefreshTokenResult refreshResult =
-                refreshTokenService.issue(user, request.rememberMe(), httpRequest);
-
-        refreshCookieService.addRefreshCookie(
-                httpResponse,
-                refreshResult.rawToken(),
-                refreshResult.rememberMe(),
-                Duration.between(OffsetDateTime.now(), refreshResult.expiresAt())
+        return authSessionService.issueSession(
+                user,
+                request.rememberMe(),
+                httpRequest,
+                httpResponse
         );
 
-        String accessToken = jwtTokenService.generateAccessToken(UserPrincipal.create(user));
-
-        return new AuthResponse(
-                accessToken,
-                "Bearer",
-                jwtTokenService.getAccessTokenExpiresInSeconds()
-        );
+//        RefreshTokenResult refreshResult =
+//                refreshTokenService.issue(user, request.rememberMe(), httpRequest);
+//
+//        refreshCookieService.addRefreshCookie(
+//                httpResponse,
+//                refreshResult.rawToken(),
+//                refreshResult.rememberMe(),
+//                Duration.between(OffsetDateTime.now(), refreshResult.expiresAt())
+//        );
+//
+//        String accessToken = jwtTokenService.generateAccessToken(UserPrincipal.create(user));
+//
+//        return new AuthResponse(
+//                accessToken,
+//                "Bearer",
+//                jwtTokenService.getAccessTokenExpiresInSeconds()
+//        );
     }
 
     @Override
