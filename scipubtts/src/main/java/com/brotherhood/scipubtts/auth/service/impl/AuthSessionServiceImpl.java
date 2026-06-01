@@ -10,19 +10,28 @@ import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.user.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
 
 @Service
-@RequiredArgsConstructor
 public class AuthSessionServiceImpl implements AuthSessionService {
+
 
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
     private final JwtTokenService jwtTokenService;
+
+    public AuthSessionServiceImpl(
+            RefreshTokenService refreshTokenService,
+            RefreshCookieService refreshCookieService,
+            JwtTokenService jwtTokenService
+    ) {
+        this.refreshTokenService = refreshTokenService;
+        this.refreshCookieService = refreshCookieService;
+        this.jwtTokenService = jwtTokenService;
+    }
 
     @Override
     public AuthResponse issueSession(

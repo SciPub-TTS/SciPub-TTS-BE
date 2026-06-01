@@ -56,8 +56,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setFirstName(givenName);
             user.setLastName(familyName);
             user.setRole(Role.RESEARCHER);
-            user.setPasswordHash(null);
             user.setEmailVerified(false);
+            user.setPasswordHash(null);
             user.setGoogleLinked(true);
             user.setBanned(false);
         } else {

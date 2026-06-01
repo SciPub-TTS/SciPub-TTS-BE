@@ -6,6 +6,23 @@ on:
   pull_request:
     branches: ["dev", "main"]
 
+env:
+  SPRING_PROFILES_ACTIVE: dev
+
+  DEV_DB_URL: ${{ secrets.DEV_DB_URL }}
+  DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
+  DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+
+  DEV_MAIL_USERNAME: ${{ secrets.DEV_MAIL_USERNAME }}
+  DEV_MAIL_PASSWORD: ${{ secrets.DEV_MAIL_PASSWORD }}
+
+  DEV_GOOGLE_CLIENT_ID: ${{ secrets.DEV_GOOGLE_CLIENT_ID }}
+  DEV_GOOGLE_CLIENT_SECRET: ${{ secrets.DEV_GOOGLE_CLIENT_SECRET }}
+
+  DEV_JWT_SECRET: ${{ secrets.DEV_JWT_SECRET }}
+
+  DEV_CORS_ALLOWED_ORIGINS: ${{ secrets.DEV_CORS_ALLOWED_ORIGINS }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
