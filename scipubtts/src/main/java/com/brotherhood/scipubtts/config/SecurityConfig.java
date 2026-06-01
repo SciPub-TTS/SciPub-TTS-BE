@@ -32,6 +32,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> oAuth2AuthorizationRequestRepository() {
         return new org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository();
@@ -91,6 +92,9 @@ public class SecurityConfig {
                                 "/register",
                                 "/api/auth/**",
                                 "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/api/auth/oauth2/**",
+                                "/oauth2/**",
                                 "/verify-email",
                                 "/login/**",
                                 "/v3/api-docs/**",
@@ -100,11 +104,16 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
-                ).oauth2Login(oauth2 -> oauth2
+                )
+
+                .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(auth ->
                                 auth.authorizationRequestRepository(
                                         authorizationRequestRepository()
                                 )
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*")
                         )
                         .userInfoEndpoint(userInfo ->
                                 userInfo.userService(customOAuth2UserService)
