@@ -10,16 +10,16 @@ import com.brotherhood.scipubtts.auth.service.SecureValueService;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.config.AuthProperties;
-import com.brotherhood.scipubtts.auth.service.PasswordResetCodeRequestedEvent;
+import com.brotherhood.scipubtts.auth.dto.request.PasswordResetCodeRequestedEvent;
 import com.brotherhood.scipubtts.auth.service.PasswordRecoveryService;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Locale;
@@ -38,6 +38,7 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
     private final AuthProperties authProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetAttemptServiceImpl passwordResetAttemptService;
 
     @Override
     @Transactional
@@ -84,6 +85,7 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
         );
     }
 
+
     @Override
     @Transactional
     public VerifyResetCodeResponse verifyCode(String email,
@@ -106,19 +108,23 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
         }
 
         if (challenge.isExpired()) {
-            challenge.setInvalidatedAt(now);
-            challengeRepository.save(challenge);
+            passwordResetAttemptService.invalidateChallenge(challenge.getId(), now);
             throw new BusinessException(ErrorCode.PASSWORD_RESET_CODE_EXPIRED);
         }
 
         String normalizedCode = code.trim().toUpperCase(Locale.ROOT);
 
         if (!passwordEncoder.matches(normalizedCode, challenge.getCodeHash())) {
-            challenge.setAttemptCount(challenge.getAttemptCount() + 1);
-            if (challenge.getAttemptCount() >= challenge.getMaxAttempts()) {
-                challenge.setInvalidatedAt(now);
-            }
-            challengeRepository.save(challenge);
+            PasswordResetAttemptServiceImpl.FailedAttemptResult failedAttempt =
+                    passwordResetAttemptService.persistFailedAttempt(
+                            challenge.getId(),
+                            now
+                    );
+//            challenge.setAttemptCount(challenge.getAttemptCount() + 1);
+//            if (challenge.getAttemptCount() >= challenge.getMaxAttempts()) {
+//                challenge.setInvalidatedAt(now);
+//            }
+//            challengeRepository.save(challenge);
             throw new BusinessException(
                     challenge.getAttemptCount() >= challenge.getMaxAttempts()
                             ? ErrorCode.PASSWORD_RESET_CODE_ATTEMPTS_EXCEEDED

@@ -1,66 +1,67 @@
 package com.brotherhood.scipubtts.config;
 
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * CORS Configuration cho FE request từ localhost:5173 tới Backend localhost:8080/api
- *
- * Cấu hình này cho phép:
- * - Preflight OPTIONS request
- * - Cookie + Authorization header (withCredentials: true từ FE)
- * - Credentials mode để refresh token HttpOnly cookie hoạt động
- */
+import java.util.Arrays;
+
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry
-                // Áp dụng cho tất cả endpoint /api/**
-                .addMapping("/api/**")
-                // Cho phép request từ FE development + production
-                .allowedOrigins(
-                        "http://localhost:5173",     // Vite dev server
-                        "http://localhost:3000",     // Nếu dùng port khác
-                        "https://yourdomain.com"     // Production domain
-                )
-                // Method cho phép
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                // Header cho phép trong request
-                .allowedHeaders(
-                        "Content-Type",
-                        "Authorization",
-                        "X-Requested-With",
-                        "Accept",
-                        "Origin"
-                )
-                // Header expose về FE (optional)
-                .exposedHeaders(
-                        "Authorization",
-                        "X-Total-Count",
-                        "X-Page-Number"
-                )
-                // QUAN TRỌNG: Cho phép cookie + Authorization header
-                // FE dùng withCredentials: true trong axios, backend phải set true
-                .allowCredentials(true)
-                // Cache preflight result trong browser (ms)
-                .maxAge(30000);
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    private String allowedOrigins;
 
-        // Nếu có endpoint khác không dùng /api/** prefix
-        registry
-                .addMapping("/auth/**")
-                .allowedOrigins(
-                        "http://localhost:5173",
-                        "https://yourdomain.com"
-                )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
+    @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,PATCH,OPTIONS}")
+    private String allowedMethods;
 
-        // Nếu có route verify-email redirect từ BE (không standard CORS, chỉ documentation)
-        // GET /verify-email?token=... sẽ redirect, không cần CORS setup
+    @Value("${app.cors.allowed-headers:Content-Type,Authorization,X-Requested-With,Accept,Origin}")
+    private String allowedHeaders;
+
+    @Value("${app.cors.exposed-headers:Authorization,X-Total-Count,X-Page-Number}")
+    private String exposedHeaders;
+
+    @Value("${app.cors.allow-credentials:true}")
+    private boolean allowCredentials;
+
+    @Value("${app.cors.max-age:3600}")
+    private long maxAge;
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // Tách chuỗi comma-separated từ file properties thành List cấu hình công khai
+        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+            config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        }
+
+        if (allowedMethods != null && !allowedMethods.isEmpty()) {
+            config.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
+        }
+
+        if (allowedHeaders != null && !allowedHeaders.isEmpty()) {
+            config.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
+        }
+
+        if (exposedHeaders != null && !exposedHeaders.isEmpty()) {
+            config.setExposedHeaders(Arrays.asList(exposedHeaders.split(",")));
+        }
+
+        // Credentials — QUAN TRỌNG cho cookie + Authorization
+        config.setAllowCredentials(allowCredentials);
+
+        // Cache preflight
+        config.setMaxAge(maxAge);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Áp dụng cho tất cả path
+        source.registerCorsConfiguration("/**", config);
+
+        return source;
     }
 }

@@ -11,8 +11,7 @@ import java.util.UUID;
 @Table(
         name = "refresh_token",
         indexes = {
-                @Index(name = "idx_refresh_token_user_active", columnList = "user_id, revoked_at, expires_at"),
-                @Index(name = "idx_refresh_token_family", columnList = "family_id")
+                @Index(name = "idx_refresh_token_user_active", columnList = "user_id, revoked_at, expired_at"),
         }
 )
 @Getter

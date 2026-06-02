@@ -1,7 +1,6 @@
 package com.brotherhood.scipubtts.email.service.impl;
 
-import com.brotherhood.scipubtts.auth.service.PasswordResetCodeRequestedEvent;
-import com.brotherhood.scipubtts.auth.service.PasswordResetCompletedEvent;
+import com.brotherhood.scipubtts.auth.dto.request.PasswordResetCodeRequestedEvent;
 import com.brotherhood.scipubtts.email.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;

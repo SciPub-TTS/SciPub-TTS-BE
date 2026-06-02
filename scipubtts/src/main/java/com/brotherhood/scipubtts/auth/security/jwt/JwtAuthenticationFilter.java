@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.auth.security.jwt;
 
 import com.brotherhood.scipubtts.auth.security.CustomUserDetailsService;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -63,6 +64,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             } catch (ExpiredJwtException ex) {
                 request.setAttribute("auth_error", "Access token đã hết hạn");
+            } catch (BusinessException ex) {
+                request.setAttribute("auth_error", ex.getMessage());
             } catch (JwtException | IllegalArgumentException | UsernameNotFoundException ex) {
                 request.setAttribute("auth_error", "Access token không hợp lệ");
             }

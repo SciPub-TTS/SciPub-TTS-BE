@@ -7,7 +7,9 @@ import com.brotherhood.scipubtts.auth.dto.response.VerifyResetCodeResponse;
 import com.brotherhood.scipubtts.auth.service.PasswordRecoveryService;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,34 +24,38 @@ public class PasswordRecoveryController {
     private final PasswordRecoveryService passwordRecoveryService;
 
     @PostMapping("/request")
-    public ResponseEntity<ResponseObject> requestReset(@RequestBody ForgotPasswordRequest request,
+    public ResponseEntity<ResponseObject> requestReset(@Valid @RequestBody ForgotPasswordRequest request,
                                                        HttpServletRequest httpRequest) {
 
         passwordRecoveryService.requestReset(request.email(), httpRequest);
 
         return ResponseEntity.ok(
                 new ResponseObject(
-                        200,
-                        "Nếu email tồn tại trong hệ thống, mã xác thực đã được gửi",
+                        HttpStatus.OK.value(),
+                        "If the email exists in our system, a verification code has been sent",
                         null
                 )
         );
     }
 
     @PostMapping("/verify-code")
-    public ResponseEntity<ResponseObject> verifyCode(@RequestBody VerifyResetCodeRequest request,
+    public ResponseEntity<ResponseObject> verifyCode(@Valid @RequestBody VerifyResetCodeRequest request,
                                                      HttpServletRequest httpRequest) {
 
         VerifyResetCodeResponse data =
                 passwordRecoveryService.verifyCode(request.email(), request.code(), httpRequest);
 
         return ResponseEntity.ok(
-                new ResponseObject(200, "Xác thực mã thành công", data)
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Verification code verified successfully",
+                        data
+                )
         );
     }
 
     @PostMapping("/reset")
-    public ResponseEntity<ResponseObject> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<ResponseObject> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
 
         passwordRecoveryService.resetPassword(
                 request.resetGrantToken(),
@@ -58,7 +64,11 @@ public class PasswordRecoveryController {
         );
 
         return ResponseEntity.ok(
-                new ResponseObject(200, "Đặt lại mật khẩu thành công, vui lòng đăng nhập lại", null)
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Password reset successful, please log in again",
+                        null
+                )
         );
     }
 }

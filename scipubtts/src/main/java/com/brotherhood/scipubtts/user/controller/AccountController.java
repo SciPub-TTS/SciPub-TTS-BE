@@ -5,6 +5,7 @@ import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.user.dto.request.ChangePasswordRequest;
 import com.brotherhood.scipubtts.user.service.AccountService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +27,10 @@ public class AccountController {
         accountService.changePassword(principal.getId(), request);
 
         return ResponseEntity.ok(
-                new ResponseObject(200, "Đổi mật khẩu thành công, vui lòng đăng nhập lại", null)
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Password changed successfully, please log in again",
+                        null)
         );
     }
 }

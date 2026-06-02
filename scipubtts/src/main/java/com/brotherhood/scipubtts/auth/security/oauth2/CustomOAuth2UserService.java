@@ -47,6 +47,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     "Email not found from Google");
         }
 
+        Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
+
+        if (!Boolean.TRUE.equals(googleEmailVerified)) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("google_email_not_verified"),
+                    "Google account email is not verified");
+        }
+
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {

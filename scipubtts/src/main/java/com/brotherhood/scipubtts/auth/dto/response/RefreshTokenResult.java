@@ -9,4 +9,14 @@ public record RefreshTokenResult(
         String rawToken,
         boolean rememberMe,
         OffsetDateTime expiresAt
-) {}
+) {
+    @Override
+    public String toString() {
+        return "RefreshTokenResult[" +
+                "rawToken=***" +
+                ", userId=" + user.getId() +
+                ", rememberMe=" + rememberMe +
+                ", expiresAt=" + expiresAt +
+                "]";
+    }
+}

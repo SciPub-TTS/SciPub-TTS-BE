@@ -14,7 +14,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -41,10 +44,19 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        if (!(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
+            throw new ServletException("Invalid OAuth2 principal type. Expected OAuth2User.");
+        }
 
-        User user = userRepository.findById(principal.getId())
-                .orElseThrow(() -> new IllegalStateException("OAuth2 user not found"));
+        String email = oauth2User.getAttribute("email");
+        if (email == null) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("invalid_user_info"), "Email not found from OAuth2 provider");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new OAuth2AuthenticationException(
+                        new OAuth2Error("oauth2_user_not_found"), "User with email " + email + " not found in system"));
 
         AuthResponse authResponse = authSessionService.issueSession(
                 user,

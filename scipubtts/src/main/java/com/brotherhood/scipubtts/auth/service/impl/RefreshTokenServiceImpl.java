@@ -69,6 +69,13 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
         //Nếu trường này khác null, nghĩa là token này đã từng được sử dụng trước đó rồi, hoặc user đã bấm Logout. Việc một token đã hủy đột ngột xuất hiện lại là dấu hiệu của việc Hacker đang cố dùng lại token cũ ăn trộm được. Hệ thống sẽ lập tức chặn lại.
         if (current.getRevokedAt() != null) {
+            // LẬP TỨC KHAI TỬ toàn bộ các token đang hoạt động khác của User này
+            refreshTokenRepository.revokeAllActiveByUserId(current.getUser().getId(), now);
+
+            // Log báo động hệ thống (Hữu ích cho việc giám sát an ninh SecOps)
+            // log.warn("Refresh token reuse detected for user: {}. Token family breached!", userId);
+
+            // Ném lỗi cụ thể ra ngoài để báo hiệu token bị thu hồi do tái sử dụng
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_REVOKED);
         }
 
