@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.user.service.impl;
 
+import com.brotherhood.scipubtts.auth.dto.response.CurrentUserResponse;
 import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
@@ -17,7 +18,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserServiceImpl implements AccountService {
+public class AccountServiceImpl implements AccountService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -57,4 +58,19 @@ public class UserServiceImpl implements AccountService {
 
         refreshTokenService.revokeAllByUserId(userId);
     }
+
+    @Override
+    public CurrentUserResponse getCurrentUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return new CurrentUserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getRole().name()
+        );
+    }
+
 }

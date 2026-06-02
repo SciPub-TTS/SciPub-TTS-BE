@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.email.service.impl;
 
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.email.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,7 +71,7 @@ public class EmailServiceImpl implements EmailService {
 
     private void validateEmail(String to) {
         if (to == null || !to.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            throw new IllegalArgumentException("Invalid email address: " + to);
+            throw new BusinessException(ErrorCode.INVALID_EMAIL_FORMAT);
         }
     }
 }

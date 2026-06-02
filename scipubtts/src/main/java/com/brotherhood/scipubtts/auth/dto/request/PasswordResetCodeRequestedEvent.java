@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.auth.service;
+package com.brotherhood.scipubtts.auth.dto.request;
 
 public record PasswordResetCodeRequestedEvent(
         String email,

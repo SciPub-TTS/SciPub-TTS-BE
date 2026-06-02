@@ -24,14 +24,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(@NonNull String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
+                .orElseThrow(() ->
+                        new UsernameNotFoundException(ErrorCode.USER_NOT_FOUND.getMessage())
+                );
 
         return UserPrincipal.create(user);
     }
 
     public UserDetails loadUserById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
         return UserPrincipal.create(user);
     }
 }

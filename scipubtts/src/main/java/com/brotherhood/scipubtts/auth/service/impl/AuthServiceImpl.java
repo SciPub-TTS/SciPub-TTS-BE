@@ -94,14 +94,14 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public String verifyEmail(String token) {
         EmailVerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMAIL_VERIFICATION_TOKEN_INVALID));
 
         if (verificationToken.isUsed()) {
-            throw new RuntimeException("Verification token already used");
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_TOKEN_ALREADY_USED);
         }
 
         if (verificationToken.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            throw new RuntimeException("Verification token expired");
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_TOKEN_EXPIRED);
         }
 
         User user = verificationToken.getUser();
@@ -123,20 +123,22 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
-        if (user.isBanned()) {
-            throw new BusinessException(ErrorCode.ACCOUNT_BANNED);
-        }
+        String passwordHash = user.getPasswordHash();
 
-        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-            throw new BusinessException(ErrorCode.LOCAL_PASSWORD_NOT_AVAILABLE);
-        }
-
-        if (!user.isEmailVerified()) {
-            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+        if (passwordHash == null || passwordHash.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        if (user.isBanned()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_BANNED);
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
         authenticationManager.authenticate(
