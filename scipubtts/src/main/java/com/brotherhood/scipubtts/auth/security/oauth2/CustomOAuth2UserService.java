@@ -4,6 +4,8 @@ import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
