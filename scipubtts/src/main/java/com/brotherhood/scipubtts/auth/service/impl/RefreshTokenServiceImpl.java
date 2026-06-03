@@ -41,7 +41,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         Duration ttl = rememberMe
                 ? authProperties.rememberMeRefreshTokenTtl()
                 : authProperties.refreshTokenTtl();
-
         String rawToken = secureValueService.generateOpaqueToken();
 
         RefreshToken token = RefreshToken.builder()
