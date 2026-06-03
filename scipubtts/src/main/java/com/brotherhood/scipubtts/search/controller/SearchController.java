@@ -107,7 +107,7 @@ public class SearchController {
 
     private UUID requireUserId(UserPrincipal userPrincipal) {
         if (userPrincipal == null || userPrincipal.getId() == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_AUTHENTICATED);
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         return userPrincipal.getId();
