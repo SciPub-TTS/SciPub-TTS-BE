@@ -62,7 +62,17 @@ public enum ErrorCode {
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "The provided email address format is invalid."),
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Invalid email verification token."),
     EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
-    EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired.");
+    EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
+
+    // ===== SEARCH / OPENALEX =====
+    OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Không thể phân tích phản hồi từ OpenAlex"),
+    OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
+            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+    RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Quá trình thử lại bị gián đoạn");
     private final HttpStatus status;
     private final String message;
+
+
 }
