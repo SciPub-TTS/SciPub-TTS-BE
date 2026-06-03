@@ -1,0 +1,20 @@
+server.port=8080
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/scipub_local
+spring.datasource.username=postgres
+spring.datasource.password=Dien_Mat_Khau_Local_Cua_Ban_Vao_Day
+
+# Email SMTP Credentials
+spring.mail.username=dien_email_test_cua_ban@gmail.com
+spring.mail.password=dien_mat_khau_ung_dung_smtp
+
+# Google Auth Security
+spring.security.oauth2.client.registration.google.client-id=dien_google_client_id
+spring.security.oauth2.client.registration.google.client-secret=dien_google_client_secret
+
+# Security Secrets
+app.jwt.secret=chuoi_key_ngau_nhien_co_do_dai_tren_32_ky_tu_cho_local
+server.servlet.session.cookie.name=SCIPUB_SESSION_LOCAL
+
+# CORS local
+app.cors.allowed-origins=http://localhost:3000
