@@ -40,7 +40,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
         String email = (String) oAuth2User.getAttributes().get("email");
-        Boolean emailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
         String fullName = (String) oAuth2User.getAttributes().get("name");
         String givenName = (String) oAuth2User.getAttributes().get("given_name");
         String familyName = (String) oAuth2User.getAttributes().get("family_name");
@@ -48,6 +47,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (!StringUtils.hasText(email)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
                     ErrorCode.OAUTH2_EMAIL_NOT_FOUND.getMessage());
+        }
+
+        Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
+
+        if (!Boolean.TRUE.equals(googleEmailVerified)) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("google_email_not_verified"),
+                    "Google account email is not verified");
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
@@ -59,8 +65,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setFirstName(givenName);
             user.setLastName(familyName);
             user.setRole(Role.RESEARCHER);
+            user.setEmailVerified(false);
             user.setPasswordHash(null);
-            user.setEmailVerified(Boolean.TRUE.equals(emailVerified));
             user.setGoogleLinked(true);
             user.setBanned(false);
         } else {
@@ -73,9 +79,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             }
             if (!StringUtils.hasText(user.getLastName())) {
                 user.setLastName(familyName);
-            }
-            if (Boolean.TRUE.equals(emailVerified)) {
-                user.setEmailVerified(true);
             }
             user.setGoogleLinked(true);
         }

@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.common.exception;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,8 +46,10 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ResponseObject(
-                        500,
-                        "Lỗi hệ thống: " + ex.getMessage(),
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        //Change to exception without message to hide log leak
+                        //"An unexpected error occurred"
+                        "An unexpected error occurred: " + ex.getMessage(),
                         null
                 )
         );
@@ -64,10 +67,29 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 new ResponseObject(
-                        400,
-                        "Validation falied",
+                        HttpStatus.BAD_REQUEST.value(),
+                        "Validation failed",
                         errors
                 )
         );
     }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ResponseObject> handleConstraintViolationException(
+            ConstraintViolationException ex
+    ) {
+        List<String> errors = ex.getConstraintViolations()
+                .stream()
+                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .toList();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ResponseObject(
+                        HttpStatus.BAD_REQUEST.value(),
+                        "Validation failed",
+                        errors
+                )
+        );
+    }
+
 }

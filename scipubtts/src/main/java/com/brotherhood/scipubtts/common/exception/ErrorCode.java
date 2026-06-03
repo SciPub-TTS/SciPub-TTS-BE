@@ -7,143 +7,62 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 @Getter
 public enum ErrorCode {
-
-    // ===== REQUEST =====
-    EXISTING_ACTIVE_REQUEST(HttpStatus.CONFLICT,
-            "SĐT %s đã có một yêu cầu đang được xử lý."),
-    REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "Không tìm thấy yêu cầu với ID/SĐT %s."),
-    INVALID_REQUEST_TYPE(HttpStatus.BAD_REQUEST,
-            "Loại yêu cầu không hợp lệ."),
-    INVALID_STATUS(HttpStatus.BAD_REQUEST,
-            "Status không hợp lệ: %s"),
-    INVALID_STATUS_UPDATE(HttpStatus.BAD_REQUEST,
-            "Coordinator chỉ được set status 'đang xử lý' hoặc 'đã huỷ'"),
-    INVALID_STATUS_TRANSITION(HttpStatus.BAD_REQUEST,
-            "Yêu cầu đang ở trạng thái %s, không thể cập nhật"),
-    REQUEST_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST,
-            "Yêu cầu đã hoàn thành, không thể thay đổi"),
-
-    REQUEST_LOCATION_MISSING(HttpStatus.BAD_REQUEST,
-            "Yêu cầu chưa có thông tin vị trí"),
-
-    ASSIGNMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy nhiệm vụ."),
-
-    // ===== CITIZEN =====
-    INVALID_PHONE(HttpStatus.BAD_REQUEST,
-            "Số điện thoại không hợp lệ."),
-
-    // ===== MESSAGE =====
-    INVALID_REQUEST_ID(HttpStatus.BAD_REQUEST,
-            "Thiếu requestId."),
-    INVALID_MESSAGE_CONTENT(HttpStatus.BAD_REQUEST,
-            "Nội dung tin nhắn không được để trống."),
-    SENDER_NOT_FOUND(HttpStatus.BAD_REQUEST,
-            "Không tìm thấy người gửi."),
-    INVALID_SENDER_ID(HttpStatus.BAD_REQUEST,
-            "Thiếu senderId"),
-
-    // ===== IMAGE =====
-    IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Tải ảnh lên thất bại."),
-    CLOUDINARY_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Xóa ảnh trên Cloudinary thất bại."),
-
     // ===== AUTH =====
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED,
-            "Email hoặc mật khẩu không chính xác."),
-    AUTH_BANNED(HttpStatus.UNAUTHORIZED,
-            "Tài khoản hiện tại đang bị khoá, vui lòng liên hệ %s"),
-    EMAIL_EXISTED(HttpStatus.BAD_REQUEST,
-            "Email đã tồn tại"),
-    INVALID_TOKEN(HttpStatus.BAD_REQUEST,
-            "Token không hợp lệ"),
-    TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST,
-            "Token xác thực đã được sử dụng"),
-    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
-            "Token xác thực đã hết hạn"),
-    UNVERIFIED_EMAIL(HttpStatus.BAD_REQUEST,
-            "Vui lòng xác thực email trước khi đăng nhập"),
-    OAUTH2_ACCOUNT(HttpStatus.BAD_REQUEST,
-            "Tài khoản này được tạo bằng Google login, vui lòng sử dụng Google để đăng nhập"),
-    USER_NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED,
-            "Người dùng chưa được xác thực"),
+            "Incorrect email or password."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED,
+            "Authentication is required to access this resource."),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN,
+            "You do not have permission to access this resource."),
+
+    ACCOUNT_BANNED(HttpStatus.FORBIDDEN,
+            "This account has been banned."),
+    EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN,
+            "Please verify your email address before logging in."),
+    LOCAL_PASSWORD_NOT_AVAILABLE(HttpStatus.BAD_REQUEST,
+            "This account does not support local password authentication."),
+
+    REFRESH_TOKEN_MISSING(HttpStatus.UNAUTHORIZED,
+            "Refresh token is missing."),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED,
+            "Invalid refresh token."),
+    REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED,
+            "Refresh token has expired."),
+    REFRESH_TOKEN_REVOKED(HttpStatus.UNAUTHORIZED,
+            "Refresh token has been revoked."),
+
+    CURRENT_PASSWORD_INVALID(HttpStatus.BAD_REQUEST,
+            "The current password you entered is incorrect."),
+    PASSWORD_CONFIRMATION_NOT_MATCH(HttpStatus.BAD_REQUEST,
+            "Password confirmation does not match."),
+    PASSWORD_REUSE_NOT_ALLOWED(HttpStatus.BAD_REQUEST,
+            "The new password cannot be the same as your current password."),
+    PASSWORD_TOO_WEAK(HttpStatus.BAD_REQUEST,
+            "The password does not meet the minimum security requirements."),
+
+    PASSWORD_RESET_CODE_INVALID(HttpStatus.BAD_REQUEST,
+            "Invalid verification code."),
+    PASSWORD_RESET_CODE_EXPIRED(HttpStatus.BAD_REQUEST,
+            "Verification code has expired."),
+    PASSWORD_RESET_CODE_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,
+            "You have exceeded the maximum number of attempts allowed."),
+    PASSWORD_RESET_GRANT_INVALID(HttpStatus.BAD_REQUEST,
+            "Invalid password reset grant token."),
+    PASSWORD_RESET_GRANT_EXPIRED(HttpStatus.BAD_REQUEST,
+            "Password reset grant token has expired."),
+
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
+            "Too many requests. Please try again later."),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "User not found."),
+    INVALID_USER_INFO(HttpStatus.BAD_REQUEST, "Email not found from Google provider."),
+    OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No account is associated with this social email address."),
 
     // ===== EMAIL =====
-    INVALID_EMAIL(HttpStatus.BAD_REQUEST,
-            "Địa chỉ email không hợp lệ: %s"),
-
-    // ===== SEARCH / OPENALEX =====
-    OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Không thể phân tích phản hồi từ OpenAlex"),
-    OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
-    RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn"),
-
-    // ===== OAUTH2 =====
-    OAUTH2_EMAIL_NOT_FOUND(HttpStatus.BAD_REQUEST,
-            "Không tìm thấy email từ Google"),
-    OAUTH2_ACCOUNT_BANNED(HttpStatus.FORBIDDEN,
-            "Tài khoản hiện tại đang bị khoá"),
-
-    // ===== SYSTEM / DATABASE =====
-    UNSUPPORTED_DATE_TYPE(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Định dạng thời gian không được hỗ trợ: %s."),
-
-
-    // ===== VEHICLE =====
-    INVALID_VEHICLE_TYPE(HttpStatus.BAD_REQUEST,
-            "Loại phương tiện không hợp lệ. Chỉ chấp nhận: 'xuồng', 'xe cứu hộ', 'trực thăng'"),
-    VEHICLE_NOT_AVAILABLE(HttpStatus.NOT_FOUND,
-            "Không có phương tiện khả dụng"),
-    VEHICLE_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "Không tìm thấy phương tiện với ID: %s"),
-    INVALID_VEHICLE_STATE(HttpStatus.BAD_REQUEST,
-            "Trạng thái phương tiện không hợp lệ"),
-    INVALID_VEHICLE_OWNER(HttpStatus.BAD_REQUEST,
-            "Nhân viên không hợp lệ: chỉ cho phép 'cứu hộ'"),
-
-
-    // ===== TEAM =====
-    RESCUE_TEAM_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "Không tìm thấy đội cứu hộ với id: %s"),
-    NO_NEARBY_TEAM_FOUND(HttpStatus.NOT_FOUND,
-            "Không tìm thấy đội cứu hộ nào phù hợp với phương tiện: %s"),
-    INVALID_TEAM_ROLE(HttpStatus.FORBIDDEN,
-            "Tài khoản gửi tin nhắn không phải đội cứu hộ"),
-
-    // ===== COORDINATOR =====
-    COORDINATOR_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "Không tìm thấy điều phối viên với id: %s"),
-    INVALID_COORDINATOR_ROLE(HttpStatus.FORBIDDEN,
-            "Tài khoản gửi tin nhắn không phải điều phối viên"),
-
-    // ===== URGENCY =====
-    INVALID_URGENCY(HttpStatus.BAD_REQUEST,
-            "Mức độ khẩn cấp không hợp lệ. Chỉ chấp nhận: 'cao', 'trung bình', 'thấp'"),
-
-    // ===== STAFF =====
-    STAFF_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "Không tìm thấy nhân viên với ID: %s"),
-    STAFF_ALREADY_EXISTS(HttpStatus.CONFLICT,
-            "Số điện thoại đã tồn tại: %s"),
-    INVALID_ROLE(HttpStatus.BAD_REQUEST,
-            "Role không hợp lệ. Chỉ chấp nhận: 'điều phối viên' hoặc 'cứu hộ'"),
-    INVALID_STAFF_STATE(HttpStatus.BAD_REQUEST,
-            "Trạng thái không hợp lệ. Chỉ chấp nhận: 'hoạt động' hoặc 'không hoạt động'"),
-
-    // ===== DASHBOARD =====
-    STAFF_DATA_EMPTY(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Lỗi thống kê: không có dữ liệu nhân viên"),
-    VEHICLE_DATA_EMPTY(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Lỗi thống kê: không có dữ liệu phương tiện"),
-    TEAM_PERFORMANCE_EMPTY(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Lỗi thống kê: không có dữ liệu hiệu suất đội"),
-    CITY_DATA_EMPTY(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Lỗi thống kê: không có dữ liệu thành phố");
-
-
+    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "The provided email address format is invalid."),
+    EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Invalid email verification token."),
+    EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
+    EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired.");
     private final HttpStatus status;
     private final String message;
 }

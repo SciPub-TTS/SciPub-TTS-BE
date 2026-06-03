@@ -23,7 +23,7 @@ public class JwtTokenService {
     private final long accessTokenMinutes;
 
     public JwtTokenService(@Value("${app.jwt.secret}") String secret,
-                           @Value("${app.jwt.access-token-minutes:60}") long accessTokenMinutes) {
+                           @Value("${app.jwt.access-token-minutes:15}") long accessTokenMinutes) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenMinutes = accessTokenMinutes;
     }
@@ -35,7 +35,13 @@ public class JwtTokenService {
         return Jwts.builder()
                 .subject(principal.getId().toString())
                 .claim("email", principal.getEmail())
-                .claim("role", principal.getAuthorities().stream().findFirst().orElseThrow().getAuthority())
+                .claim(
+                        "role",
+                        principal.getAuthorities().stream()
+                                .findFirst()
+                                .orElseThrow()
+                                .getAuthority()
+                )
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(secretKey)
@@ -52,12 +58,7 @@ public class JwtTokenService {
         return UUID.fromString(claims.getSubject());
     }
 
-    public boolean validate(String token) {
-        try {
-            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException ex) {
-            return false;
-        }
+    public long getAccessTokenExpiresInSeconds() {
+        return accessTokenMinutes * 60;
     }
 }
