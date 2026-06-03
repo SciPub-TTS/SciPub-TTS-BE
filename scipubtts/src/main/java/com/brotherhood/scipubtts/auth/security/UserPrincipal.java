@@ -31,7 +31,6 @@ public class UserPrincipal implements UserDetails, OAuth2User, CredentialsContai
     }
 
     public static UserPrincipal create(User user) {
-        System.out.println(user.getId());
         return new UserPrincipal(
                 user.getId(),
                 user.getEmail(),
