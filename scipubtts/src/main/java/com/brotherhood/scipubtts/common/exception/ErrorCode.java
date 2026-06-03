@@ -66,11 +66,11 @@ public enum ErrorCode {
 
     // ===== SEARCH / OPENALEX =====
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Không thể phân tích phản hồi từ OpenAlex"),
+            "Failed to parse the response from OpenAlex."),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+            "Request to OpenAlex failed after multiple attempts."),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn");
+            "The retry process was interrupted.");
     private final HttpStatus status;
     private final String message;
 
