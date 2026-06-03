@@ -61,6 +61,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public CurrentUserResponse getCurrentUser(UUID userId) {
+        System.out.println(userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 

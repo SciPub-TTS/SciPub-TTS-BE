@@ -22,12 +22,10 @@ import java.io.IOException;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
-    private final AccountService userService;
     private final AccountService accountService;
 
-    public AuthController(AuthService authService, AccountService userService, AccountService accountService) {
+    public AuthController(AuthService authService, AccountService accountService) {
         this.authService = authService;
-        this.userService = userService;
         this.accountService = accountService;
     }
 
@@ -98,7 +96,6 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<ResponseObject> me(@AuthenticationPrincipal UserPrincipal principal) {
-
         CurrentUserResponse data = accountService.getCurrentUser(principal.getId());
 
         return ResponseEntity.status(HttpStatus.OK).body(
