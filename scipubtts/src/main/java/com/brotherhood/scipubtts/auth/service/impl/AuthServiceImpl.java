@@ -123,6 +123,8 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
+        System.out.println(user.getId());
+
         String passwordHash = user.getPasswordHash();
 
         if (passwordHash == null || passwordHash.isBlank()) {
