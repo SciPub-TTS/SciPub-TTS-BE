@@ -40,7 +40,6 @@ public class AuthSessionServiceImpl implements AuthSessionService {
             HttpServletRequest request,
             HttpServletResponse response
     ) {
-        System.out.println(user.getId());
 
         RefreshTokenResult refreshResult =
                 refreshTokenService.issue(user, rememberMe, request);

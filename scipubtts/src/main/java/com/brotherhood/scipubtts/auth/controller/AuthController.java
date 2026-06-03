@@ -6,6 +6,7 @@ import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.CurrentUserResponse;
 import com.brotherhood.scipubtts.auth.service.AuthService;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.user.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -79,10 +81,11 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ResponseObject> logout(@AuthenticationPrincipal UserPrincipal principal,
-                                                 HttpServletRequest request,
-                                                 HttpServletResponse response) {
-
+    public ResponseEntity<ResponseObject> logout(
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
         authService.logout(principal, request, response);
 
         return ResponseEntity.ok(
@@ -95,8 +98,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ResponseObject> me(@AuthenticationPrincipal UserPrincipal principal) {
-        CurrentUserResponse data = accountService.getCurrentUser(principal.getId());
+    public ResponseEntity<ResponseObject> me(@CurrentUserUUID UUID userId) {
+        CurrentUserResponse data = accountService.getCurrentUser(userId);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(
