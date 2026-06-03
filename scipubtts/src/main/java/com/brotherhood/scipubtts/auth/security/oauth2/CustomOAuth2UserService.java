@@ -46,7 +46,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         if (!StringUtils.hasText(email)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
-                    ErrorCode.OAUTH2_EMAIL_NOT_FOUND.getMessage());
+                    "Email not found from Google");
         }
 
         Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
@@ -72,7 +72,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         } else {
             if (user.isBanned()) {
                 throw new OAuth2AuthenticationException(new OAuth2Error("account_banned"),
-                        ErrorCode.OAUTH2_ACCOUNT_BANNED.getMessage());
+                        "Account is banned");
             }
             if (!StringUtils.hasText(user.getFirstName())) {
                 user.setFirstName(givenName);
