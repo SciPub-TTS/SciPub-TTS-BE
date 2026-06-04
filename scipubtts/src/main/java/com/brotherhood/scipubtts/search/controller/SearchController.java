@@ -61,7 +61,7 @@ public class SearchController {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(200, "Search works successfully", data)
-        );
+            );
     }
 
     @GetMapping("/history/recent")
@@ -113,4 +113,3 @@ public class SearchController {
         return userPrincipal.getId();
     }
 }
-

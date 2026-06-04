@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.search.service;
+package com.brotherhood.scipubtts.common.openalex;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
@@ -78,6 +78,10 @@ public class OpenAlexClient {
                         .retrieve()
                         .body(String.class);
             } catch (RestClientResponseException exception) {
+                if (exception.getStatusCode().value() == 404) {
+                    throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+                }
+
                 lastException = exception;
 
                 if (!isRetryableStatus(exception.getStatusCode().value()) || attempt == MAX_RETRIES) {
@@ -111,4 +115,3 @@ public class OpenAlexClient {
         }
     }
 }
-

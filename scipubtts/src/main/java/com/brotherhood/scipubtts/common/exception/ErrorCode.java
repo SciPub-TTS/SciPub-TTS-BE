@@ -65,12 +65,14 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
 
     // ===== SEARCH / OPENALEX =====
+    OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "OpenAlex entity not found"),
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Không thể phân tích phản hồi từ OpenAlex"),
+            "Could not parse response from OpenAlex"),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+            "OpenAlex request failed after multiple attempts"),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn");
+            "Retry process was interrupted");
     private final HttpStatus status;
     private final String message;
 
