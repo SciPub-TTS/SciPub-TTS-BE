@@ -30,20 +30,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final AuthSessionService authSessionService;
     private final UserRepository userRepository;
 
-    private final AuthorizationRequestRepository<OAuth2AuthorizationRequest>
-            authorizationRequestRepository =
-            new HttpSessionOAuth2AuthorizationRequestRepository();
+    private final AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository = new HttpSessionOAuth2AuthorizationRequestRepository();
 
-    @Value("${app.frontend.oauth2-success-url:http://localhost:5173/oauth2/success}")
+    @Value("${app.frontend.oauth2-success-url}")
     private String frontendSuccessUrl;
-
 
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest request,
             HttpServletResponse response,
-            Authentication authentication
-    ) throws IOException, ServletException {
+            Authentication authentication) throws IOException, ServletException {
         if (!(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
             throw new ServletException("Invalid OAuth2 principal type. Expected OAuth2User.");
         }
@@ -62,28 +58,26 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 user,
                 false,
                 request,
-                response
-        );
+                response);
 
         String targetUrl = frontendSuccessUrl;
-//        User click "Continue with Google"
-//        ↓
-//        Google redirect về /oauth2/callback (Spring Security tự xử lý)
-//        ↓
-//        OAuth2AuthenticationSuccessHandler.onAuthenticationSuccess()
-//          → authSessionService.issueSession() → set HttpOnly refresh cookie
-//          → sendRedirect("http://localhost:5173/oauth2/success")  ← No token
-//              ↓
-//        FE OAuth2SuccessPage mount
-//          → POST /api/auth/refresh (browser tự attach cookie)
-//          → backend trả accessToken
-//          → lưu vào localStorage
-//              ↓
-//          → GET /api/auth/me
-//          → lưu user vào storage
-//              ↓
-//          → navigate("/")
-
+        // User click "Continue with Google"
+        // ↓
+        // Google redirect về /oauth2/callback (Spring Security tự xử lý)
+        // ↓
+        // OAuth2AuthenticationSuccessHandler.onAuthenticationSuccess()
+        // → authSessionService.issueSession() → set HttpOnly refresh cookie
+        // → sendRedirect("http://localhost:5173/oauth2/success") ← No token
+        // ↓
+        // FE OAuth2SuccessPage mount
+        // → POST /api/auth/refresh (browser tự attach cookie)
+        // → backend trả accessToken
+        // → lưu vào localStorage
+        // ↓
+        // → GET /api/auth/me
+        // → lưu user vào storage
+        // ↓
+        // → navigate("/")
 
         authorizationRequestRepository.removeAuthorizationRequest(request, response);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
