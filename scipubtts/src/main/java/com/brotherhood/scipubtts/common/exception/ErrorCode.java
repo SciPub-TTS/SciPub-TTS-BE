@@ -14,6 +14,7 @@ public enum ErrorCode {
             "Authentication is required to access this resource."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN,
             "You do not have permission to access this resource."),
+    EMAIL_EXISTS(HttpStatus.CONFLICT, "Email already exists"),
 
     ACCOUNT_BANNED(HttpStatus.FORBIDDEN,
             "This account has been banned."),

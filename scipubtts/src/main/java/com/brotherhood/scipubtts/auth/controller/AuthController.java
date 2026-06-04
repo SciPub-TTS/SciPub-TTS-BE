@@ -9,6 +9,7 @@ import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.user.service.AccountService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -98,7 +99,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ResponseObject> me(@CurrentUserUUID UUID userId) {
+    public ResponseEntity<ResponseObject> me(@Parameter(hidden = true) @CurrentUserUUID UUID userId) {
         CurrentUserResponse data = accountService.getCurrentUser(userId);
 
         return ResponseEntity.status(HttpStatus.OK).body(
