@@ -58,7 +58,7 @@ public class SearchController {
 
     @GetMapping("/works")
     public ResponseEntity<ResponseObject> searchWorks(
-            @CurrentUserUUID(required = false) UUID userId, // URL công khai: Khách vãng lai dùng thì userId = null
+            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId, // URL công khai: Khách vãng lai dùng thì userId = null
             @ModelAttribute SearchWorksQueryRequest request
     ) {
         // Mẹo nhỏ: Bạn có thể check nếu userId != null thì gọi service lưu lịch sử tìm kiếm ngầm tại đây
@@ -71,7 +71,7 @@ public class SearchController {
 
     @GetMapping("/history/recent")
     public ResponseEntity<ResponseObject> getRecentSearches(
-            @CurrentUserUUID UUID userId, // Ép buộc bảo mật: Không có đăng nhập tự động tạch từ vòng gửi xe (401)
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam(defaultValue = "5") int limit
     ) {
         List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, limit);
@@ -83,7 +83,7 @@ public class SearchController {
 
     @PostMapping("/history")
     public ResponseEntity<ResponseObject> saveSearchHistory(
-            @CurrentUserUUID UUID userId, // Ép buộc bảo mật
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
         SearchHistorySaveRequest updatedRequest = request.withUserId(userId);
@@ -96,7 +96,7 @@ public class SearchController {
 
     @DeleteMapping("/history")
     public ResponseEntity<ResponseObject> deleteSearchHistory(
-            @CurrentUserUUID UUID userId, // Ép buộc bảo mật
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam String query
     ) {
         searchService.deleteSearchHistory(userId, query);

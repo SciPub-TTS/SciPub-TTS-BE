@@ -14,7 +14,12 @@ spring.security.oauth2.client.registration.google.client-secret=dien_google_clie
 
 # Security Secrets
 app.jwt.secret=chuoi_key_ngau_nhien_co_do_dai_tren_32_ky_tu_cho_local
+app.backend-base-url=your_local_backend_base_url
 server.servlet.session.cookie.name=SCIPUB_SESSION_LOCAL
 
 # CORS local
-app.cors.allowed-origins=http://localhost:3000
+app.cors.allowed-origins=http://localhost:5173,http://localhost:8080,https://yourdomain.com
+app.auth.refresh-cookie-secure=false
+app.auth.refresh-cookie-same-site=Lax
+
+logging.level.org.springframework.security=DEBUG
