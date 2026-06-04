@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClient;
 public class OpenAlexConfig {
 
   @Bean
-  public RestClient openAlexClient() {
+  public RestClient openAlexRestClient() {
     return RestClient.builder()
             .baseUrl("https://api.openalex.org")
             .defaultHeader("User-Agent", "ScipubTTS")

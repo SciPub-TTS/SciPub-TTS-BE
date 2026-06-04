@@ -70,9 +70,13 @@ public enum ErrorCode {
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
             "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn");
+            "Quá trình thử lại bị gián đoạn"),
+
+    // ===== STATISTIC / OPENALEX ====
+    OPENALEX_SERVICE_ERROR(HttpStatus.BAD_GATEWAY,
+            "Failed to retrieve publication data from OpenAlex");
+
     private final HttpStatus status;
     private final String message;
-
 
 }

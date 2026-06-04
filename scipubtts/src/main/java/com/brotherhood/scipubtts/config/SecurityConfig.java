@@ -94,7 +94,8 @@ public class SecurityConfig {
                                 "/login/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/api/statistic/**"
                         )
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -123,5 +124,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
-
