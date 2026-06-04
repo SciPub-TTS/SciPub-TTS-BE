@@ -75,5 +75,6 @@ public enum ErrorCode {
     private final HttpStatus status;
     private final String message;
 
-
+    // ===== DEPLOY =====
+    FRONTEND_BASE_URL_REQUIRED("FRONTEND_BASE_URL_REQUIRED", "Client must provide appBaseUrl"),
 }
