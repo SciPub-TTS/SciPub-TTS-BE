@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.search.controller;
 
+import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
@@ -56,7 +57,11 @@ public class SearchController {
     }
 
     @GetMapping("/works")
-    public ResponseEntity<ResponseObject> searchWorks(@ModelAttribute SearchWorksQueryRequest request) {
+    public ResponseEntity<ResponseObject> searchWorks(
+            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId, // URL công khai: Khách vãng lai dùng thì userId = null
+            @ModelAttribute SearchWorksQueryRequest request
+    ) {
+        // Mẹo nhỏ: Bạn có thể check nếu userId != null thì gọi service lưu lịch sử tìm kiếm ngầm tại đây
         SearchWorksResponse data = searchService.searchWorks(request);
 
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -66,14 +71,10 @@ public class SearchController {
 
     @GetMapping("/history/recent")
     public ResponseEntity<ResponseObject> getRecentSearches(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam(defaultValue = "5") int limit
     ) {
-        UUID userId = requireUserId(userPrincipal);
-        List<SearchHistoryItemResponse> data = searchService.getRecentSearches(
-                userId,
-                limit
-        );
+        List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, limit);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(200, "Loaded recent searches", data)
@@ -82,10 +83,10 @@ public class SearchController {
 
     @PostMapping("/history")
     public ResponseEntity<ResponseObject> saveSearchHistory(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
-        SearchHistorySaveRequest updatedRequest = request.withUserId(requireUserId(userPrincipal));
+        SearchHistorySaveRequest updatedRequest = request.withUserId(userId);
         searchService.saveSearchHistory(updatedRequest);
 
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -95,22 +96,14 @@ public class SearchController {
 
     @DeleteMapping("/history")
     public ResponseEntity<ResponseObject> deleteSearchHistory(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam String query
     ) {
-        searchService.deleteSearchHistory(requireUserId(userPrincipal), query);
+        searchService.deleteSearchHistory(userId, query);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(200, "Deleted search history", null)
         );
-    }
-
-    private UUID requireUserId(UserPrincipal userPrincipal) {
-        if (userPrincipal == null || userPrincipal.getId() == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-
-        return userPrincipal.getId();
     }
 }
 

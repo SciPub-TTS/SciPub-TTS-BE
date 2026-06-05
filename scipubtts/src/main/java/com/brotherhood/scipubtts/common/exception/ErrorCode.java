@@ -14,6 +14,7 @@ public enum ErrorCode {
             "Authentication is required to access this resource."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN,
             "You do not have permission to access this resource."),
+    EMAIL_EXISTS(HttpStatus.CONFLICT, "Email already exists"),
 
     ACCOUNT_BANNED(HttpStatus.FORBIDDEN,
             "This account has been banned."),
@@ -66,16 +67,16 @@ public enum ErrorCode {
 
     // ===== SEARCH / OPENALEX =====
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Không thể phân tích phản hồi từ OpenAlex"),
+            "Failed to parse the response from OpenAlex."),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+            "Request to OpenAlex failed after multiple attempts."),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn"),
+            "The retry process was interrupted."),
 
     // ===== STATISTIC / OPENALEX ====
     OPENALEX_SERVICE_ERROR(HttpStatus.BAD_GATEWAY,
             "Failed to retrieve publication data from OpenAlex");
-
+  
     private final HttpStatus status;
     private final String message;
 
