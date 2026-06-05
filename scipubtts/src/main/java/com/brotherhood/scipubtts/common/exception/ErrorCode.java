@@ -71,9 +71,13 @@ public enum ErrorCode {
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
             "Request to OpenAlex failed after multiple attempts."),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "The retry process was interrupted.");
+            "The retry process was interrupted."),
+
+    // ===== STATISTIC / OPENALEX ====
+    OPENALEX_SERVICE_ERROR(HttpStatus.BAD_GATEWAY,
+            "Failed to retrieve publication data from OpenAlex");
+  
     private final HttpStatus status;
     private final String message;
-
 
 }
