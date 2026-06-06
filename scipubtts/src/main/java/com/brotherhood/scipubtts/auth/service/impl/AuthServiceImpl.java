@@ -218,7 +218,7 @@ public class AuthServiceImpl implements AuthService {
 
     private String buildRedirectUrl(String appBaseUrl) {
         if (appBaseUrl == null || appBaseUrl.isBlank()) {
-      throw new BusinessException(ErrorCode.FRONTEND_BASE_URL_REQUIRED)  
+      throw new BusinessException(ErrorCode.FRONTEND_BASE_URL_REQUIRED);  
         }
         return appBaseUrl + "/login?verified=true";
     }

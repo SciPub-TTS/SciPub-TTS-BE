@@ -65,6 +65,8 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
 
+    // ===== DEPLOY =====
+    FRONTEND_BASE_URL_REQUIRED(HttpStatus.BAD_REQUEST,"Client must provide appBaseUrl"),
     // ===== SEARCH / OPENALEX =====
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
             "Failed to parse the response from OpenAlex."),
@@ -75,6 +77,4 @@ public enum ErrorCode {
     private final HttpStatus status;
     private final String message;
 
-    // ===== DEPLOY =====
-    FRONTEND_BASE_URL_REQUIRED("FRONTEND_BASE_URL_REQUIRED", "Client must provide appBaseUrl"),
 }
