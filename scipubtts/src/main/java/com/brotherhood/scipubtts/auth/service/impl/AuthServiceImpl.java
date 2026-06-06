@@ -47,15 +47,14 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
 
-    @Value("${app.backend-base-url:http://localhost:8080}")
+    @Value("${app.backend-base-url}")
     private String backendBaseUrl;
 
     @Override
     @Transactional
     public String registerLocal(RegisterLocalRequest request) {
-        // giữ nguyên logic register hiện tại của bạn
         if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Email already exists");
+            throw new BusinessException(ErrorCode.EMAIL_EXISTS);
         }
 
         User user = User.builder()
