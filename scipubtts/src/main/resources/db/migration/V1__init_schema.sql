@@ -1,6 +1,7 @@
 -- =========================================================
--- Flyway Migration: V2__init_scipub_tts_mvp_schema.sql
--- Purpose: User features, OpenAlex JSONB caching, and background job logs for SciPub-TTS MVP
+-- Flyway Migration: V1__init_schema.sql
+-- Purpose: Full schema — Auth, User Features, OpenAlex Cache,
+--          Background Job Logs, and Taxonomy (Fields/Subfields/Topics)
 -- Database: PostgreSQL
 -- =========================================================
 
@@ -228,9 +229,45 @@ CREATE TABLE api_call_log (
 );
 
 -- =========================================================
--- 5. INDEXES
+-- 5. TAXONOMY (Fields → Subfields → Topics)
 -- =========================================================
 
+CREATE TABLE fields (
+    openalex_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE subfields (
+    openalex_id TEXT PRIMARY KEY,
+    field_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+
+    CONSTRAINT fk_subfields_field_id
+        FOREIGN KEY (field_id)
+        REFERENCES fields(openalex_id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE topics (
+    openalex_id TEXT PRIMARY KEY,
+    subfield_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    works_count BIGINT NOT NULL DEFAULT 0,
+    cited_by_count BIGINT NOT NULL DEFAULT 0,
+    updated_date TIMESTAMPTZ,
+
+    CONSTRAINT fk_topics_subfield_id
+        FOREIGN KEY (subfield_id)
+        REFERENCES subfields(openalex_id)
+        ON DELETE CASCADE
+);
+
+-- =========================================================
+-- 6. INDEXES
+-- =========================================================
+
+-- Auth
 CREATE INDEX idx_email_verification_user ON email_verification_token(user_id);
 CREATE INDEX idx_email_verification_token ON email_verification_token(token);
 
@@ -241,6 +278,7 @@ CREATE INDEX idx_password_reset_grant_challenge ON password_reset_grant(challeng
 CREATE INDEX idx_refresh_token_user ON refresh_token(user_id);
 CREATE INDEX idx_refresh_token_hash ON refresh_token(token_hash);
 
+-- User features
 CREATE INDEX idx_bookmark_user ON user_bookmark(user_id);
 CREATE INDEX idx_bookmark_openalex ON user_bookmark(entity_type, openalex_id);
 
@@ -251,10 +289,16 @@ CREATE INDEX idx_search_history_user_created ON search_history(user_id, created_
 
 CREATE INDEX idx_feed_user_generated ON research_feed_item(user_id, generated_at DESC);
 
+-- OpenAlex cache
 CREATE INDEX idx_openalex_cache_openalex_id ON openalex_entity_cache(openalex_id);
 CREATE INDEX idx_openalex_cache_entity ON openalex_entity_cache(entity_type, openalex_id);
 CREATE INDEX idx_openalex_cache_expires ON openalex_entity_cache(expires_at);
 CREATE INDEX idx_openalex_cache_raw_payload ON openalex_entity_cache USING GIN (raw_payload);
 
+-- Job logs
 CREATE INDEX idx_api_job_status ON api_job(status);
 CREATE INDEX idx_api_call_log_job ON api_call_log(job_id);
+
+-- Taxonomy
+CREATE INDEX idx_subfields_field_id ON subfields(field_id);
+CREATE INDEX idx_topics_subfield_id ON topics(subfield_id);

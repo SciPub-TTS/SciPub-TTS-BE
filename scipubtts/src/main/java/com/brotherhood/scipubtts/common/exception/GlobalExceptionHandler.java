@@ -28,17 +28,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(OAuth2AuthenticationException.class)
-    public ResponseEntity<ResponseObject> handleOAuth2AuthenticationException(OAuth2AuthenticationException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                new ResponseObject(
-                        401,
-                        ex.getMessage(),
-                        null
-                )
-        );
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResponseObject> handleUnexpectedException(Exception ex) {
 

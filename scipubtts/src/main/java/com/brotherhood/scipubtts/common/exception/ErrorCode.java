@@ -19,6 +19,8 @@ public enum ErrorCode {
             "This account has been banned."),
     EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN,
             "Please verify your email address before logging in."),
+    EMAIL_EXISTS(HttpStatus.FORBIDDEN,
+            "The email has been exist."),
     LOCAL_PASSWORD_NOT_AVAILABLE(HttpStatus.BAD_REQUEST,
             "This account does not support local password authentication."),
 
