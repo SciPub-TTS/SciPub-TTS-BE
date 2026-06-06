@@ -77,7 +77,15 @@ public enum ErrorCode {
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
             "OpenAlex request failed after multiple attempts"),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Retry process was interrupted");
+            "The retry process was interrupted."),
+    OPENALEX_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY,
+            "Failed to retrieve publication data from OpenAlex"),
+
+    // ===== BOOKMARK =====
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
+    BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark.");
+
     private final HttpStatus status;
     private final String message;
 
