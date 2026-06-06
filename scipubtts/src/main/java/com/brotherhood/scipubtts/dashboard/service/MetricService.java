@@ -2,9 +2,9 @@ package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.dashboard.constant.MetricTitle;
 import com.brotherhood.scipubtts.dashboard.constant.OpenAlexEntity;
-import com.brotherhood.scipubtts.dashboard.dto.request.MetricRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsInPeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsToPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsInPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsToPeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.MetricsResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Metric;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import java.util.List;
 public class MetricService {
   private final OpenAlexService openAlexService;
 
-  public MetricsResponse takeMetrics(MetricRequest request){
+  public MetricsResponse takeMetrics(PeriodRequest request){
     /// TODO: Query from db
     long totalPaperPreviousPeriod = 310854931L;
     long totalTopicPreviousPeriod = 4406L;

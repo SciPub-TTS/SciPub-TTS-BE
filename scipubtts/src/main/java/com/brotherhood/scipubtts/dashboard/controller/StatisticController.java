@@ -1,10 +1,12 @@
 package com.brotherhood.scipubtts.dashboard.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.dashboard.dto.request.MetricRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
 import com.brotherhood.scipubtts.dashboard.service.MetricService;
 import com.brotherhood.scipubtts.dashboard.service.PublicationService;
+import com.brotherhood.scipubtts.dashboard.service.TopicService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,10 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class StatisticController {
   private final PublicationService publicationService;
   private final MetricService metricService;
+  private final TopicService topicService;
 
-  public StatisticController(PublicationService publicationService, MetricService metricService) {
+  public StatisticController(PublicationService publicationService, MetricService metricService, TopicService topicService) {
     this.publicationService = publicationService;
     this.metricService = metricService;
+    this.topicService = topicService;
   }
 
   @PostMapping("/publication-trends")
@@ -39,13 +43,30 @@ public class StatisticController {
   }
 
   @PostMapping("/metrics")
-  public ResponseEntity<ResponseObject> takeMetrics(@Valid @RequestBody MetricRequest request, HttpServletRequest httpServletRequest){
+  public ResponseEntity<ResponseObject> takeMetrics(@Valid @RequestBody PeriodRequest request, HttpServletRequest httpServletRequest){
     var data = metricService.takeMetrics(request);
 
     return ResponseEntity.ok(
             new ResponseObject(
                     HttpStatus.OK.value(),
                     "Get publication trends successfully",
+                    data
+            )
+    );
+  }
+
+  @PostMapping("/TopicScore")
+  public ResponseEntity<ResponseObject> calculateTopicsScore(
+          @Valid @RequestBody TopicCalculateRequest request,
+          HttpServletRequest httpServletRequest){
+    var data = topicService.calculateVelocityAllTopics(request);
+
+    // TODO: data will be calculated through more service to fill full the topic score.
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Calculate all topics score",
                     data
             )
     );

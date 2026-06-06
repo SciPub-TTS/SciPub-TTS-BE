@@ -1,22 +1,35 @@
 package com.brotherhood.scipubtts.dashboard.service;
 
-import com.brotherhood.scipubtts.dashboard.constant.OpenAlexEntity;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsInPeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsToPeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexPublicationRequest;
-import com.brotherhood.scipubtts.dashboard.dto.response.OpenAlexMetricsResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.OpenAlexPublicationResponse;
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.dashboard.dto.request.*;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsInPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsToPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexVelocityRequest;
+import com.brotherhood.scipubtts.dashboard.dto.response.*;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexHotTopicFilterResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexMetricsResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexPublicationResponse;
+import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class OpenAlexService {
   private final RestClient restClient;
+  private final int TOP_TOPICS = 30;
 
   public OpenAlexService(RestClient openAlexClient) {
     this.restClient = openAlexClient;
   }
 
+  // Service for publication
   public OpenAlexPublicationResponse searchPublicationsByYear(OpenAlexPublicationRequest request){
     if(request.yearFrom().isEmpty() || request.yearTo().isEmpty()) {
       return null;
@@ -41,6 +54,7 @@ public class OpenAlexService {
             .body(OpenAlexPublicationResponse.class);
   }
 
+  // Service for metric
   public OpenAlexMetricsResponse takeMetricsInPeriod(OpenAlexMetricsInPeriodRequest request){
     if(request.endTime().isEmpty() || request.startTime().isEmpty()){
       return null;
@@ -93,5 +107,175 @@ public class OpenAlexService {
                             .build())
             .retrieve()
             .body(OpenAlexMetricsResponse.class);
+  }
+
+  // Service for topic
+  public TopicHotFilterResponse filterHotTopic(
+          TopicHotFilterRequest request
+  ){
+    var queryPeriod = String.format("field.id:%s", request.fieldId());
+
+    var topOfCited = restClient.get()
+            .uri(uriBuilder ->
+                    uriBuilder
+                            .path("/topics")
+                            .queryParam(
+                                    "filter",
+                                    queryPeriod
+                            )
+                            .queryParam(
+                                    "page",
+                                    1
+                            ).queryParam(
+                                    "per_page",
+                                    TOP_TOPICS
+                            ).queryParam(
+                                    "select",
+                                    "id,display_name"
+                            ).queryParam(
+                                    "sort",
+                                  "cited_by_count:desc"
+                            )
+                            .build())
+            .retrieve()
+            .body(OpenAlexHotTopicFilterResponse.class);
+
+    var topOfWorks = restClient.get()
+            .uri(uriBuilder ->
+                    uriBuilder
+                            .path("/topics")
+                            .queryParam(
+                                    "filter",
+                                    queryPeriod
+                            )
+                            .queryParam(
+                                    "page",
+                                    1
+                            ).queryParam(
+                                    "per_page",
+                                    TOP_TOPICS
+                            ).queryParam(
+                                    "select",
+                                    "id,display_name"
+                            ).queryParam(
+                                    "sort",
+                                    "works_count:desc"
+                            )
+                            .build())
+            .retrieve()
+            .body(OpenAlexHotTopicFilterResponse.class);
+
+    Set<String> visited =
+            new LinkedHashSet<>();
+
+    List<Topic> topics =
+            new ArrayList<>();
+
+    if (topOfCited != null) {
+
+      topOfCited.results()
+              .forEach(item -> {
+
+                if (visited.add(item.id())) {
+                    topics.add(
+                          new Topic(
+                                  item.id(),
+                                  item.displayName(),
+                                  null,
+                                  null,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  0
+                          )
+                  );
+
+                }
+
+              });
+
+    }
+
+    if (topOfWorks != null) {
+
+      topOfWorks.results()
+              .forEach(item -> {
+
+                if (
+                        visited.add(
+                                item.id()
+                        )
+                ) {
+
+                  topics.add(
+                          new Topic(
+                                  item.id(),
+                                  item.displayName(),
+                                  null,
+                                  null,
+                                  0,
+                                  0,
+                                  0,
+                                  0,
+                                  0
+                          )
+                  );
+
+                }
+
+              });
+
+    }
+
+    return new TopicHotFilterResponse(
+            List.copyOf(
+                    topics
+            )
+    );
+  }
+
+  public long numOfWorksInPeriodByTopic(
+          OpenAlexVelocityRequest request
+  ){
+    var filter = String.format(
+            "from_publication_date:%s,to_publication_date:%s,topics.id:%s",
+            request.startTime(),
+            request.endTime(),
+            request.topicId()
+    );
+
+    var response = restClient.get()
+            .uri(uriBuilder ->
+                    uriBuilder
+                            .path("/works")
+                            .queryParam(
+                                    "filter",
+                                    filter
+                            )
+                            .queryParam(
+                                    "page",
+                                    1
+                            )
+                            .queryParam(
+                                    "per-page",
+                                    1
+                            )
+                            .queryParam(
+                                    "select",
+                                    "id"
+                            )
+                            .build()
+            )
+            .retrieve()
+            .body(OpenAlexMetricsResponse.class);
+
+    if (response == null || response.meta() == null) {
+      throw new BusinessException(
+              ErrorCode.OPENALEX_SERVICE_ERROR
+      );
+    }
+
+    return response.meta().count();
   }
 }

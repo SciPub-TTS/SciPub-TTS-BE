@@ -2,7 +2,7 @@ package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendResponse;
 import com.brotherhood.scipubtts.dashboard.entity.PublicationTrend;
 import lombok.RequiredArgsConstructor;

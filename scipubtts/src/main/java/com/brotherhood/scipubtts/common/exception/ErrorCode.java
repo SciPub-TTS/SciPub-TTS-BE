@@ -74,7 +74,9 @@ public enum ErrorCode {
 
     // ===== STATISTIC / OPENALEX ====
     OPENALEX_SERVICE_ERROR(HttpStatus.BAD_GATEWAY,
-            "Failed to retrieve publication data from OpenAlex");
+            "Failed to retrieve publication data from OpenAlex"),
+    TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,
+            "Request start time and end time must not be null");
 
     private final HttpStatus status;
     private final String message;
