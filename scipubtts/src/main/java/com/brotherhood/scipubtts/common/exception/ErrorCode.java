@@ -65,16 +65,20 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
 
-    // ===== SEARCH / OPENALEX =====
+    // ===== OPENALEX =====
+    INVALID_CANVAS_ENTITY_TYPE(HttpStatus.BAD_REQUEST,
+            "Unsupported canvas entity type."),
+    OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "OpenAlex entity not found"),
+    OPENALEX_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE,
+            "OpenAlex service returned empty or invalid data."),
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Failed to parse the response from OpenAlex."),
+            "Could not parse response from OpenAlex"),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Request to OpenAlex failed after multiple attempts."),
+            "OpenAlex request failed after multiple attempts"),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
             "The retry process was interrupted."),
-
-    // ===== STATISTIC / OPENALEX ====
-    OPENALEX_SERVICE_ERROR(HttpStatus.BAD_GATEWAY,
+    OPENALEX_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY,
             "Failed to retrieve publication data from OpenAlex"),
 
     // ===== BOOKMARK =====
@@ -84,5 +88,6 @@ public enum ErrorCode {
 
     private final HttpStatus status;
     private final String message;
+
 
 }
