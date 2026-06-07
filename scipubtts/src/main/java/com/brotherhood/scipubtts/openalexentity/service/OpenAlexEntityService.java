@@ -1,8 +1,8 @@
-package com.brotherhood.scipubtts.canvas.service;
+package com.brotherhood.scipubtts.openalexentity.service;
 
 import java.util.Map;
 
-public interface CanvasService {
+public interface OpenAlexEntityService {
     Map<String, Object> getEntityDetail(String entityType, String entityId);
 
     Map<String, Object> getEntityTopWorks(

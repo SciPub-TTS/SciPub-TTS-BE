@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.canvas.service;
+package com.brotherhood.scipubtts.openalexentity.service;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
@@ -10,23 +10,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Component
-public class CanvasOpenAlexQueryFactory {
+public class OpenAlexEntityQueryFactory {
 
     private static final String TOP_WORKS_SELECT_FIELDS =
             "id,display_name,publication_year,cited_by_count,primary_location,best_oa_location";
 
     private final SearchQuerySupport searchQuerySupport;
 
-    public CanvasOpenAlexQueryFactory(SearchQuerySupport searchQuerySupport) {
+    public OpenAlexEntityQueryFactory(SearchQuerySupport searchQuerySupport) {
         this.searchQuerySupport = searchQuerySupport;
     }
 
-    public String buildEntityDetailPath(CanvasEntityType entityType, String entityId) {
+    public String buildEntityDetailPath(OpenAlexEntityType entityType, String entityId) {
         return entityType.buildEntityPath(normalizeEntityId(entityId));
     }
 
     public Map<String, String> buildTopWorksQueryParams(
-            CanvasEntityType entityType,
+            OpenAlexEntityType entityType,
             String entityId,
             Integer page,
             Integer perPage,

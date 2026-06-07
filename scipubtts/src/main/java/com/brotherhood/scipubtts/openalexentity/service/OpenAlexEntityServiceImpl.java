@@ -1,29 +1,29 @@
-package com.brotherhood.scipubtts.canvas.service;
+package com.brotherhood.scipubtts.openalexentity.service;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
 import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
-public class CanvasServiceImpl implements CanvasService {
+public class OpenAlexEntityServiceImpl implements OpenAlexEntityService {
 
     private final OpenAlexClient openAlexClient;
-    private final CanvasOpenAlexQueryFactory canvasOpenAlexQueryFactory;
+    private final OpenAlexEntityQueryFactory openAlexEntityQueryFactory;
 
-    public CanvasServiceImpl(
+    public OpenAlexEntityServiceImpl(
             OpenAlexClient openAlexClient,
-            CanvasOpenAlexQueryFactory canvasOpenAlexQueryFactory
+            OpenAlexEntityQueryFactory openAlexEntityQueryFactory
     ) {
         this.openAlexClient = openAlexClient;
-        this.canvasOpenAlexQueryFactory = canvasOpenAlexQueryFactory;
+        this.openAlexEntityQueryFactory = openAlexEntityQueryFactory;
     }
 
     @Override
     public Map<String, Object> getEntityDetail(String entityType, String entityId) {
-        CanvasEntityType resolvedType = CanvasEntityType.fromValue(entityType);
+        OpenAlexEntityType resolvedType = OpenAlexEntityType.fromValue(entityType);
 
         return openAlexClient.get(
-                canvasOpenAlexQueryFactory.buildEntityDetailPath(resolvedType, entityId),
+                openAlexEntityQueryFactory.buildEntityDetailPath(resolvedType, entityId),
                 Map.of()
         );
     }
@@ -36,11 +36,11 @@ public class CanvasServiceImpl implements CanvasService {
             Integer perPage,
             String sort
     ) {
-        CanvasEntityType resolvedType = CanvasEntityType.fromValue(entityType);
+        OpenAlexEntityType resolvedType = OpenAlexEntityType.fromValue(entityType);
 
         return openAlexClient.get(
                 "/works",
-                canvasOpenAlexQueryFactory.buildTopWorksQueryParams(
+                openAlexEntityQueryFactory.buildTopWorksQueryParams(
                         resolvedType,
                         entityId,
                         page,
