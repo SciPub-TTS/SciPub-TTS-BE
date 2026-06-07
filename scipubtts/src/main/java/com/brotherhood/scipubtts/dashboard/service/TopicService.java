@@ -191,6 +191,20 @@ public class TopicService {
     return Math.round(citationScore * 1000.0) / 1000.0;
   }
 
+  private double calculateInstitution(
+          Topic topic
+  ) {
+
+    return openAlexService
+            .countInstitutionByTopic(
+                    new OpenAlexTopicFilterRequest(
+                            topic.getStartTime(),
+                            topic.getEndTime(),
+                            topic.getTopicId()
+                    )
+            );
+  }
+
   public TopicCalculateResponse calculateAllTopicsScore(
           TopicCalculateRequest request
   ){
@@ -203,17 +217,14 @@ public class TopicService {
 
     for (var topic : topicList.topicIdList()) {
       System.out.println("\n--------------------------------------------");
-      System.out.printf("👉 Processing Topic ID: %s\n", topic.getTopicId());
+      System.out.printf("=> Processing Topic ID: %s\n", topic.getTopicId());
 
       // VELOCITY
-      long startVelocity = System.currentTimeMillis();
       var velocity =
               calculateVelocity(
                       request.endTime(),
                       topic.getTopicId()
               );
-      long endVelocity = System.currentTimeMillis();
-      System.out.printf("   [Formula] calculateVelocity execution time: %d ms\n", (endVelocity - startVelocity));
 
       topic.setStartTime(
               request.startTime()
@@ -227,29 +238,32 @@ public class TopicService {
               velocity
       );
 
-      // ACCELERATE
-      long startAcceleration = System.currentTimeMillis();
-      var acceleration =
-              calculateAcceleration(
-                      topic
-              );
-      long endAcceleration = System.currentTimeMillis();
-      System.out.printf("   [Formula] calculateAcceleration execution time: %d ms\n", (endAcceleration - startAcceleration));
+//      // ACCELERATE
+//      var acceleration =
+//              calculateAcceleration(
+//                      topic
+//              );
+//
+//      topic.setAcceleration(
+//              acceleration
+//      );
+//
+//      // CITATION
+//      long startCitation = System.currentTimeMillis();
+//      var citation =
+//              calculateCitationDecay(
+//                      topic
+//              );
+//      long endCitation = System.currentTimeMillis();
+//      System.out.printf("   [Formula] calculateCitationDecay execution time: %d ms\n", (endCitation - startCitation));
+//
+//      topic.setCitation(citation);
 
-      topic.setAcceleration(
-              acceleration
-      );
+      // INSTITUTION
+      var institution =
+              calculateInstitution(topic);
 
-      // CITATION
-      long startCitation = System.currentTimeMillis();
-      var citation =
-              calculateCitationDecay(
-                      topic
-              );
-      long endCitation = System.currentTimeMillis();
-      System.out.printf("   [Formula] calculateCitationDecay execution time: %d ms\n", (endCitation - startCitation));
-
-      topic.setCitation(citation);
+      topic.setInstitution(institution);
 
       result.add(
               topic

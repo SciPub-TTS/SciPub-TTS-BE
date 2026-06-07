@@ -8,10 +8,7 @@ import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsT
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.*;
-import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexHotTopicFilterResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexMetricsResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexPublicationResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexWorkCitationResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.*;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -361,5 +358,50 @@ public class OpenAlexService {
 
     System.out.println("Total API calls made: " + apiCallCount);
     return new OpenAlexWorkCitationResponse(null, result);
+  }
+
+  public long countInstitutionByTopic(
+          OpenAlexTopicFilterRequest request
+  ) {
+
+    String filter =
+            String.format(
+                    "topics.id:%s," +
+                            "from_publication_date:%s," +
+                            "to_publication_date:%s",
+                    request.topicId(),
+                    request.startTime(),
+                    request.endTime()
+            );
+
+    long total = 0;
+    String cursor = "*";
+
+    while (cursor != null) {
+      final String currentCursor = cursor;
+
+      OpenAlexInstitutionResponse response = restClient.get()
+              .uri(uriBuilder -> uriBuilder
+                      .path("/works")
+                      .queryParam("filter", filter)
+                      .queryParam("group_by", "authorships.institutions.id")
+                      .queryParam("per_page", 200)
+                      .queryParam("cursor", currentCursor)
+                      .build()
+              )
+              .retrieve()
+              .body(OpenAlexInstitutionResponse.class);
+
+      if (response == null || response.groupBy() == null) break;
+
+      int pageCount = response.groupBy().size();
+      total += pageCount;
+
+      if (pageCount < 200) break; // page cuối
+
+      cursor = response.meta().nextCursor(); // null nếu hết
+    }
+
+    return total;
   }
 }
