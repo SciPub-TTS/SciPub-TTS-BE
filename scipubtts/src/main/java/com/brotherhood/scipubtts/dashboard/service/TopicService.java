@@ -4,7 +4,7 @@ import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexVelocityRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import lombok.RequiredArgsConstructor;
@@ -20,37 +20,37 @@ import java.util.List;
 public class TopicService {
   private final OpenAlexService openAlexService;
   private static final long VELOCITY_PERIOD_DAYS = 14;
+  private static final double CITATION_LAMBDA = Math.log(2);
 
   private double calculateVelocity(
-          TopicCalculateRequest request, String topicId
+          String endTime, String topicId
   ){
-    if(request.startTime().isEmpty() || request.endTime().isEmpty()){
+    if(endTime.isEmpty()){
       throw new BusinessException(
               ErrorCode.TOPIC_REQUEST_INVALID
       );
     }
 
-    var currentStart =
-            LocalDate.parse(request.startTime());
-
     var currentEnd =
-            LocalDate.parse(request.endTime());
+            LocalDate.parse(endTime);
 
-    var previousStart =
-            currentStart.minus(
+    var currentStart =
+            currentEnd.minus(
                     VELOCITY_PERIOD_DAYS,
                     ChronoUnit.DAYS
             );
 
-    var previousEnd =
-            currentEnd.minus(
+    var previousEnd = currentStart;
+
+    var previousStart =
+            previousEnd.minus(
                     VELOCITY_PERIOD_DAYS,
                     ChronoUnit.DAYS
             );
 
     var worksCurrentPeriod =
             openAlexService.numOfWorksInPeriodByTopic(
-                    new OpenAlexVelocityRequest(
+                    new OpenAlexTopicFilterRequest(
                             currentStart.toString(),
                             currentEnd.toString(),
                             topicId
@@ -59,7 +59,7 @@ public class TopicService {
 
     var worksPreviousPeriod =
             openAlexService.numOfWorksInPeriodByTopic(
-                    new OpenAlexVelocityRequest(
+                    new OpenAlexTopicFilterRequest(
                             previousStart.toString(),
                             previousEnd.toString(),
                             topicId
@@ -68,7 +68,7 @@ public class TopicService {
 
     double velocity;
 
-    if (worksCurrentPeriod == 0) {
+    if (worksPreviousPeriod == 0) {
       velocity =
               worksCurrentPeriod > 0
                       ? 1.0
@@ -83,9 +83,118 @@ public class TopicService {
     return velocity;
   }
 
-  public TopicCalculateResponse calculateVelocityAllTopics(
+  private double calculateAcceleration(Topic topic){
+    var currentEnd =
+            LocalDate.parse(topic.getEndTime());
+
+    var previousEnd =
+            currentEnd.minus(
+                    VELOCITY_PERIOD_DAYS,
+                    ChronoUnit.DAYS
+            );
+
+    var previousVelocity = calculateVelocity(
+            previousEnd.toString(),
+            topic.getTopicId()
+    );
+
+    return topic.getVelocity() - previousVelocity;
+  }
+
+  private double calculateCitationDecay(Topic topic){
+
+    long totalStart = System.nanoTime();
+    System.out.println("[CitationDecay] START - topicId=" + topic.getTopicId());
+
+    long apiStart = System.nanoTime();
+    var response =
+            openAlexService.takeWorkCitationList(
+                    new OpenAlexTopicFilterRequest(
+                            topic.getStartTime(),
+                            topic.getEndTime(),
+                            topic.getTopicId()
+                    )
+            );
+    long apiEnd = System.nanoTime();
+    System.out.println(
+            "[CitationDecay] API completed in "
+                    + ((apiEnd - apiStart) / 1_000_000.0)
+                    + " ms"
+    );
+
+    if (response == null
+            || response.workCitationList() == null
+            || response.workCitationList().isEmpty()) {
+
+      System.out.println("[CitationDecay] Empty response");
+      System.out.println(
+              "[CitationDecay] TOTAL execution time = "
+                      + ((System.nanoTime() - totalStart) / 1_000_000.0)
+                      + " ms"
+      );
+
+      return 0.0;
+    }
+
+    // PREPARE
+    long prepareStart = System.nanoTime();
+
+    LocalDate endDate =
+            LocalDate.parse(topic.getEndTime());
+
+    long prepareEnd = System.nanoTime();
+    System.out.println(
+            "[CitationDecay] Prepare phase took "
+                    + ((prepareEnd - prepareStart) / 1_000_000.0)
+                    + " ms"
+    );
+
+    // CALCULATE
+    long calcStart = System.nanoTime();
+    int workCount = 0;
+
+    double citationScore = 0.0;
+
+    for (var work : response.workCitationList()) {
+
+      workCount++;
+
+      double citationCount = work.citedByCount();
+
+      LocalDate publicationDate =
+              LocalDate.parse(work.publicationDate());
+
+      long daysBetween =
+              ChronoUnit.DAYS.between(
+                      publicationDate,
+                      endDate
+              );
+
+      double age =
+              daysBetween / 365.25;
+
+      citationScore +=
+              citationCount
+                      * Math.exp(
+                      -CITATION_LAMBDA * age
+              );
+    }
+    long calcEnd = System.nanoTime();
+    System.out.println(
+            "[CitationDecay] Calculation completed for "
+                    + workCount
+                    + " works in "
+                    + ((calcEnd - calcStart) / 1_000_000.0)
+                    + " ms"
+    );
+
+    return Math.round(citationScore * 1000.0) / 1000.0;
+  }
+
+  public TopicCalculateResponse calculateAllTopicsScore(
           TopicCalculateRequest request
   ){
+
     var topicList = openAlexService.filterHotTopic(
             new TopicHotFilterRequest(request.fieldId())
     );
@@ -93,12 +202,18 @@ public class TopicService {
     var result = new ArrayList<Topic>();
 
     for (var topic : topicList.topicIdList()) {
+      System.out.println("\n--------------------------------------------");
+      System.out.printf("👉 Processing Topic ID: %s\n", topic.getTopicId());
 
+      // VELOCITY
+      long startVelocity = System.currentTimeMillis();
       var velocity =
               calculateVelocity(
-                      request,
+                      request.endTime(),
                       topic.getTopicId()
               );
+      long endVelocity = System.currentTimeMillis();
+      System.out.printf("   [Formula] calculateVelocity execution time: %d ms\n", (endVelocity - startVelocity));
 
       topic.setStartTime(
               request.startTime()
@@ -111,6 +226,30 @@ public class TopicService {
       topic.setVelocity(
               velocity
       );
+
+      // ACCELERATE
+      long startAcceleration = System.currentTimeMillis();
+      var acceleration =
+              calculateAcceleration(
+                      topic
+              );
+      long endAcceleration = System.currentTimeMillis();
+      System.out.printf("   [Formula] calculateAcceleration execution time: %d ms\n", (endAcceleration - startAcceleration));
+
+      topic.setAcceleration(
+              acceleration
+      );
+
+      // CITATION
+      long startCitation = System.currentTimeMillis();
+      var citation =
+              calculateCitationDecay(
+                      topic
+              );
+      long endCitation = System.currentTimeMillis();
+      System.out.printf("   [Formula] calculateCitationDecay execution time: %d ms\n", (endCitation - startCitation));
+
+      topic.setCitation(citation);
 
       result.add(
               topic

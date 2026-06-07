@@ -6,15 +6,17 @@ import com.brotherhood.scipubtts.dashboard.dto.request.*;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsInPeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsToPeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexVelocityRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.*;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexHotTopicFilterResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexMetricsResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexPublicationResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexWorkCitationResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -236,7 +238,7 @@ public class OpenAlexService {
   }
 
   public long numOfWorksInPeriodByTopic(
-          OpenAlexVelocityRequest request
+          OpenAlexTopicFilterRequest request
   ){
     var filter = String.format(
             "from_publication_date:%s,to_publication_date:%s,topics.id:%s",
@@ -277,5 +279,87 @@ public class OpenAlexService {
     }
 
     return response.meta().count();
+  }
+
+  public OpenAlexWorkCitationResponse takeWorkCitationList(
+          OpenAlexTopicFilterRequest request
+  ){
+    int startYear = LocalDate.parse(request.startTime()).getYear();
+    int endYear = LocalDate.parse(request.endTime()).getYear();
+
+    List<OpenAlexWorkCitationResponse.WorkCitation> result =
+            new ArrayList<>();
+
+    int apiCallCount = 0;
+    for (int publicationYear = startYear;
+         publicationYear <= endYear;
+         publicationYear++){
+
+      int diff = endYear - publicationYear;
+
+      // 2^diff - 1
+      int citationThreshold =(1 << diff) - 1;
+
+      String filter =
+              String.format(
+                      "topics.id:%s," +
+                              "from_publication_date:%s," +
+                              "to_publication_date:%s," +
+                              "publication_year:%d," +
+                              "cited_by_count:>%d",
+                      request.topicId(),
+                      request.startTime(),
+                      request.endTime(),
+                      publicationYear,
+                      citationThreshold
+              );
+
+      int page = 1;
+
+      while (true) {
+        var currentPage = page;
+
+        apiCallCount++;
+        var response =
+                restClient.get()
+                        .uri(uriBuilder ->
+                                uriBuilder
+                                        .path("/works")
+                                        .queryParam("filter", filter)
+                                        .queryParam(
+                                                "select",
+                                                "cited_by_count,publication_date"
+                                        )
+                                        .queryParam(
+                                                "sort",
+                                                "cited_by_count:desc"
+                                        )
+                                        .queryParam("per_page", 200)
+                                        .queryParam("page", currentPage)
+                                        .build()
+                        )
+                        .retrieve()
+                        .body(OpenAlexWorkCitationResponse.class);
+
+        if (response == null
+                || response.workCitationList() == null
+                || response.workCitationList().isEmpty()) {
+          break;
+        }
+
+        result.addAll(response.workCitationList());
+
+        long totalCount = response.meta().count();
+
+        if (page * 200 >= totalCount) {
+          break;
+        }
+
+        page++;
+      }
+    }
+
+    System.out.println("Total API calls made: " + apiCallCount);
+    return new OpenAlexWorkCitationResponse(null, result);
   }
 }

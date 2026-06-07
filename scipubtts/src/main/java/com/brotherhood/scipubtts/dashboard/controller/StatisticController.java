@@ -55,12 +55,20 @@ public class StatisticController {
     );
   }
 
-  @PostMapping("/TopicScore")
+  @PostMapping("/topicScore")
   public ResponseEntity<ResponseObject> calculateTopicsScore(
           @Valid @RequestBody TopicCalculateRequest request,
           HttpServletRequest httpServletRequest){
-    var data = topicService.calculateVelocityAllTopics(request);
+    long startTime = System.currentTimeMillis();
 
+    var data = topicService.calculateAllTopicsScore(request);
+
+    long duration = System.currentTimeMillis() - startTime;
+
+    System.out.println(
+            "calculateAllTopicsScore took "
+                    + duration + " ms"
+    );
     // TODO: data will be calculated through more service to fill full the topic score.
 
     return ResponseEntity.ok(
