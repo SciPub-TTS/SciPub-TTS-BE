@@ -14,10 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Component
 public class OpenAlexService {
@@ -403,5 +400,50 @@ public class OpenAlexService {
     }
 
     return total;
+  }
+
+  public Set<String> takeDistinctAuthorIds(
+          OpenAlexTopicFilterRequest request
+  ) {
+
+    String filter = String.format(
+            "topics.id:%s,from_publication_date:%s,to_publication_date:%s",
+            request.topicId(),
+            request.startTime(),
+            request.endTime()
+    );
+
+    Set<String> authorIds = new HashSet<>();
+    String cursor = "*";
+
+    while (cursor != null) {
+      var currentCursor = cursor;
+
+      OpenAlexAuthorGroupResponse response = restClient.get()
+              .uri(uriBuilder -> uriBuilder
+                      .path("/works")
+                      .queryParam("filter", filter)
+                      .queryParam("group_by", "author.id")
+                      .queryParam("per_page", 200)
+                      .queryParam("cursor", currentCursor)
+                      .build()
+              )
+              .retrieve()
+              .body(OpenAlexAuthorGroupResponse.class);
+
+      if (response == null || response.groupBy() == null) break;
+
+      response.groupBy().stream()
+              .map(OpenAlexAuthorGroupResponse.Group::key)
+              .filter(key -> key != null && !key.isBlank())
+              .forEach(authorIds::add);
+
+      int pageSize = response.groupBy().size();
+      if (pageSize < 200) break;
+
+      cursor = response.meta() != null ? response.meta().nextCursor() : null;
+    }
+
+    return authorIds;
   }
 }

@@ -13,13 +13,15 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
 public class TopicService {
   private final OpenAlexService openAlexService;
-  private static final long VELOCITY_PERIOD_DAYS = 14;
+  private static final long PERIOD_DAYS = 14;
   private static final double CITATION_LAMBDA = Math.log(2);
 
   private double calculateVelocity(
@@ -36,7 +38,7 @@ public class TopicService {
 
     var currentStart =
             currentEnd.minus(
-                    VELOCITY_PERIOD_DAYS,
+                    PERIOD_DAYS,
                     ChronoUnit.DAYS
             );
 
@@ -44,7 +46,7 @@ public class TopicService {
 
     var previousStart =
             previousEnd.minus(
-                    VELOCITY_PERIOD_DAYS,
+                    PERIOD_DAYS,
                     ChronoUnit.DAYS
             );
 
@@ -89,7 +91,7 @@ public class TopicService {
 
     var previousEnd =
             currentEnd.minus(
-                    VELOCITY_PERIOD_DAYS,
+                    PERIOD_DAYS,
                     ChronoUnit.DAYS
             );
 
@@ -205,6 +207,38 @@ public class TopicService {
             );
   }
 
+  private double calculateNewcomerRatio(Topic topic){
+    var currentEnd = LocalDate.parse(topic.getEndTime());
+    var currentStart = currentEnd.minus(PERIOD_DAYS, ChronoUnit.DAYS);
+
+    Set<String> currentPeriodAuthor = openAlexService.takeDistinctAuthorIds(
+            new OpenAlexTopicFilterRequest(
+                    currentStart.toString(),
+                    currentEnd.toString(),
+                    topic.getTopicId()
+            )
+    );
+
+    if (currentPeriodAuthor.isEmpty()) return 0.0;
+
+    var pastEnd = currentStart.minus(1, ChronoUnit.DAYS);
+    var pastStart = LocalDate.parse(topic.getStartTime());
+    Set<String> allAuthor = openAlexService.takeDistinctAuthorIds(
+            new OpenAlexTopicFilterRequest(
+                    pastStart.toString(),
+                    pastEnd.toString(),
+                    topic.getTopicId()
+            )
+    );
+
+    Set<String> newCommer = new HashSet<>(currentPeriodAuthor);
+    newCommer.removeAll(allAuthor);
+
+    double ratio = (double) newCommer.size() / currentPeriodAuthor.size();
+
+    return Math.round(ratio * 1000.0) / 1000.0;
+  }
+
   public TopicCalculateResponse calculateAllTopicsScore(
           TopicCalculateRequest request
   ){
@@ -258,12 +292,16 @@ public class TopicService {
 //      System.out.printf("   [Formula] calculateCitationDecay execution time: %d ms\n", (endCitation - startCitation));
 //
 //      topic.setCitation(citation);
+//
+//      // INSTITUTION
+//      var institution =
+//              calculateInstitution(topic);
+//
+//      topic.setInstitution(institution);
 
-      // INSTITUTION
-      var institution =
-              calculateInstitution(topic);
-
-      topic.setInstitution(institution);
+      var newCommer =
+              calculateNewcomerRatio(topic);
+      topic.setNewComerAuthor(newCommer);
 
       result.add(
               topic
