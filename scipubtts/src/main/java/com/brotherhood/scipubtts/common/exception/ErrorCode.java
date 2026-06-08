@@ -53,6 +53,8 @@ public enum ErrorCode {
     PASSWORD_RESET_GRANT_EXPIRED(HttpStatus.BAD_REQUEST,
             "Password reset grant token has expired."),
 
+    REQUEST_BODY_REQUIRED(HttpStatus.BAD_REQUEST,
+            "Request body is required."),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
             "Too many requests. Please try again later."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -66,21 +68,32 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
 
-    // ===== SEARCH / OPENALEX =====
+    // ===== OPENALEX =====
+    OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "OpenAlex entity not found."),
+    OPENALEX_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE,
+            "OpenAlex service returned empty or invalid data."),
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Không thể phân tích phản hồi từ OpenAlex"),
+            "Could not parse response from OpenAlex."),
+    OPENALEX_REQUIRED(HttpStatus.BAD_REQUEST,
+            "OpenAlex id is required."),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+            "OpenAlex request failed after multiple attempts."),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn"),
+            "The retry process was interrupted."),
+    OPENALEX_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY,
+            "Failed to retrieve publication data from OpenAlex."),
 
-    // ===== STATISTIC / OPENALEX ====
-    OPENALEX_SERVICE_ERROR(HttpStatus.BAD_GATEWAY,
-            "Failed to retrieve publication data from OpenAlex"),
+    // ===== STATISTIC =====
     TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,
-            "Request start time and end time must not be null");
+            "Request start time and end time must not be null."),
+
+    // ===== BOOKMARK =====
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),
+    BOOKMARK_REQUIRED(HttpStatus.BAD_REQUEST, "Bookmark id is required."),
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
+    BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark.");
 
     private final HttpStatus status;
     private final String message;
-
 }
