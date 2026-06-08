@@ -66,7 +66,7 @@ public class SearchController {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(200, "Search works successfully", data)
-        );
+            );
     }
 
     @GetMapping("/history/recent")
@@ -105,5 +105,12 @@ public class SearchController {
                 new ResponseObject(200, "Deleted search history", null)
         );
     }
-}
 
+    private UUID requireUserId(UserPrincipal userPrincipal) {
+        if (userPrincipal == null || userPrincipal.getId() == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        return userPrincipal.getId();
+    }
+}
