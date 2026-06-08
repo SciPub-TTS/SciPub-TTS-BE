@@ -1,6 +1,4 @@
-package com.brotherhood.scipubtts.bookmark.dto.request;
-
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
+package com.brotherhood.scipubtts.bookmark.dto.response;
 
 import java.util.List;
 

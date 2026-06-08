@@ -6,6 +6,7 @@ import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -14,18 +15,17 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
+@RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
 
-    public CustomOAuth2UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
     @Override
+    @Transactional // Đảm bảo an toàn dữ liệu và tránh lỗi Lazy Loading Chắt chẽ
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
@@ -43,6 +43,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String fullName = (String) oAuth2User.getAttributes().get("name");
         String givenName = (String) oAuth2User.getAttributes().get("given_name");
         String familyName = (String) oAuth2User.getAttributes().get("family_name");
+        String picture = (String) oAuth2User.getAttributes().get("picture"); // Lấy thêm avatar từ Google
 
         if (!StringUtils.hasText(email)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
@@ -50,26 +51,33 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
-
         if (!Boolean.TRUE.equals(googleEmailVerified)) {
             throw new OAuth2AuthenticationException(new OAuth2Error("google_email_not_verified"),
                     "Google account email is not verified");
         }
 
+        // Xử lý fallback nếu họ/tên từ Google bị trống
+        if (!StringUtils.hasText(givenName)) {
+            givenName = fullName;
+        }
+
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
+            // Trường hợp: Đăng nhập lần đầu -> Tạo mới User
             user = new User();
             user.setEmail(email);
             user.setUsername(email);
             user.setFirstName(givenName);
             user.setLastName(familyName);
             user.setRole(Role.RESEARCHER);
-            user.setEmailVerified(false);
+            user.setEmailVerified(true); // SỬA: Đã qua Google xác thực thì mặc định là TRUE
             user.setPasswordHash(null);
             user.setGoogleLinked(true);
             user.setBanned(false);
+            // user.setAvatarUrl(picture); // Thêm dòng này nếu Entity User của bạn có trường lưu ảnh
         } else {
+            // Trường hợp: Đã có tài khoản trước đó (đăng ký bằng form hoặc cùng email)
             if (user.isBanned()) {
                 throw new OAuth2AuthenticationException(new OAuth2Error("account_banned"),
                         "Account is banned");
@@ -81,6 +89,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 user.setLastName(familyName);
             }
             user.setGoogleLinked(true);
+            // Cập nhật lại avatar mới nhất từ Google nếu cần
+            // user.setAvatarUrl(picture);
         }
 
         userRepository.save(user);

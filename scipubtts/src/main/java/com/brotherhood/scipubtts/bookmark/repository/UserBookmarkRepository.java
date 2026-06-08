@@ -19,24 +19,27 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     // ==========================================
     // ENDPOINT 1 & 3: ADD BOOKMARK & CHECK STATUS
     // ==========================================
-    Optional<UserBookmark> findByUserIdAndOpenalexId(UUID userId, String openalexId);
+    Optional<UserBookmark> findByUserIdAndOpenAlexId(UUID userId, String openAlexId);
 
+    boolean existsByUserIdAndOpenAlexId(UUID userId, String openAlexId);
     // ==========================================
     // ENDPOINT 2: GET BOOKMARK LIST (LAZY PAGING + DYNAMIC FILTER)
     // ==========================================
     @Query("""
-        SELECT b FROM UserBookmark b 
-        WHERE b.userId = :userId 
-        AND (:topic IS NULL OR b.topicSnapshot = :topic) 
-        AND (:source IS NULL OR b.sourceSnapshot = :source) 
-        AND (:year IS NULL OR b.publicationYear = :year) 
-        AND (:keyword IS NULL OR :keyword = '' OR 
-            LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%')) OR 
-            LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%')) OR 
-            LOWER(b.sourceSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%')) OR 
-            LOWER(b.topicSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        )
-        """)
+            SELECT b
+            FROM UserBookmark b
+            WHERE b.userId = :userId
+              AND (:topic IS NULL OR :topic = '' OR b.topicSnapshot = :topic)
+              AND (:source IS NULL OR :source = '' OR b.sourceSnapshot = :source)
+              AND (:year IS NULL OR b.publicationYear = :year)
+              AND (
+                  :keyword IS NULL OR :keyword = ''
+                  OR LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(b.sourceSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(b.topicSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+    """)
     Page<UserBookmark> searchMyBookmarks(
             @Param("userId") UUID userId,
             @Param("keyword") String keyword,
@@ -53,11 +56,23 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     long countByUserId(UUID userId);
 
     // 4.2. Total unique topics
-    @Query("SELECT COUNT(DISTINCT b.topicSnapshot) FROM UserBookmark b WHERE b.userId = :userId AND b.topicSnapshot IS NOT NULL")
+    @Query("""
+        SELECT COUNT(DISTINCT b.topicSnapshot)
+        FROM UserBookmark b
+        WHERE b.userId = :userId
+          AND b.topicSnapshot IS NOT NULL
+          AND b.topicSnapshot <> ''
+    """)
     long countDistinctTopicsByUserId(@Param("userId") UUID userId);
 
     // 4.3. Total unique sources
-    @Query("SELECT COUNT(DISTINCT b.sourceSnapshot) FROM UserBookmark b WHERE b.userId = :userId AND b.sourceSnapshot IS NOT NULL")
+    @Query("""
+        SELECT COUNT(DISTINCT b.sourceSnapshot)
+        FROM UserBookmark b
+        WHERE b.userId = :userId
+          AND b.sourceSnapshot IS NOT NULL
+          AND b.sourceSnapshot <> ''
+    """)
     long countDistinctSourcesByUserId(@Param("userId") UUID userId);
 
 
@@ -65,15 +80,35 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     // ENDPOINT 5: GET FILTER OPTIONS
     // ==========================================
     // 5.1. Danh sách Topics (sắp xếp A-Z)
-    @Query("SELECT DISTINCT b.topicSnapshot FROM UserBookmark b WHERE b.userId = :userId AND b.topicSnapshot IS NOT NULL ORDER BY b.topicSnapshot ASC")
+    @Query("""
+        SELECT DISTINCT b.topicSnapshot
+        FROM UserBookmark b
+        WHERE b.userId = :userId
+          AND b.topicSnapshot IS NOT NULL
+          AND b.topicSnapshot <> ''
+        ORDER BY b.topicSnapshot ASC
+    """)
     List<String> findDistinctTopicsByUserId(@Param("userId") UUID userId);
 
     // 5.2. Danh sách Sources (sắp xếp A-Z)
-    @Query("SELECT DISTINCT b.sourceSnapshot FROM UserBookmark b WHERE b.userId = :userId AND b.sourceSnapshot IS NOT NULL ORDER BY b.sourceSnapshot ASC")
+    @Query("""
+        SELECT DISTINCT b.sourceSnapshot
+        FROM UserBookmark b
+        WHERE b.userId = :userId
+          AND b.sourceSnapshot IS NOT NULL
+          AND b.sourceSnapshot <> ''
+        ORDER BY b.sourceSnapshot ASC
+    """)
     List<String> findDistinctSourcesByUserId(@Param("userId") UUID userId);
 
     // 5.3. Danh sách Years (sắp xếp mới nhất -> cũ nhất)
-    @Query("SELECT DISTINCT b.publicationYear FROM UserBookmark b WHERE b.userId = :userId AND b.publicationYear IS NOT NULL ORDER BY b.publicationYear DESC")
+    @Query("""
+        SELECT DISTINCT b.publicationYear
+        FROM UserBookmark b
+        WHERE b.userId = :userId
+          AND b.publicationYear IS NOT NULL
+        ORDER BY b.publicationYear DESC
+    """)
     List<Integer> findDistinctYearsByUserId(@Param("userId") UUID userId);
 
 
@@ -87,10 +122,24 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     // ENDPOINT 7 & 8: DELETE
     // ==========================================
     @Modifying
-    @Query("DELETE FROM UserBookmark b WHERE b.id = :id AND b.userId = :userId")
-    void deleteByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+    @Query("""
+        DELETE FROM UserBookmark b
+        WHERE b.id = :id
+          AND b.userId = :userId
+    """)
+    int deleteByIdAndUserId(
+            @Param("id") UUID id,
+            @Param("userId") UUID userId
+    );
 
     @Modifying
-    @Query("DELETE FROM UserBookmark b WHERE b.userId = :userId AND b.openalexId = :openalexId")
-    void deleteByUserIdAndOpenalexId(@Param("userId") UUID userId, @Param("openalexId") String openalexId);
+    @Query("""
+        DELETE FROM UserBookmark b
+        WHERE b.userId = :userId
+          AND b.openAlexId = :openAlexId
+    """)
+    int deleteByUserIdAndOpenAlexId(
+            @Param("userId") UUID userId,
+            @Param("openAlexId") String openAlexId
+    );
 }
