@@ -10,19 +10,36 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    private static final List<String> PUBLIC_PATH_PATTERNS = List.of(
+            "/api/auth/**",
+            "/api/search/**",
+            "/api/papers/**",
+            "/api/statistic/**",
+            "/oauth2/**",
+            "/login/oauth2/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "/error",
+            "/favicon.ico"
+    );
 
     private final JwtTokenService jwtTokenService;
     private final CustomUserDetailsService customUserDetailsService;
@@ -31,6 +48,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                    CustomUserDetailsService customUserDetailsService) {
         this.jwtTokenService = jwtTokenService;
         this.customUserDetailsService = customUserDetailsService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
+
+        String path = request.getServletPath();
+        for (String pattern : PUBLIC_PATH_PATTERNS) {
+            if (PATH_MATCHER.match(pattern, path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override

@@ -57,7 +57,6 @@ public class SearchController {
             description = "All query fields are optional. In Swagger, leave unused fields empty instead of sending placeholder values such as string, 0, or [\"\"]."
     )
     public ResponseEntity<ResponseObject> searchWorks(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
             @ParameterObject @ModelAttribute SearchWorksQueryRequest request
     ) {
         SearchWorksResponse data = searchService.searchWorks(request);
