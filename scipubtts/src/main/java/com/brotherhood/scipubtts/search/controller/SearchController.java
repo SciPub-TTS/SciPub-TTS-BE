@@ -2,24 +2,18 @@ package com.brotherhood.scipubtts.search.controller;
 
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.common.exception.BusinessException;
-import com.brotherhood.scipubtts.common.exception.ErrorCode;
-import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
 import com.brotherhood.scipubtts.search.dto.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
 import com.brotherhood.scipubtts.search.service.SearchService;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,7 +25,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/search")
-
 public class SearchController {
 
     private final SearchService searchService;
@@ -51,22 +44,21 @@ public class SearchController {
     ) {
         SearchFilterOptionsResponse data = searchService.getFilterOptions(keyword, limit, page);
 
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Loaded search filter options", data)
+        return ResponseEntity.ok(
+                new ResponseObject(HttpStatus.OK.value(), "Loaded search filter options", data)
         );
     }
 
     @GetMapping("/works")
     public ResponseEntity<ResponseObject> searchWorks(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId, // URL công khai: Khách vãng lai dùng thì userId = null
+            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
             @ModelAttribute SearchWorksQueryRequest request
     ) {
-        // Mẹo nhỏ: Bạn có thể check nếu userId != null thì gọi service lưu lịch sử tìm kiếm ngầm tại đây
         SearchWorksResponse data = searchService.searchWorks(request);
 
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Search works successfully", data)
-            );
+        return ResponseEntity.ok(
+                new ResponseObject(HttpStatus.OK.value(), "Search works successfully", data)
+        );
     }
 
     @GetMapping("/history/recent")
@@ -76,8 +68,8 @@ public class SearchController {
     ) {
         List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, limit);
 
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Loaded recent searches", data)
+        return ResponseEntity.ok(
+                new ResponseObject(HttpStatus.OK.value(), "Loaded recent searches", data)
         );
     }
 
@@ -86,11 +78,10 @@ public class SearchController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
-        SearchHistorySaveRequest updatedRequest = request.withUserId(userId);
-        searchService.saveSearchHistory(updatedRequest);
+        searchService.saveSearchHistory(request.withUserId(userId));
 
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Saved search history", null)
+        return ResponseEntity.ok(
+                new ResponseObject(HttpStatus.OK.value(), "Saved search history", null)
         );
     }
 
@@ -101,16 +92,8 @@ public class SearchController {
     ) {
         searchService.deleteSearchHistory(userId, query);
 
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Deleted search history", null)
+        return ResponseEntity.ok(
+                new ResponseObject(HttpStatus.OK.value(), "Deleted search history", null)
         );
-    }
-
-    private UUID requireUserId(UserPrincipal userPrincipal) {
-        if (userPrincipal == null || userPrincipal.getId() == null) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-
-        return userPrincipal.getId();
     }
 }

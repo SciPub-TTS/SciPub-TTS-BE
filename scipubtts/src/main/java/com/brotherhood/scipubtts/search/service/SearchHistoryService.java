@@ -28,6 +28,10 @@ public class SearchHistoryService {
     }
 
     public List<SearchHistoryItemResponse> getRecentSearches(UUID userId, int limit) {
+        if (userId == null) {
+            return List.of();
+        }
+
         int normalizedLimit = searchQuerySupport.normalizeRecentSearchLimit(limit);
         List<SearchHistoryRepository.RecentSearchProjection> recentSearches =
                 searchHistoryRepository.findRecentDistinctSearches(
@@ -58,7 +62,7 @@ public class SearchHistoryService {
 
     @Transactional
     public void deleteSearchHistory(UUID userId, String query) {
-        if (!StringUtils.hasText(query)) {
+        if (userId == null || !StringUtils.hasText(query)) {
             return;
         }
 

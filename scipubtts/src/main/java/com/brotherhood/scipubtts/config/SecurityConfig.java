@@ -120,7 +120,6 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/api/search/**",
                                 "/api/papers/**",
-                                "/api/canvas/**",
                                 "/api/statistic/**"
                         )
                         .permitAll()
