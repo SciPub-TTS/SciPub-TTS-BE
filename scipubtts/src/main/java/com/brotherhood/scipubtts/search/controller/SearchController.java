@@ -9,6 +9,8 @@ import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
 import com.brotherhood.scipubtts.search.service.SearchService;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Operation;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -50,9 +52,13 @@ public class SearchController {
     }
 
     @GetMapping("/works")
+    @Operation(
+            summary = "Search works",
+            description = "All query fields are optional. In Swagger, leave unused fields empty instead of sending placeholder values such as string, 0, or [\"\"]."
+    )
     public ResponseEntity<ResponseObject> searchWorks(
             @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
-            @ModelAttribute SearchWorksQueryRequest request
+            @ParameterObject @ModelAttribute SearchWorksQueryRequest request
     ) {
         SearchWorksResponse data = searchService.searchWorks(request);
 
