@@ -52,6 +52,8 @@ public enum ErrorCode {
     PASSWORD_RESET_GRANT_EXPIRED(HttpStatus.BAD_REQUEST,
             "Password reset grant token has expired."),
 
+    REQUEST_BODY_REQUIRED(HttpStatus.BAD_REQUEST,
+            "Request body is required."),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
             "Too many requests. Please try again later."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,
