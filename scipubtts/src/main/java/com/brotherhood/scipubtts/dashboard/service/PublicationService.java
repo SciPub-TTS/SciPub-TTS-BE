@@ -5,6 +5,7 @@ import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendResponse;
 import com.brotherhood.scipubtts.dashboard.entity.PublicationTrend;
+import com.brotherhood.scipubtts.dashboard.repository.PublicationTrendRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,8 +13,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class PublicationService {
   private final OpenAlexService openAlexService;
+  private final PublicationTrendRepository publicationTrendRepository;
 
-  public PublicationTrendResponse takePublicationTrends(OpenAlexPublicationRequest request){
+  private PublicationTrendResponse takePublicationTrends(OpenAlexPublicationRequest request){
 
     var data = openAlexService.searchPublicationsByYear(request);
 
@@ -38,6 +40,49 @@ public class PublicationService {
 
     return new PublicationTrendResponse(
             publicationTrends
+    );
+  }
+
+  public PublicationTrendResponse calculateAndSavePublicationTrends(
+          OpenAlexPublicationRequest request
+  ) {
+
+    var response = takePublicationTrends(request);
+
+    for (var item : response.publicationTrends()) {
+
+      var entity = publicationTrendRepository
+              .findById(item.getYear())
+              .orElseGet(() ->
+                      PublicationTrend.builder()
+                              .year(item.getYear())
+                              .build()
+              );
+
+      entity.setPublications(
+              item.getPublications()
+      );
+
+      publicationTrendRepository.save(entity);
+    }
+
+    return response;
+  }
+
+  public PublicationTrendResponse getPublicationTrendsFromDb() {
+
+    var result =
+            publicationTrendRepository.findAll()
+                    .stream()
+                    .sorted(
+                            java.util.Comparator.comparing(
+                                    PublicationTrend::getYear
+                            )
+                    )
+                    .toList();
+
+    return new PublicationTrendResponse(
+            result
     );
   }
 }

@@ -106,6 +106,27 @@ public class OpenAlexService {
   }
 
   // Service for topic
+  private Topic toTopic(
+          OpenAlexHotTopicFilterResponse.TopicItem item
+  ) {
+    Topic topic = new Topic();
+
+    topic.setTopicId(item.id());
+    topic.setName(item.displayName());
+    topic.setWorks(
+            item.worksCount() == null
+                    ? 0
+                    : item.worksCount()
+    );
+    topic.setCitations(
+            item.citedByCount() == null
+                    ? 0
+                    : item.citedByCount()
+    );
+
+    return topic;
+  }
+
   public TopicHotFilterResponse filterHotTopic(
           TopicHotFilterRequest request
   ){
@@ -127,7 +148,7 @@ public class OpenAlexService {
                                     TOP_TOPICS
                             ).queryParam(
                                     "select",
-                                    "id,display_name"
+                                    "id,display_name,works_count,cited_by_count"
                             ).queryParam(
                                     "sort",
                                   "cited_by_count:desc"
@@ -152,7 +173,7 @@ public class OpenAlexService {
                                     TOP_TOPICS
                             ).queryParam(
                                     "select",
-                                    "id,display_name"
+                                    "id,display_name,works_count,cited_by_count"
                             ).queryParam(
                                     "sort",
                                     "works_count:desc"
@@ -173,20 +194,7 @@ public class OpenAlexService {
               .forEach(item -> {
 
                 if (visited.add(item.id())) {
-                    topics.add(
-                          new Topic(
-                                  item.id(),
-                                  item.displayName(),
-                                  null,
-                                  null,
-                                  0,
-                                  0,
-                                  0,
-                                  0,
-                                  0
-                          )
-                  );
-
+                  topics.add(toTopic(item));
                 }
 
               });
@@ -198,26 +206,8 @@ public class OpenAlexService {
       topOfWorks.results()
               .forEach(item -> {
 
-                if (
-                        visited.add(
-                                item.id()
-                        )
-                ) {
-
-                  topics.add(
-                          new Topic(
-                                  item.id(),
-                                  item.displayName(),
-                                  null,
-                                  null,
-                                  0,
-                                  0,
-                                  0,
-                                  0,
-                                  0
-                          )
-                  );
-
+                if (visited.add(item.id())) {
+                  topics.add(toTopic(item));
                 }
 
               });
@@ -229,6 +219,41 @@ public class OpenAlexService {
                     topics
             )
     );
+  }
+
+  public Topic findTopicById(String topicId) {
+
+    var response = restClient.get()
+            .uri(uriBuilder ->
+                    uriBuilder
+                            .path("/topics")
+                            .queryParam(
+                                    "filter",
+                                    "id:" + topicId
+                            )
+                            .queryParam(
+                                    "per_page",
+                                    1
+                            )
+                            .queryParam(
+                                    "select",
+                                    "id,display_name,works_count,cited_by_count"
+                            )
+                            .build()
+            )
+            .retrieve()
+            .body(OpenAlexHotTopicFilterResponse.class);
+
+    if (response == null
+            || response.results() == null
+            || response.results().isEmpty()) {
+
+      throw new BusinessException(
+              ErrorCode.TOPIC_NOT_FOUND
+      );
+    }
+
+    return toTopic(response.results().getFirst());
   }
 
   public long numOfWorksInPeriodByTopic(

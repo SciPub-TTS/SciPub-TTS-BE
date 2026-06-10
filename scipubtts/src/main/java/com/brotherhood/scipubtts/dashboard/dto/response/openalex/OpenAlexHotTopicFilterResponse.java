@@ -11,6 +11,12 @@ public record OpenAlexHotTopicFilterResponse(
           String id,
 
           @JsonProperty("display_name")
-          String displayName
+          String displayName,
+
+          @JsonProperty("works_count")
+          Long worksCount,
+
+          @JsonProperty("cited_by_count")
+          Long citedByCount
   ) {}
 }

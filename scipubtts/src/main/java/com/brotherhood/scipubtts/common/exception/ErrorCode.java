@@ -87,6 +87,8 @@ public enum ErrorCode {
     // ===== STATISTIC =====
     TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,
             "Request start time and end time must not be null."),
+    TOPIC_NOT_FOUND(HttpStatus.BAD_REQUEST,
+            "Can not find topic with this id."),
 
     // ===== BOOKMARK =====
     BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),

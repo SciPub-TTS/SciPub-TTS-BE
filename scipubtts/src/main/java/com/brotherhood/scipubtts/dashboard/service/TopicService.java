@@ -2,11 +2,12 @@ package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
+import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,8 @@ import java.util.Set;
 @Service
 public class TopicService {
   private final OpenAlexService openAlexService;
+  private final TopicRepository topicRepository;
+
   private static final long PERIOD_DAYS = 14;
   private static final double CITATION_LAMBDA = Math.log(2);
 
@@ -86,8 +89,7 @@ public class TopicService {
   }
 
   private double calculateAcceleration(Topic topic){
-    var currentEnd =
-            LocalDate.parse(topic.getEndTime());
+    var currentEnd = topic.getEndTime();
 
     var previousEnd =
             currentEnd.minus(
@@ -112,8 +114,8 @@ public class TopicService {
     var response =
             openAlexService.takeWorkCitationList(
                     new OpenAlexTopicFilterRequest(
-                            topic.getStartTime(),
-                            topic.getEndTime(),
+                            topic.getStartTime().toString(),
+                            topic.getEndTime().toString(),
                             topic.getTopicId()
                     )
             );
@@ -141,8 +143,7 @@ public class TopicService {
     // PREPARE
     long prepareStart = System.nanoTime();
 
-    LocalDate endDate =
-            LocalDate.parse(topic.getEndTime());
+    LocalDate endDate = topic.getEndTime();
 
     long prepareEnd = System.nanoTime();
     System.out.println(
@@ -200,15 +201,15 @@ public class TopicService {
     return openAlexService
             .countInstitutionByTopic(
                     new OpenAlexTopicFilterRequest(
-                            topic.getStartTime(),
-                            topic.getEndTime(),
+                            topic.getStartTime().toString(),
+                            topic.getEndTime().toString(),
                             topic.getTopicId()
                     )
             );
   }
 
   private double calculateNewcomerRatio(Topic topic){
-    var currentEnd = LocalDate.parse(topic.getEndTime());
+    var currentEnd = topic.getEndTime();
     var currentStart = currentEnd.minus(PERIOD_DAYS, ChronoUnit.DAYS);
 
     Set<String> currentPeriodAuthor = openAlexService.takeDistinctAuthorIds(
@@ -222,7 +223,7 @@ public class TopicService {
     if (currentPeriodAuthor.isEmpty()) return 0.0;
 
     var pastEnd = currentStart.minus(1, ChronoUnit.DAYS);
-    var pastStart = LocalDate.parse(topic.getStartTime());
+    var pastStart = topic.getStartTime();
     Set<String> allAuthor = openAlexService.takeDistinctAuthorIds(
             new OpenAlexTopicFilterRequest(
                     pastStart.toString(),
@@ -239,77 +240,118 @@ public class TopicService {
     return Math.round(ratio * 1000.0) / 1000.0;
   }
 
-  public TopicCalculateResponse calculateAllTopicsScore(
-          TopicCalculateRequest request
-  ){
+  private Topic calculateTopic(
+          Topic topic,
+          LocalDate startDate,
+          LocalDate endDate
+  ) {
 
-    var topicList = openAlexService.filterHotTopic(
+    topic.setStartTime(startDate);
+    topic.setEndTime(endDate);
+
+    double velocity = calculateVelocity(
+            endDate.toString(),
+            topic.getTopicId()
+    );
+
+    topic.setVelocity(velocity);
+
+    double acceleration = calculateAcceleration(topic);
+    topic.setAcceleration(acceleration);
+
+//    double citationDecay = calculateCitationDecay(topic);
+//    topic.setCitationDecay(citationDecay);
+
+    double institution = calculateInstitution(topic);
+    topic.setInstitution(institution);
+
+//    double newcomerRatio = calculateNewcomerRatio(topic);
+//    topic.setNewComerAuthor(newcomerRatio);
+
+    return topic;
+  }
+
+  public TopicCalculateResponse calculateAndSaveTopics(          TopicCalculateAllRequest request ) {
+
+    var hotTopics = openAlexService.filterHotTopic(
             new TopicHotFilterRequest(request.fieldId())
     );
 
-    var result = new ArrayList<Topic>();
+    List<Topic> result = new ArrayList<>();
 
-    for (var topic : topicList.topicIdList()) {
-      System.out.println("\n--------------------------------------------");
-      System.out.printf("=> Processing Topic ID: %s\n", topic.getTopicId());
-
-      // VELOCITY
-      var velocity =
-              calculateVelocity(
-                      request.endTime(),
-                      topic.getTopicId()
-              );
-
-      topic.setStartTime(
-              request.startTime()
-      );
-
-      topic.setEndTime(
-              request.endTime()
-      );
-
-      topic.setVelocity(
-              velocity
-      );
-
-//      // ACCELERATE
-//      var acceleration =
-//              calculateAcceleration(
-//                      topic
-//              );
-//
-//      topic.setAcceleration(
-//              acceleration
-//      );
-//
-//      // CITATION
-//      long startCitation = System.currentTimeMillis();
-//      var citation =
-//              calculateCitationDecay(
-//                      topic
-//              );
-//      long endCitation = System.currentTimeMillis();
-//      System.out.printf("   [Formula] calculateCitationDecay execution time: %d ms\n", (endCitation - startCitation));
-//
-//      topic.setCitation(citation);
-//
-//      // INSTITUTION
-//      var institution =
-//              calculateInstitution(topic);
-//
-//      topic.setInstitution(institution);
-
-      var newCommer =
-              calculateNewcomerRatio(topic);
-      topic.setNewComerAuthor(newCommer);
-
+    for (Topic topic : hotTopics.topicIdList()) {
       result.add(
-              topic
+              calculateAndSaveTopic(
+                      topic.getTopicId(),
+                      request.startTime(),
+                      request.endTime()
+              )
       );
     }
 
-    return new TopicCalculateResponse(
-            List.copyOf(result)
+    return new TopicCalculateResponse(result);
+  }
+
+  public Topic calculateAndSaveTopic(String topicId, String startTime, String endTime) {
+
+    LocalDate startDate = LocalDate.parse(startTime);
+    LocalDate endDate = LocalDate.parse(endTime);
+
+    var existingTopic = topicRepository.findByTopicIdAndStartTimeAndEndTime(
+            topicId,
+            startDate,
+            endDate
     );
+
+    if (existingTopic.isPresent()) {
+      return existingTopic.get();
+    }
+
+    Topic topic = openAlexService.findTopicById(topicId);
+
+    Topic calculatedTopic = calculateTopic(
+            topic,
+            startDate,
+            endDate
+    );
+
+    return topicRepository.save(calculatedTopic);
+  }
+
+  public TopicCalculateResponse getTopicsFromDb(
+          TopicCalculateAllRequest request
+  ) {
+
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate = LocalDate.parse(request.endTime());
+
+    List<Topic> topics =
+            topicRepository.findByStartTimeAndEndTime(
+                    startDate,
+                    endDate
+            );
+
+    if (topics.isEmpty()) {
+      return calculateAndSaveTopics(request);
+    }
+
+    return new TopicCalculateResponse(topics);
+  }
+
+  public Topic getTopicFromDb(
+          String topicId,
+          String startTime,
+          String endTime
+  ) {
+
+    return topicRepository
+            .findByTopicIdAndStartTimeAndEndTime(
+                    topicId,
+                    LocalDate.parse(startTime),
+                    LocalDate.parse(endTime)
+            )
+            .orElseThrow(() -> new BusinessException(
+                    ErrorCode.TOPIC_NOT_FOUND
+            ));
   }
 }

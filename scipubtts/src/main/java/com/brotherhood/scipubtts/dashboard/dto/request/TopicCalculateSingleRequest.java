@@ -1,8 +1,8 @@
 package com.brotherhood.scipubtts.dashboard.dto.request;
 
-public record TopicCalculateRequest(
+public record TopicCalculateSingleRequest(
         String startTime,
         String endTime,
-        String fieldId
+        String topicId
 ) {
 }

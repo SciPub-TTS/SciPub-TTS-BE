@@ -4,7 +4,6 @@ import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
 import com.brotherhood.scipubtts.dashboard.service.MetricService;
 import com.brotherhood.scipubtts.dashboard.service.PublicationService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
@@ -13,24 +12,20 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDate;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/statistic")
-public class StatisticController {
+@RequestMapping("/api/data")
+public class DataController {
   private final PublicationService publicationService;
   private final MetricService metricService;
   private final TopicService topicService;
 
-  @PostMapping("/publication-trends")
-  public ResponseEntity<ResponseObject> takePublicationTrend(@Valid @RequestBody OpenAlexPublicationRequest request, HttpServletRequest httpServletRequest){
-    var data = publicationService.calculateAndSavePublicationTrends(request);
+  @GetMapping("/publication-trends")
+  public ResponseEntity<ResponseObject> getPublicationTrends() {
+
+    var data = publicationService.getPublicationTrendsFromDb();
 
     return ResponseEntity.ok(
             new ResponseObject(
@@ -42,65 +37,51 @@ public class StatisticController {
   }
 
   @PostMapping("/metrics")
-  public ResponseEntity<ResponseObject> takeMetrics(@Valid @RequestBody PeriodRequest request, HttpServletRequest httpServletRequest){
-    var data = metricService.calculateAndSaveMetrics(request);
+  public ResponseEntity<ResponseObject> getMetrics(@Valid @RequestBody PeriodRequest request, HttpServletRequest httpServletRequest){
+    var data = metricService.getMetricsFromDb(request);
 
     return ResponseEntity.ok(
             new ResponseObject(
                     HttpStatus.OK.value(),
-                    "Get publication trends successfully",
+                    "Get metrics successfully",
                     data
             )
     );
   }
 
   @PostMapping("/topicScore-all")
-  public ResponseEntity<ResponseObject> calculateAllTopicsScore(
+  public ResponseEntity<ResponseObject> getTopics(
           @Valid @RequestBody TopicCalculateAllRequest request,
-          HttpServletRequest httpServletRequest){
-    long startTime = System.currentTimeMillis();
+          HttpServletRequest httpServletRequest
+  ) {
 
-    var data = topicService.calculateAndSaveTopics(request);
-
-    long duration = System.currentTimeMillis() - startTime;
-
-    System.out.println(
-            "calculateAllTopicsScore took "
-                    + duration + " ms"
-    );
+    var data = topicService.getTopicsFromDb(request);
 
     return ResponseEntity.ok(
             new ResponseObject(
                     HttpStatus.OK.value(),
-                    "Calculate all topics score",
+                    "Get topics successfully",
                     data
             )
     );
   }
 
   @PostMapping("/topicScore-single")
-  public ResponseEntity<ResponseObject> calculateSingleTopicsScore(
+  public ResponseEntity<ResponseObject> getTopic(
           @Valid @RequestBody TopicCalculateSingleRequest request,
-          HttpServletRequest httpServletRequest){
-    long startTime = System.currentTimeMillis();
+          HttpServletRequest httpServletRequest
+  ) {
 
-    var data = topicService.calculateAndSaveTopic(
+    var data = topicService.getTopicFromDb(
             request.topicId(),
             request.startTime(),
             request.endTime()
     );
 
-    long duration = System.currentTimeMillis() - startTime;
-
-    System.out.println(
-            "calculateAllTopicsScore took "
-                    + duration + " ms"
-    );
-
     return ResponseEntity.ok(
             new ResponseObject(
                     HttpStatus.OK.value(),
-                    "Calculate all topics score",
+                    "Get topic successfully",
                     data
             )
     );
