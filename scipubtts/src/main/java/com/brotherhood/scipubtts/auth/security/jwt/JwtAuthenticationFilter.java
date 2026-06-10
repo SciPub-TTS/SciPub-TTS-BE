@@ -9,6 +9,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     private static final List<String> PUBLIC_PATH_PATTERNS = List.of(
@@ -70,6 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        log.info("Authorization header = {}", request.getHeader("Authorization"));
 
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
 
