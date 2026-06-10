@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "user_bookmark", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "entity_type", "openalex_id"})
+        @UniqueConstraint(columnNames = {"user_id", "openalex_id"})
 })
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,7 +27,7 @@ public class UserBookmark {
     private UUID userId;
 
     @Column(name = "openalex_id", nullable = false, columnDefinition = "TEXT")
-    private String openalexId;
+    private String openAlexId;
 
     @Column(name = "title_snapshot", columnDefinition = "TEXT")
     private String titleSnapshot;
@@ -59,5 +59,4 @@ public class UserBookmark {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    // Getters, Setters, và Constructor
 }

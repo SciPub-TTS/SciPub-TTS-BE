@@ -52,6 +52,8 @@ public enum ErrorCode {
     PASSWORD_RESET_GRANT_EXPIRED(HttpStatus.BAD_REQUEST,
             "Password reset grant token has expired."),
 
+    REQUEST_BODY_REQUIRED(HttpStatus.BAD_REQUEST,
+            "Request body is required."),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
             "Too many requests. Please try again later."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -72,6 +74,8 @@ public enum ErrorCode {
             "OpenAlex service returned empty or invalid data."),
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
             "Could not parse response from OpenAlex"),
+    OPENALEX_REQUIRED(HttpStatus.BAD_REQUEST,
+            "Open Alex id is required."),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
             "OpenAlex request failed after multiple attempts"),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -81,11 +85,11 @@ public enum ErrorCode {
 
     // ===== BOOKMARK =====
     BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),
+    BOOKMARK_REQUIRED(HttpStatus.BAD_REQUEST, "Bookmark id is required."),
     BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
     BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark.");
 
     private final HttpStatus status;
     private final String message;
-
 
 }

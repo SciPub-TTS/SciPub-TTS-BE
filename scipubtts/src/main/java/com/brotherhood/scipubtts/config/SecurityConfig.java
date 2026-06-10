@@ -1,10 +1,10 @@
 package com.brotherhood.scipubtts.config;
 
-
 import com.brotherhood.scipubtts.auth.security.CustomUserDetailsService;
 import com.brotherhood.scipubtts.auth.security.jwt.JwtAuthenticationFilter;
 import com.brotherhood.scipubtts.auth.security.oauth2.CustomAuthenticationFailureHandler;
 import com.brotherhood.scipubtts.auth.security.oauth2.CustomOAuth2UserService;
+import com.brotherhood.scipubtts.auth.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.brotherhood.scipubtts.auth.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.brotherhood.scipubtts.common.exception.RestAccessDeniedHandler;
 import com.brotherhood.scipubtts.common.exception.RestAuthenticationEntryPoint;
