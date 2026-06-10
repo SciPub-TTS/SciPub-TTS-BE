@@ -118,6 +118,7 @@ public class BookmarkServiceImpl implements BookmarkService {
             String keyword,
             String topic,
             String source,
+            String author,
             Integer year,
             String sort
     ) {
@@ -133,6 +134,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                 normalizeNullable(keyword),
                 normalizeNullable(topic),
                 normalizeNullable(source),
+                normalizeNullable(author),
                 year,
                 pageable
         );
@@ -228,11 +230,13 @@ public class BookmarkServiceImpl implements BookmarkService {
         long totalPapers = userBookmarkRepository.countByUserId(userId);
         long totalTopics = userBookmarkRepository.countDistinctTopicsByUserId(userId);
         long totalSources = userBookmarkRepository.countDistinctSourcesByUserId(userId);
+        long totalAuthors = userBookmarkRepository.countDistinctAuthorsByUserId(userId);
 
         return new BookmarkStatsResponse(
                 safeLongToInt(totalPapers),
                 safeLongToInt(totalTopics),
-                safeLongToInt(totalSources)
+                safeLongToInt(totalSources),
+                safeLongToInt(totalAuthors)
         );
     }
 
@@ -254,11 +258,13 @@ public class BookmarkServiceImpl implements BookmarkService {
         List<String> topics = userBookmarkRepository.findDistinctTopicsByUserId(userId);
         List<Integer> years = userBookmarkRepository.findDistinctYearsByUserId(userId);
         List<String> sources = userBookmarkRepository.findDistinctSourcesByUserId(userId);
+        List<String> authors = userBookmarkRepository.findDistinctAuthorsByUserId(userId);
 
         return new FilterOptionsResponse(
                 topics,
                 years,
-                sources
+                sources,
+                authors
         );
     }
 

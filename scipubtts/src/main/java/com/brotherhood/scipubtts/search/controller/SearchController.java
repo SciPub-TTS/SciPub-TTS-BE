@@ -9,6 +9,8 @@ import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
 import com.brotherhood.scipubtts.search.service.SearchService;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Operation;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,6 +29,7 @@ import java.util.UUID;
 @RequestMapping("/api/search")
 public class SearchController {
 
+    // This controller only receives HTTP requests and forwards them to the service layer.
     private final SearchService searchService;
 
     public SearchController(SearchService searchService) {
@@ -42,6 +45,7 @@ public class SearchController {
             @Parameter(description = "Page number for filter options (>=1)")
             @RequestParam(defaultValue = "1") int page
     ) {
+        // Load option lists used by the frontend filter widgets.
         SearchFilterOptionsResponse data = searchService.getFilterOptions(keyword, limit, page);
 
         return ResponseEntity.ok(
@@ -50,10 +54,14 @@ public class SearchController {
     }
 
     @GetMapping("/works")
+    @Operation(
+            summary = "Search works",
+            description = "All query fields are optional. In Swagger, leave unused fields empty instead of sending placeholder values such as string, 0, or [\"\"]."
+    )
     public ResponseEntity<ResponseObject> searchWorks(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
-            @ModelAttribute SearchWorksQueryRequest request
+            @ParameterObject @ModelAttribute SearchWorksQueryRequest request
     ) {
+        // Search papers with the optional query, filters and sort values.
         SearchWorksResponse data = searchService.searchWorks(request);
 
         return ResponseEntity.ok(
@@ -66,6 +74,7 @@ public class SearchController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam(defaultValue = "5") int limit
     ) {
+        // Load the latest search history of the current user.
         List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, limit);
 
         return ResponseEntity.ok(
@@ -78,6 +87,7 @@ public class SearchController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
+        // Save one search term for the current user.
         searchService.saveSearchHistory(request.withUserId(userId));
 
         return ResponseEntity.ok(
@@ -90,6 +100,7 @@ public class SearchController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam String query
     ) {
+        // Remove one search history entry for the current user.
         searchService.deleteSearchHistory(userId, query);
 
         return ResponseEntity.ok(

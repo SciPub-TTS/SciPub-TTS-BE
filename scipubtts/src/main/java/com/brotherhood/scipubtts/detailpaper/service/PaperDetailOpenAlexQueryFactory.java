@@ -12,6 +12,7 @@ import java.util.Map;
 @Component
 public class PaperDetailOpenAlexQueryFactory {
 
+    // These select lists keep the OpenAlex response smaller and more predictable.
     private static final String WORK_DETAIL_SELECT_FIELDS =
             "id,title,doi,publication_year,publication_date,language,type,open_access,primary_location,best_oa_location,authorships,topics,primary_topic,keywords,cited_by_count,citation_normalized_percentile,fwci,referenced_works_count,referenced_works,related_works,locations_count,locations,biblio,ids,apc_list,apc_paid,has_content,content_urls,indexed_in,counts_by_year,is_retracted,abstract_inverted_index";
     private static final String WORK_REFERENCE_SELECT_FIELDS = "id,display_name,title";
@@ -23,6 +24,7 @@ public class PaperDetailOpenAlexQueryFactory {
     }
 
     public String buildWorkDetailPath(String workId) {
+        // Accept both "W123" and full OpenAlex URLs, then normalize them to one id.
         String normalizedWorkId = normalizeWorkId(workId);
         return "/works/" + normalizedWorkId;
     }
@@ -34,6 +36,7 @@ public class PaperDetailOpenAlexQueryFactory {
     }
 
     public Map<String, String> buildWorkReferenceQueryParams(Iterable<String> workIds) {
+        // Load titles for reference ids in one batch request.
         String joinedWorkIds = joinWorkIds(workIds);
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("filter", "openalex:" + joinedWorkIds);

@@ -1,29 +1,78 @@
 package com.brotherhood.scipubtts.search.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
+@Schema(
+        name = "SearchWorksQueryRequest",
+        description = "All search filters are optional. Leave unused fields empty in Swagger."
+)
 public class SearchWorksQueryRequest {
+    @Schema(description = "Keyword matched against OpenAlex works", nullable = true, example = "AI")
     private String query;
+
+    @Schema(description = "Year filter mode", nullable = true, allowableValues = {"range", "exact"})
     private String yearMode;
+
+    @Schema(description = "Start year when yearMode=range", nullable = true, example = "2020")
     private Integer yearFrom;
+
+    @Schema(description = "End year when yearMode=range", nullable = true, example = "2025")
     private Integer yearTo;
+
+    @Schema(description = "Exact year when yearMode=exact", nullable = true, example = "2024")
     private Integer yearExact;
+
+    @Schema(description = "Work types such as article or book-chapter", nullable = true, example = "[\"article\"]")
     private List<String> type;
+
+    @Schema(description = "Filter only open-access works", nullable = true, example = "true")
     private Boolean openAccess;
+
+    @Schema(description = "OpenAlex subfield ids", nullable = true, example = "[\"subfields/1302\"]")
     private List<String> subField;
+
+    @Schema(description = "OpenAlex author ids", nullable = true, example = "[\"A507823743\"]")
     private List<String> author;
+
+    @Schema(description = "OpenAlex institution ids", nullable = true, example = "[\"I71267560\"]")
     private List<String> institution;
+
+    @Schema(description = "Filter works that have PDF content", nullable = true, example = "true")
     private Boolean pdf;
+
+    @Schema(description = "Country codes such as US, VN, KR", nullable = true, example = "[\"US\"]")
     private List<String> country;
+
+    @Schema(description = "Citation filter mode", nullable = true, allowableValues = {"range", "exact"})
     private String citationMode;
+
+    @Schema(description = "Minimum citation count when citationMode=range", nullable = true, example = "10")
     private Integer citationMin;
+
+    @Schema(description = "Maximum citation count when citationMode=range", nullable = true, example = "100")
     private Integer citationMax;
+
+    @Schema(description = "Exact citation count when citationMode=exact", nullable = true, example = "50")
     private Integer citationExact;
+
+    @Schema(description = "OpenAlex source ids", nullable = true, example = "[\"S4306400194\"]")
     private List<String> source;
+
+    @Schema(description = "OpenAlex award ids", nullable = true, example = "[\"https://openalex.org/awards/A1969205030\"]")
     private List<String> award;
+
+    @Schema(description = "ORCID filter", nullable = true, allowableValues = {"is", "is not"})
     private String indexedByOrcid;
+
+    @Schema(description = "Sort expression", nullable = true, example = "cited_by_count:desc")
     private String sort;
+
+    @Schema(description = "Page number", nullable = true, example = "1", defaultValue = "1")
     private Integer page;
+
+    @Schema(description = "Page size", nullable = true, example = "20", defaultValue = "20")
     private Integer perPage;
 
     public static SearchWorksQueryRequest empty() {
