@@ -10,6 +10,7 @@ import java.util.Map;
 @Component
 public class SearchWorksMapper {
 
+    // OpenAlex returns dynamic JSON, so OpenAlexMapReader extracts data safely.
     private final OpenAlexMapReader openAlexMapReader;
 
     public SearchWorksMapper(OpenAlexMapReader openAlexMapReader) {
@@ -23,6 +24,7 @@ public class SearchWorksMapper {
             int fallbackPage,
             int fallbackPerPage
     ) {
+        // Read response metadata first so paging info is always available.
         Map<String, Object> meta = openAlexMapReader.getMap(response, "meta");
         long totalCount = openAlexMapReader.getLong(meta, "count", 0L);
         int page = openAlexMapReader.getInt(meta, "page", fallbackPage);
@@ -34,32 +36,7 @@ public class SearchWorksMapper {
         List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
 
         for (Map<String, Object> result : results) {
-            Map<String, Object> openAccess = openAlexMapReader.getMap(result, "open_access");
-            Map<String, Object> hasContent = openAlexMapReader.getMap(result, "has_content");
-            Map<String, Object> primaryTopic = openAlexMapReader.getMap(result, "primary_topic");
-            Map<String, Object> subField = openAlexMapReader.getMap(primaryTopic, "subfield");
-            Map<String, Object> primaryLocation = openAlexMapReader.getMap(result, "primary_location");
-            Map<String, Object> source = openAlexMapReader.getMap(primaryLocation, "source");
-            List<Map<String, Object>> authorships = openAlexMapReader.getMapList(result, "authorships");
-
-            items.add(new SearchWorksResponse.WorkItem(
-                    openAlexMapReader.getString(result, "id"),
-                    openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "display_name")),
-                    openAlexMapReader.deriveAbstractText(openAlexMapReader.getMap(result, "abstract_inverted_index")),
-                    openAlexMapReader.getString(result, "doi"),
-                    openAlexMapReader.getInteger(result, "publication_year"),
-                    openAlexMapReader.getInteger(result, "cited_by_count"),
-                    openAlexMapReader.getBoolean(openAccess, "is_oa"),
-                    openAlexMapReader.getBoolean(hasContent, "pdf"),
-                    openAlexMapReader.derivePdfUrl(result),
-                    openAlexMapReader.deriveHasOrcid(authorships),
-                    openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "type")),
-                    openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(primaryTopic, "display_name")),
-                    openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(subField, "display_name")),
-                    openAlexMapReader.getString(source, "id"),
-                    openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(source, "display_name")),
-                    mapAuthorNames(authorships)
-            ));
+            items.add(mapWorkItem(result));
         }
 
         SearchWorksResponse.Meta responseMeta = new SearchWorksResponse.Meta(
@@ -75,7 +52,38 @@ public class SearchWorksMapper {
         return new SearchWorksResponse(responseMeta, items);
     }
 
+    private SearchWorksResponse.WorkItem mapWorkItem(Map<String, Object> result) {
+        Map<String, Object> openAccess = openAlexMapReader.getMap(result, "open_access");
+        Map<String, Object> hasContent = openAlexMapReader.getMap(result, "has_content");
+        Map<String, Object> primaryTopic = openAlexMapReader.getMap(result, "primary_topic");
+        Map<String, Object> subField = openAlexMapReader.getMap(primaryTopic, "subfield");
+        Map<String, Object> primaryLocation = openAlexMapReader.getMap(result, "primary_location");
+        Map<String, Object> source = openAlexMapReader.getMap(primaryLocation, "source");
+        List<Map<String, Object>> authorships = openAlexMapReader.getMapList(result, "authorships");
+
+        // Build one DTO that the frontend can consume directly.
+        return new SearchWorksResponse.WorkItem(
+                openAlexMapReader.getString(result, "id"),
+                openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "display_name")),
+                openAlexMapReader.deriveAbstractText(openAlexMapReader.getMap(result, "abstract_inverted_index")),
+                openAlexMapReader.getString(result, "doi"),
+                openAlexMapReader.getInteger(result, "publication_year"),
+                openAlexMapReader.getInteger(result, "cited_by_count"),
+                openAlexMapReader.getBoolean(openAccess, "is_oa"),
+                openAlexMapReader.getBoolean(hasContent, "pdf"),
+                openAlexMapReader.derivePdfUrl(result),
+                openAlexMapReader.deriveHasOrcid(authorships),
+                openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "type")),
+                openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(primaryTopic, "display_name")),
+                openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(subField, "display_name")),
+                openAlexMapReader.getString(source, "id"),
+                openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(source, "display_name")),
+                mapAuthorNames(authorships)
+        );
+    }
+
     private List<String> mapAuthorNames(List<Map<String, Object>> authorships) {
+        // Collect author display names in their original order.
         List<String> names = new ArrayList<>();
 
         for (Map<String, Object> authorship : authorships) {
