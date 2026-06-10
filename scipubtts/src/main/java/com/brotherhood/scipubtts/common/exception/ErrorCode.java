@@ -68,8 +68,6 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
 
     // ===== OPENALEX =====
-    INVALID_CANVAS_ENTITY_TYPE(HttpStatus.BAD_REQUEST,
-            "Unsupported canvas entity type."),
     OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
             "OpenAlex entity not found"),
     OPENALEX_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE,

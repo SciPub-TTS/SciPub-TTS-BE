@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -89,13 +90,34 @@ public class SearchQuerySupport {
 
         if ("most cited".equals(normalizedSort)
                 || "most_cited".equals(normalizedSort)
+                || "citation_most_cited".equals(normalizedSort)
                 || "cited_by_count:desc".equals(normalizedSort)
                 || "trending".equals(normalizedSort)) {
             return "cited_by_count:desc";
         }
 
-        if ("latest".equals(normalizedSort) || "publication_year:desc".equals(normalizedSort)) {
+        if ("least cited".equals(normalizedSort)
+                || "least_cited".equals(normalizedSort)
+                || "citation_least_cited".equals(normalizedSort)
+                || "cited_by_count:asc".equals(normalizedSort)) {
+            return "cited_by_count:asc";
+        }
+
+        if ("latest".equals(normalizedSort)
+                || "published_latest".equals(normalizedSort)
+                || "publication_year:desc".equals(normalizedSort)) {
             return "publication_year:desc";
+        }
+
+        if ("oldest".equals(normalizedSort)
+                || "published_oldest".equals(normalizedSort)
+                || "publication_year:asc".equals(normalizedSort)) {
+            return "publication_year:asc";
+        }
+
+        if ("trending_keyword".equals(normalizedSort)
+                || "trending_topic".equals(normalizedSort)) {
+            return defaultSort;
         }
 
         if ("relevance".equals(normalizedSort) || "relevance_score:desc".equals(normalizedSort)) {
@@ -158,7 +180,7 @@ public class SearchQuerySupport {
             return List.of();
         }
 
-        List<String> normalized = new ArrayList<>();
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
 
         for (String value : values) {
             if (!StringUtils.hasText(value)) {
@@ -171,7 +193,7 @@ public class SearchQuerySupport {
             }
         }
 
-        return normalized;
+        return new ArrayList<>(normalized);
     }
 
     public String normalizeGroupedValue(String groupBy, String rawKey) {

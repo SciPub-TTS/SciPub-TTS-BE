@@ -1,6 +1,5 @@
 package com.brotherhood.scipubtts.config;
 
-
 import com.brotherhood.scipubtts.auth.security.CustomUserDetailsService;
 import com.brotherhood.scipubtts.auth.security.jwt.JwtAuthenticationFilter;
 import com.brotherhood.scipubtts.auth.security.oauth2.CustomAuthenticationFailureHandler;
@@ -12,6 +11,7 @@ import com.brotherhood.scipubtts.common.exception.RestAuthenticationEntryPoint;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.*;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -64,7 +64,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        return new HttpCookieOAuth2AuthorizationRequestRepository();
+        return new HttpSessionOAuth2AuthorizationRequestRepository();
     }
 
     @Bean
@@ -105,6 +105,7 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(daoAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/", "/error", "/favicon.ico",
                                 "/api/auth/register",
@@ -120,7 +121,6 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/api/search/**",
                                 "/api/papers/**",
-                                "/api/canvas/**",
                                 "/api/statistic/**"
                         )
                         .permitAll()
