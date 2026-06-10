@@ -284,7 +284,8 @@ public class TopicService {
               calculateAndSaveTopic(
                       topic.getTopicId(),
                       request.startTime(),
-                      request.endTime()
+                      request.endTime(),
+                      request.fieldId()
               )
       );
     }
@@ -292,7 +293,7 @@ public class TopicService {
     return new TopicCalculateResponse(result);
   }
 
-  public Topic calculateAndSaveTopic(String topicId, String startTime, String endTime) {
+  public Topic calculateAndSaveTopic(String topicId, String startTime, String endTime, String fieldId) {
 
     LocalDate startDate = LocalDate.parse(startTime);
     LocalDate endDate = LocalDate.parse(endTime);
@@ -307,7 +308,7 @@ public class TopicService {
       return existingTopic.get();
     }
 
-    Topic topic = openAlexService.findTopicById(topicId);
+    Topic topic = openAlexService.findTopicById(topicId, fieldId);
 
     Topic calculatedTopic = calculateTopic(
             topic,
@@ -324,15 +325,17 @@ public class TopicService {
 
     LocalDate startDate = LocalDate.parse(request.startTime());
     LocalDate endDate = LocalDate.parse(request.endTime());
+    Integer fieldId = Integer.parseInt(request.fieldId());
 
     List<Topic> topics =
-            topicRepository.findByStartTimeAndEndTime(
+            topicRepository.findByStartTimeAndEndTimeAndFieldId(
                     startDate,
-                    endDate
+                    endDate,
+                    fieldId
             );
 
     if (topics.isEmpty()) {
-      return calculateAndSaveTopics(request);
+      return null;
     }
 
     return new TopicCalculateResponse(topics);

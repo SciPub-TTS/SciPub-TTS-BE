@@ -14,6 +14,12 @@ public interface TopicRepository extends JpaRepository<Topic, Long> {
           LocalDate endTime
   );
 
+  List<Topic> findByStartTimeAndEndTimeAndFieldId(
+          LocalDate startTime,
+          LocalDate endTime,
+          Integer fieldId
+  );
+
   Optional<Topic> findByTopicIdAndStartTimeAndEndTime(
           String topicId,
           LocalDate startTime,

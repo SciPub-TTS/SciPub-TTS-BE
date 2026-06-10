@@ -30,6 +30,9 @@ public class Topic {
   @Column(nullable = false)
   private String name;
 
+  @Column(name = "field_id", nullable = false)
+  private Integer fieldId;
+
   @Column(name = "start_time", nullable = false)
   private LocalDate startTime;
 

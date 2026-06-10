@@ -107,12 +107,14 @@ public class OpenAlexService {
 
   // Service for topic
   private Topic toTopic(
-          OpenAlexHotTopicFilterResponse.TopicItem item
+          OpenAlexHotTopicFilterResponse.TopicItem item,
+          Integer fieldId
   ) {
     Topic topic = new Topic();
 
     topic.setTopicId(item.id());
     topic.setName(item.displayName());
+    topic.setFieldId(fieldId);
     topic.setWorks(
             item.worksCount() == null
                     ? 0
@@ -131,6 +133,7 @@ public class OpenAlexService {
           TopicHotFilterRequest request
   ){
     var queryPeriod = String.format("field.id:%s", request.fieldId());
+    Integer fieldId = Integer.parseInt(request.fieldId());
 
     var topOfCited = restClient.get()
             .uri(uriBuilder ->
@@ -194,7 +197,7 @@ public class OpenAlexService {
               .forEach(item -> {
 
                 if (visited.add(item.id())) {
-                  topics.add(toTopic(item));
+                  topics.add(toTopic(item, fieldId));
                 }
 
               });
@@ -207,7 +210,7 @@ public class OpenAlexService {
               .forEach(item -> {
 
                 if (visited.add(item.id())) {
-                  topics.add(toTopic(item));
+                  topics.add(toTopic(item, fieldId));
                 }
 
               });
@@ -221,7 +224,7 @@ public class OpenAlexService {
     );
   }
 
-  public Topic findTopicById(String topicId) {
+  public Topic findTopicById(String topicId, String fieldId) {
 
     var response = restClient.get()
             .uri(uriBuilder ->
@@ -253,7 +256,9 @@ public class OpenAlexService {
       );
     }
 
-    return toTopic(response.results().getFirst());
+    return toTopic(response.results().getFirst(),
+            Integer.parseInt(fieldId)
+    );
   }
 
   public long numOfWorksInPeriodByTopic(

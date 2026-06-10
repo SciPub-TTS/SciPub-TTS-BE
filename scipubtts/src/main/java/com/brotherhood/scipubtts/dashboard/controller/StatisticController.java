@@ -87,7 +87,8 @@ public class StatisticController {
     var data = topicService.calculateAndSaveTopic(
             request.topicId(),
             request.startTime(),
-            request.endTime()
+            request.endTime(),
+            request.fieldId()
     );
 
     long duration = System.currentTimeMillis() - startTime;
