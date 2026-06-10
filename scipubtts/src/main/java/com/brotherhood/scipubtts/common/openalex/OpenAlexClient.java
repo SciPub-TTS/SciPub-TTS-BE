@@ -7,14 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
-import java.time.Duration;
 import java.util.Map;
 
 @Component
@@ -22,8 +20,6 @@ public class OpenAlexClient {
 
     private static final int MAX_RETRIES = 5;
     private static final long INITIAL_BACKOFF_MILLIS = 500L;
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -38,13 +34,7 @@ public class OpenAlexClient {
     private String openAlexMailto;
 
     public OpenAlexClient(ObjectMapper objectMapper) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
-        requestFactory.setReadTimeout(READ_TIMEOUT);
-
-        this.restClient = RestClient.builder()
-                .requestFactory(requestFactory)
-                .build();
+        this.restClient = RestClient.builder().build();
         this.objectMapper = objectMapper;
     }
 
