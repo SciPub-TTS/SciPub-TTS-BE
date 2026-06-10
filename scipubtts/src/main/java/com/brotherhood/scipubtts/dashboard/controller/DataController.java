@@ -5,10 +5,10 @@ import com.brotherhood.scipubtts.dashboard.dto.request.KeywordCalculateAllReques
 import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
-import com.brotherhood.scipubtts.dashboard.service.KeywordService;
-import com.brotherhood.scipubtts.dashboard.service.MetricService;
-import com.brotherhood.scipubtts.dashboard.service.PublicationService;
-import com.brotherhood.scipubtts.dashboard.service.TopicService;
+import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
+import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
+import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
+import com.brotherhood.scipubtts.dashboard.service.impl.TopicServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/data")
 public class DataController {
-  private final PublicationService publicationService;
-  private final MetricService metricService;
-  private final TopicService topicService;
-  private final KeywordService keywordService;
+  private final PublicationServiceImpl publicationService;
+  private final MetricServiceImpl metricService;
+  private final TopicServiceImpl topicService;
+  private final KeywordServiceImpl keywordService;
 
   @GetMapping("/publication-trends")
   public ResponseEntity<ResponseObject> getPublicationTrends() {
