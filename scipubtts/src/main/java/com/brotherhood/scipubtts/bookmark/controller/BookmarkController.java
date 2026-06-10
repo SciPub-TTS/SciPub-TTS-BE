@@ -52,11 +52,12 @@ public class BookmarkController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String topic,
             @RequestParam(required = false) String source,
+            @RequestParam(required = false) String author,
             @RequestParam(required = false) Integer year,
             @RequestParam(defaultValue = "RECENT") String sort) {
 
         BookmarkPageResponse data = bookmarkService.getMyBookmarks(
-                userId, page, size, keyword, topic, source, year, sort
+                userId, page, size, keyword, topic, source, author, year, sort
         );
 
         return ResponseEntity.ok(

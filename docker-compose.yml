@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: scipub-backend-prod
     ports:
-      - "8088:8080"
+      - "127.0.0.1:8088:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
       - PORT=${PORT}
@@ -21,6 +21,7 @@ services:
       - PROD_MAIL_PASSWORD=${PROD_MAIL_PASSWORD}
       - PROD_GOOGLE_CLIENT_ID=${PROD_GOOGLE_CLIENT_ID}
       - PROD_GOOGLE_CLIENT_SECRET=${PROD_GOOGLE_CLIENT_SECRET}
+      - PROD_FRONTEND_SUCCESS_URL=${PROD_FRONTEND_SUCCESS_URL}
     depends_on:
       - scipub-postgres
     networks:
@@ -37,8 +38,8 @@ services:
       - "5433:5432"
     environment:
       - POSTGRES_DB=SciHub_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345
+      - POSTGRES_USER=${PROD_DB_USERNAME}
+      - POSTGRES_PASSWORD=${PROD_DB_PASSWORD}
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     networks:

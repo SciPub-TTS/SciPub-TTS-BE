@@ -21,6 +21,7 @@ public interface BookmarkService {
             String keyword,
             String topic,
             String source,
+            String author,
             Integer year,
             String sort
     );
