@@ -13,6 +13,7 @@ import java.util.UUID;
 @Service
 public class SearchServiceImpl implements SearchService {
 
+    // Split responsibilities into smaller services so each class stays focused.
     private final SearchOptionsService searchOptionsService;
     private final SearchWorksLookupService searchWorksLookupService;
     private final SearchHistoryService searchHistoryService;
