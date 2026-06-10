@@ -14,22 +14,29 @@ import java.util.regex.Pattern;
 @Component
 public class OpenAlexMapReader {
 
+    // OpenAlex responses are dynamic JSON objects.
+    // We keep them as Map<String, Object> for flexibility, then read values safely here.
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("(?is)<[^>]+>");
     private static final Pattern MULTI_WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getMap(Map<String, Object> source, String key) {
         if (source == null) {
             return new LinkedHashMap<>();
         }
 
         Object value = source.get(key);
-        if (!(value instanceof Map<?, ?> rawMap)) {
+        if (!(value instanceof Map<?, ?>)) {
             return new LinkedHashMap<>();
         }
 
+        Map<?, ?> rawMap = (Map<?, ?>) value;
         Map<String, Object> result = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
-            if (entry.getKey() instanceof String keyName) {
+            Object rawKey = entry.getKey();
+
+            if (rawKey instanceof String) {
+                String keyName = (String) rawKey;
                 result.put(keyName, entry.getValue());
             }
         }
@@ -48,16 +55,21 @@ public class OpenAlexMapReader {
     public List<Map<String, Object>> getMapListFromObject(Object value) {
         List<Map<String, Object>> result = new ArrayList<>();
 
-        if (!(value instanceof List<?> rawList)) {
+        if (!(value instanceof List<?>)) {
             return result;
         }
 
+        List<?> rawList = (List<?>) value;
         for (Object item : rawList) {
-            if (item instanceof Map<?, ?> rawMap) {
+            if (item instanceof Map<?, ?>) {
+                Map<?, ?> rawMap = (Map<?, ?>) item;
                 Map<String, Object> itemMap = new LinkedHashMap<>();
 
                 for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
-                    if (entry.getKey() instanceof String keyName) {
+                    Object rawKey = entry.getKey();
+
+                    if (rawKey instanceof String) {
+                        String keyName = (String) rawKey;
                         itemMap.put(keyName, entry.getValue());
                     }
                 }
@@ -72,10 +84,11 @@ public class OpenAlexMapReader {
     public List<Object> getObjectList(Object value) {
         List<Object> result = new ArrayList<>();
 
-        if (!(value instanceof List<?> rawList)) {
+        if (!(value instanceof List<?>)) {
             return result;
         }
 
+        List<?> rawList = (List<?>) value;
         result.addAll(rawList);
         return result;
     }
@@ -186,6 +199,8 @@ public class OpenAlexMapReader {
     }
 
     public String deriveAbstractText(Map<String, Object> abstractInvertedIndex) {
+        // OpenAlex stores the abstract as "word -> positions".
+        // We rebuild the sentence by sorting tokens by position.
         if (abstractInvertedIndex == null || abstractInvertedIndex.isEmpty()) {
             return null;
         }

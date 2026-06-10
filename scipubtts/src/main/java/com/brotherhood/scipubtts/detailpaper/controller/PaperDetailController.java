@@ -17,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/api/papers")
 public class PaperDetailController {
 
+    // This controller only delegates detail requests to the service layer.
     private final PaperDetailService paperDetailService;
 
     public PaperDetailController(PaperDetailService paperDetailService) {
@@ -32,6 +33,7 @@ public class PaperDetailController {
             @Parameter(description = "OpenAlex work id", example = "W2125121305")
             @PathVariable String workId
     ) {
+        // Load one paper detail by OpenAlex work id.
         Map<String, Object> data = paperDetailService.getWorkDetail(workId);
 
         return ResponseEntity.status(HttpStatus.OK).body(

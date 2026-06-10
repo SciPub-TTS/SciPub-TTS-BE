@@ -12,6 +12,11 @@ import java.util.Map;
 @Service
 public class SearchWorksLookupService {
 
+    // This service is the main search flow:
+    // 1. normalize request
+    // 2. build OpenAlex query
+    // 3. call OpenAlex
+    // 4. map response into our DTO
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
     private final SearchFilterBuilder searchFilterBuilder;
@@ -30,30 +35,62 @@ public class SearchWorksLookupService {
     }
 
     public SearchWorksResponse searchWorks(SearchWorksQueryRequest request) {
-        SearchWorksQueryRequest safeRequest = request == null ? SearchWorksQueryRequest.empty() : request;
+        SearchWorksQueryRequest safeRequest = getSafeRequest(request);
         int page = searchQuerySupport.normalizeWorksPage(safeRequest.getPage());
         int perPage = searchQuerySupport.normalizePerPage(safeRequest.getPerPage());
         String appliedFilter = searchFilterBuilder.build(safeRequest);
+        String appliedSort = resolveSort(safeRequest);
+        Map<String, String> queryParams = buildOpenAlexQueryParams(
+                safeRequest,
+                page,
+                perPage,
+                appliedFilter,
+                appliedSort
+        );
 
-        Map<String, String> queryParams = new LinkedHashMap<>();
-        if (StringUtils.hasText(safeRequest.getQuery())) {
-            queryParams.put("search", safeRequest.getQuery().trim());
+        Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
+        return searchWorksMapper.map(openAlexResponse, appliedFilter, appliedSort, page, perPage);
+    }
+
+    private SearchWorksQueryRequest getSafeRequest(SearchWorksQueryRequest request) {
+        if (request == null) {
+            return SearchWorksQueryRequest.empty();
         }
+
+        return request;
+    }
+
+    private String resolveSort(SearchWorksQueryRequest request) {
+        boolean hasSearchQuery = StringUtils.hasText(request.getQuery());
+
+        return searchQuerySupport.resolveSort(request.getSort(), hasSearchQuery);
+    }
+
+    private Map<String, String> buildOpenAlexQueryParams(
+            SearchWorksQueryRequest request,
+            int page,
+            int perPage,
+            String appliedFilter,
+            String appliedSort
+    ) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+
+        // Keyword search is only sent when the user actually typed something.
+        if (StringUtils.hasText(request.getQuery())) {
+            queryParams.put("search", request.getQuery().trim());
+        }
+
+        // Filter string is produced by SearchFilterBuilder.
         if (StringUtils.hasText(appliedFilter)) {
             queryParams.put("filter", appliedFilter);
         }
 
-        String appliedSort = searchQuerySupport.resolveSort(
-                safeRequest.getSort(),
-                StringUtils.hasText(safeRequest.getQuery())
-        );
-
+        // These values are always sent so the OpenAlex response is predictable.
         queryParams.put("sort", appliedSort);
         queryParams.put("page", String.valueOf(page));
         queryParams.put("per_page", String.valueOf(perPage));
         queryParams.put("select", SearchConstants.WORKS_SELECT_FIELDS);
 
-        Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
-        return searchWorksMapper.map(openAlexResponse, appliedFilter, appliedSort, page, perPage);
+        return queryParams;
     }
 }

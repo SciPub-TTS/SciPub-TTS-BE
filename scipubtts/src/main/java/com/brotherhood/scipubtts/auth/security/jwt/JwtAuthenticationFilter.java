@@ -30,7 +30,12 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     private static final List<String> PUBLIC_PATH_PATTERNS = List.of(
-            "/api/auth/**",
+            "/api/auth/register",
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/auth/logout",
+            "/api/auth/verify-email",
+            "/api/auth/forgot-password/**",
             "/api/search/**",
             "/api/papers/**",
             "/api/statistic/**",

@@ -11,6 +11,7 @@ import java.util.Locale;
 @Component
 public class SearchQuerySupport {
 
+    // Keep paging values inside a safe range accepted by our app and OpenAlex.
     public int normalizeFilterOptionLimit(int limit) {
         if (limit <= 0) {
             return SearchConstants.FILTER_OPTION_LIMIT;
@@ -80,6 +81,8 @@ public class SearchQuerySupport {
     }
 
     public String resolveSort(String requestedSort, boolean hasSearchQuery) {
+        // When there is a keyword query, OpenAlex relevance is usually the best default.
+        // Without a keyword, "most cited" is a more useful default.
         String defaultSort = hasSearchQuery ? "relevance_score:desc" : "cited_by_count:desc";
 
         if (!StringUtils.hasText(requestedSort)) {
@@ -132,6 +135,7 @@ public class SearchQuerySupport {
     }
 
     public List<String> normalizeTypeValues(List<String> values) {
+        // Type values can arrive as labels or URLs. We only keep the last segment.
         List<String> normalized = normalizeStringList(values);
         List<String> result = new ArrayList<>();
 
@@ -154,6 +158,7 @@ public class SearchQuerySupport {
     }
 
     public List<String> normalizeEntityIds(List<String> values) {
+        // Author, institution, source and award filters use their OpenAlex ids.
         List<String> normalized = normalizeStringList(values);
         List<String> result = new ArrayList<>();
 
@@ -176,6 +181,7 @@ public class SearchQuerySupport {
     }
 
     public List<String> normalizeStringList(List<String> values) {
+        // Remove nulls, blanks and duplicates while keeping the original order.
         if (values == null || values.isEmpty()) {
             return List.of();
         }

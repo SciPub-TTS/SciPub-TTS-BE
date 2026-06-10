@@ -13,6 +13,8 @@ import java.util.Map;
 @Service
 public class PaperDetailServiceImpl implements PaperDetailService {
 
+    // This service loads the main paper detail, then enriches it with titles
+    // for referenced works and related works so the frontend can render links easily.
     private final OpenAlexClient openAlexClient;
     private final OpenAlexMapReader openAlexMapReader;
     private final PaperDetailOpenAlexQueryFactory paperDetailOpenAlexQueryFactory;
@@ -34,19 +36,24 @@ public class PaperDetailServiceImpl implements PaperDetailService {
                 paperDetailOpenAlexQueryFactory.buildWorkDetailQueryParams()
         );
 
-        workDetail.put(
-                "referenced_work_details",
-                buildWorkReferenceSummaries(workDetail.get("referenced_works"))
-        );
-        workDetail.put(
-                "related_work_details",
-                buildWorkReferenceSummaries(workDetail.get("related_works"))
-        );
+        addReferenceDetails(workDetail, "referenced_works", "referenced_work_details");
+        addReferenceDetails(workDetail, "related_works", "related_work_details");
 
         return workDetail;
     }
 
+    private void addReferenceDetails(
+            Map<String, Object> workDetail,
+            String sourceKey,
+            String targetKey
+    ) {
+        Object rawWorkIds = workDetail.get(sourceKey);
+        List<Map<String, Object>> summaries = buildWorkReferenceSummaries(rawWorkIds);
+        workDetail.put(targetKey, summaries);
+    }
+
     private List<Map<String, Object>> buildWorkReferenceSummaries(Object rawWorkIds) {
+        // Keep the original order so references appear in a stable order on the frontend.
         List<String> orderedWorkIds = normalizeWorkIds(rawWorkIds);
         if (orderedWorkIds.isEmpty()) {
             return List.of();
@@ -66,9 +73,11 @@ public class PaperDetailServiceImpl implements PaperDetailService {
     }
 
     private Map<String, String> fetchTitlesByWorkId(List<String> orderedWorkIds) {
+        // Remove duplicates before querying OpenAlex to avoid unnecessary requests.
         List<String> uniqueWorkIds = new ArrayList<>(new LinkedHashSet<>(orderedWorkIds));
         Map<String, String> titlesByWorkId = new LinkedHashMap<>();
 
+        // Query in chunks because a work can have many references.
         for (int startIndex = 0; startIndex < uniqueWorkIds.size(); startIndex += 50) {
             int endIndex = Math.min(startIndex + 50, uniqueWorkIds.size());
             List<String> workIdChunk = uniqueWorkIds.subList(startIndex, endIndex);
@@ -102,6 +111,7 @@ public class PaperDetailServiceImpl implements PaperDetailService {
     }
 
     private List<String> normalizeWorkIds(Object rawWorkIds) {
+        // OpenAlex can return ids as full URLs, so we normalize them to the last segment.
         List<String> normalizedWorkIds = new ArrayList<>();
 
         for (Object rawWorkId : openAlexMapReader.getObjectList(rawWorkIds)) {
