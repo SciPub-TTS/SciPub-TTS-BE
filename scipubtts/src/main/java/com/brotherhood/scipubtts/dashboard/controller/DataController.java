@@ -1,9 +1,11 @@
 package com.brotherhood.scipubtts.dashboard.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
+import com.brotherhood.scipubtts.dashboard.dto.request.KeywordCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
+import com.brotherhood.scipubtts.dashboard.service.KeywordService;
 import com.brotherhood.scipubtts.dashboard.service.MetricService;
 import com.brotherhood.scipubtts.dashboard.service.PublicationService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
@@ -21,6 +23,7 @@ public class DataController {
   private final PublicationService publicationService;
   private final MetricService metricService;
   private final TopicService topicService;
+  private final KeywordService keywordService;
 
   @GetMapping("/publication-trends")
   public ResponseEntity<ResponseObject> getPublicationTrends() {
@@ -82,6 +85,21 @@ public class DataController {
             new ResponseObject(
                     HttpStatus.OK.value(),
                     "Get topic successfully",
+                    data
+            )
+    );
+  }
+
+  @PostMapping("/keywordScore-all")
+  public ResponseEntity<ResponseObject> getTopic(
+          @Valid @RequestBody KeywordCalculateAllRequest request,
+          HttpServletRequest httpServletRequest
+  ){
+    var data = keywordService.getByPeriod(request);
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get keywords successfully",
                     data
             )
     );

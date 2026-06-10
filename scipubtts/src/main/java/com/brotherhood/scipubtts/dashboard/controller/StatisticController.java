@@ -1,10 +1,9 @@
 package com.brotherhood.scipubtts.dashboard.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.*;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.service.KeywordService;
 import com.brotherhood.scipubtts.dashboard.service.MetricService;
 import com.brotherhood.scipubtts.dashboard.service.PublicationService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
@@ -18,8 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
-
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/statistic")
@@ -27,6 +24,7 @@ public class StatisticController {
   private final PublicationService publicationService;
   private final MetricService metricService;
   private final TopicService topicService;
+  private final KeywordService keywordService;
 
   @PostMapping("/publication-trends")
   public ResponseEntity<ResponseObject> takePublicationTrend(@Valid @RequestBody OpenAlexPublicationRequest request, HttpServletRequest httpServletRequest){
@@ -102,6 +100,21 @@ public class StatisticController {
             new ResponseObject(
                     HttpStatus.OK.value(),
                     "Calculate all topics score",
+                    data
+            )
+    );
+  }
+
+  @PostMapping("/keywordScore-all")
+  public ResponseEntity<ResponseObject> calculateAllKeywordsScore(
+          @Valid @RequestBody KeywordCalculateAllRequest request,
+          HttpServletRequest httpServletRequest){
+    var data = keywordService.calculateAndSaveKeywords(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Calculate all keywords score",
                     data
             )
     );

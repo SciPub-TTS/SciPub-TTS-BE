@@ -259,19 +259,19 @@ public class TopicService {
     double acceleration = calculateAcceleration(topic);
     topic.setAcceleration(acceleration);
 
-//    double citationDecay = calculateCitationDecay(topic);
-//    topic.setCitationDecay(citationDecay);
+    double citationDecay = calculateCitationDecay(topic);
+    topic.setCitationDecay(citationDecay);
 
     double institution = calculateInstitution(topic);
     topic.setInstitution(institution);
 
-//    double newcomerRatio = calculateNewcomerRatio(topic);
-//    topic.setNewComerAuthor(newcomerRatio);
+    double newcomerRatio = calculateNewcomerRatio(topic);
+    topic.setNewComerAuthor(newcomerRatio);
 
     return topic;
   }
 
-  public TopicCalculateResponse calculateAndSaveTopics(          TopicCalculateAllRequest request ) {
+  public TopicCalculateResponse calculateAndSaveTopics(TopicCalculateAllRequest request ) {
 
     var hotTopics = openAlexService.filterHotTopic(
             new TopicHotFilterRequest(request.fieldId())

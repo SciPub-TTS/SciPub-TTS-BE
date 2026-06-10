@@ -9,6 +9,7 @@ import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicat
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.*;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.*;
+import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -20,6 +21,7 @@ import java.util.*;
 public class OpenAlexService {
   private final RestClient restClient;
   private final int TOP_TOPICS = 30;
+  private final int TOP_KEYWORDS = 100;
 
   public OpenAlexService(RestClient openAlexClient) {
     this.restClient = openAlexClient;
@@ -475,5 +477,142 @@ public class OpenAlexService {
     }
 
     return authorIds;
+  }
+
+  // Service for keyword
+
+  private Keyword toKeyword(OpenAlexHotKeywordFilterResponse.KeywordItem item) {
+    Keyword keyword = new Keyword();
+
+    keyword.setKeywordId(item.id());
+    keyword.setKeyword(item.displayName());
+    keyword.setWorksCount(
+            item.worksCount() == null
+                    ? 0
+                    : item.worksCount()
+    );
+    keyword.setCitedByCount(
+            item.citedByCount() == null
+                    ? 0
+                    : item.citedByCount()
+    );
+
+    return keyword;
+  }
+
+  public KeywordHotFilterResponse filterHotKeyword() {
+
+    var topOfCited = restClient.get()
+            .uri(uriBuilder ->
+                    uriBuilder
+                            .path("/keywords")
+                            .queryParam("page", 1)
+                            .queryParam("per_page", TOP_KEYWORDS)
+                            .queryParam("select", "id,display_name,works_count,cited_by_count")
+                            .queryParam("sort", "cited_by_count:desc")
+                            .build())
+            .retrieve()
+            .body(OpenAlexHotKeywordFilterResponse.class);
+
+    var topOfWorks = restClient.get()
+            .uri(uriBuilder ->
+                    uriBuilder
+                            .path("/keywords")
+                            .queryParam("page", 1)
+                            .queryParam("per_page", TOP_KEYWORDS)
+                            .queryParam("select", "id,display_name,works_count,cited_by_count")
+                            .queryParam("sort", "works_count:desc")
+                            .build())
+            .retrieve()
+            .body(OpenAlexHotKeywordFilterResponse.class);
+
+    Set<String> visited = new LinkedHashSet<>();
+    List<Keyword> keywords = new ArrayList<>();
+
+    if (topOfCited != null) {
+      topOfCited.keywordItemList()
+              .forEach(item -> {
+                if (visited.add(item.id())) {
+                  keywords.add(toKeyword(item));
+                }
+              });
+    }
+
+    if (topOfWorks != null) {
+      topOfWorks.keywordItemList()
+              .forEach(item -> {
+                if (visited.add(item.id())) {
+                  keywords.add(toKeyword(item));
+                }
+              });
+    }
+
+    return new KeywordHotFilterResponse(List.copyOf(keywords));
+  }
+
+  public long numOfWorksInPeriodByKeyword(
+          String keywordId,
+          LocalDate start,
+          LocalDate end
+  ) {
+    String filter = String.format(
+            "keywords.id:%s,from_publication_date:%s,to_publication_date:%s,type:article",
+            keywordId, start, end
+    );
+
+    System.out.println("========== KEYWORD QUERY ==========");
+    System.out.println("keywordId = " + keywordId);
+    System.out.println("start     = " + start);
+    System.out.println("end       = " + end);
+    System.out.println("filter    = " + filter);
+
+    var response = restClient.get()
+            .uri(uriBuilder -> uriBuilder
+                    .path("/works")
+                    .queryParam("filter", filter)
+                    .queryParam("group_by", "publication_year")
+                    .queryParam("per_page", 200)
+                    .build()
+            )
+            .retrieve()
+            .body(OpenAlexGroupByResponse.class);
+
+    if (response == null || response.groupBy() == null) return 0L;
+
+    long result = response.groupBy().stream()
+            .mapToLong(OpenAlexGroupByResponse.GroupByItem::count)
+            .sum();
+
+    System.out.println("result = " + result);
+    System.out.println("===================================");
+
+    return result;
+  }
+
+  public long numOfWorksInPeriodByField(
+          String fieldId,
+          LocalDate start,
+          LocalDate end
+  ) {
+    String filter = String.format(
+            "primary_topic.field.id:%s,from_publication_date:%s,to_publication_date:%s,type:article",
+            fieldId, start, end
+    );
+
+    var response = restClient.get()
+            .uri(uriBuilder -> uriBuilder
+                    .path("/works")
+                    .queryParam("filter", filter)
+                    .queryParam("page", 1)
+                    .queryParam("per_page", 1)
+                    .queryParam("select", "id")
+                    .build()
+            )
+            .retrieve()
+            .body(OpenAlexMetricsResponse.class);
+
+    if (response == null || response.meta() == null) return 0L;
+
+    return response.meta().count();
   }
 }
