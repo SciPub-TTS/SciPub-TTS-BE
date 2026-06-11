@@ -82,7 +82,7 @@ public class StatisticController {
           HttpServletRequest httpServletRequest){
     long startTime = System.currentTimeMillis();
 
-    var data = topicService.calculateAndSaveTopic(
+    var data = topicService.calculateTopic(
             request.topicId(),
             request.startTime(),
             request.endTime(),

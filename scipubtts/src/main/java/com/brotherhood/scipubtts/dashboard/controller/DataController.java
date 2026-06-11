@@ -1,10 +1,7 @@
 package com.brotherhood.scipubtts.dashboard.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.dashboard.dto.request.KeywordCalculateAllRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.*;
 import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
@@ -54,11 +51,11 @@ public class DataController {
 
   @PostMapping("/topicScore-all")
   public ResponseEntity<ResponseObject> getTopics(
-          @Valid @RequestBody TopicCalculateAllRequest request,
+          @Valid @RequestBody TopicRankingRequest request,
           HttpServletRequest httpServletRequest
   ) {
 
-    var data = topicService.getTopicsFromDb(request);
+    var data = topicService.getTopicsRanking(request);
 
     return ResponseEntity.ok(
             new ResponseObject(

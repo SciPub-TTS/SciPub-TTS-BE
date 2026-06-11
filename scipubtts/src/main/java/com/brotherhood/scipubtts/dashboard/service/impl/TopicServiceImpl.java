@@ -2,12 +2,15 @@ package com.brotherhood.scipubtts.dashboard.service.impl;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
+import com.brotherhood.scipubtts.dashboard.service.CalculationService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ import java.util.Set;
 public class TopicServiceImpl implements TopicService {
   private final OpenAlexServiceImpl openAlexService;
   private final TopicRepository topicRepository;
+  private final CalculationService calculationService;
 
   private static final long PERIOD_DAYS = 14;
   private static final double CITATION_LAMBDA = Math.log(2);
@@ -272,7 +276,43 @@ public class TopicServiceImpl implements TopicService {
     return topic;
   }
 
+  private List<Topic> saveRankedTopics(List<Topic> topics) {
+    Set<String> selectedTopicIds = new HashSet<>();
+    List<FormulaType> formulas = List.of(FormulaType.BALANCED, FormulaType.TRENDING, FormulaType.EMERGING, FormulaType.IMPACT);
+
+    for (FormulaType formula : formulas) {
+      TopicCalculateResponse response = calculationService.calculateTopicsFinalScore(formula.getFormula(), topics);
+      for (Topic topic : response.topicList()) {
+        selectedTopicIds.add(topic.getTopicId());
+      }
+    }
+
+    List<Topic> topicsToSave = topics.stream()
+            .filter(topic -> selectedTopicIds.contains(topic.getTopicId()))
+            .toList();
+
+    topicRepository.saveAll(topicsToSave);
+
+    return topicsToSave;
+  }
+
   public TopicCalculateResponse calculateAndSaveTopics(TopicCalculateAllRequest request ) {
+
+    LocalDate startDate = LocalDate.parse(request.startTime());
+
+    LocalDate endDate = LocalDate.parse(request.endTime());
+
+    Integer fieldId = Integer.parseInt(request.fieldId());
+
+    List<Topic> existingTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+                    startDate,
+                    endDate,
+                    fieldId
+            );
+
+    if (!existingTopics.isEmpty()) {
+      return new TopicCalculateResponse(existingTopics);
+    }
 
     var hotTopics = openAlexService.filterHotTopic(
             new TopicHotFilterRequest(request.fieldId())
@@ -282,7 +322,7 @@ public class TopicServiceImpl implements TopicService {
 
     for (Topic topic : hotTopics.topicIdList()) {
       result.add(
-              calculateAndSaveTopic(
+              calculateTopic(
                       topic.getTopicId(),
                       request.startTime(),
                       request.endTime(),
@@ -291,10 +331,12 @@ public class TopicServiceImpl implements TopicService {
       );
     }
 
+    result = saveRankedTopics(result);
+
     return new TopicCalculateResponse(result);
   }
 
-  public Topic calculateAndSaveTopic(String topicId, String startTime, String endTime, String fieldId) {
+  public Topic calculateTopic(String topicId, String startTime, String endTime, String fieldId) {
 
     LocalDate startDate = LocalDate.parse(startTime);
     LocalDate endDate = LocalDate.parse(endTime);
@@ -311,17 +353,15 @@ public class TopicServiceImpl implements TopicService {
 
     Topic topic = openAlexService.findTopicById(topicId, fieldId);
 
-    Topic calculatedTopic = calculateTopic(
+    return calculateTopic(
             topic,
             startDate,
             endDate
     );
-
-    return topicRepository.save(calculatedTopic);
   }
 
-  public TopicCalculateResponse getTopicsFromDb(
-          TopicCalculateAllRequest request
+  public TopicCalculateResponse getTopicsRanking(
+          TopicRankingRequest request
   ) {
 
     LocalDate startDate = LocalDate.parse(request.startTime());
@@ -339,7 +379,10 @@ public class TopicServiceImpl implements TopicService {
       return null;
     }
 
-    return new TopicCalculateResponse(topics);
+    return calculationService.calculateTopicsFinalScore(
+            request.formula(),
+            topics
+    );
   }
 
   public Topic getTopicFromDb(

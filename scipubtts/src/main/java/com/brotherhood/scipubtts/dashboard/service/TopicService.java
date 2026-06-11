@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 
@@ -9,15 +10,15 @@ public interface TopicService {
           TopicCalculateAllRequest request
   );
 
-  Topic calculateAndSaveTopic(
+  Topic calculateTopic(
           String topicId,
           String startTime,
           String endTime,
           String fieldId
   );
 
-  TopicCalculateResponse getTopicsFromDb(
-          TopicCalculateAllRequest request
+  TopicCalculateResponse getTopicsRanking(
+          TopicRankingRequest request
   );
 
   Topic getTopicFromDb(
