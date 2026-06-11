@@ -76,48 +76,34 @@ public class SearchOptionsService {
         List<SearchFilterOptionsResponse.FacetOption> subFieldOptions =
                 fetchGroupedWorkOptions("primary_topic.subfield.id", limit, page);
         List<SearchFilterOptionsResponse.FacetOption> countryOptions =
-                StringUtils.hasText(keyword)
-                        ? fetchCountryOptions(keyword, limit, page)
-                        : fetchGroupedWorkOptions("institutions.country_code", limit, page);
+                fetchScopedFacetOptions("institutions.country_code", keyword, limit, page);
 
-        List<SearchFilterOptionsResponse.EntityOption> sourceOptions = fetchEntityOptions(
-                "/sources",
+        List<SearchFilterOptionsResponse.EntityOption> sourceOptions = fetchScopedEntityOptions(
+                "primary_location.source.id",
                 keyword,
                 limit,
-                page,
-                "id,display_name,works_count",
-                "works_count",
-                "works_count:desc"
+                page
         );
 
-        List<SearchFilterOptionsResponse.EntityOption> authorOptions = fetchEntityOptions(
-                "/authors",
+        List<SearchFilterOptionsResponse.EntityOption> authorOptions = fetchScopedEntityOptions(
+                "authorships.author.id",
                 keyword,
                 limit,
-                page,
-                "id,display_name,works_count",
-                "works_count",
-                "works_count:desc"
+                page
         );
 
-        List<SearchFilterOptionsResponse.EntityOption> institutionOptions = fetchEntityOptions(
-                "/institutions",
+        List<SearchFilterOptionsResponse.EntityOption> institutionOptions = fetchScopedEntityOptions(
+                "authorships.institutions.id",
                 keyword,
                 limit,
-                page,
-                "id,display_name,works_count,country_code",
-                "works_count",
-                "works_count:desc"
+                page
         );
 
-        List<SearchFilterOptionsResponse.EntityOption> awardOptions = fetchEntityOptions(
-                "/awards",
+        List<SearchFilterOptionsResponse.EntityOption> awardOptions = fetchScopedEntityOptions(
+                "awards.id",
                 keyword,
                 limit,
-                page,
-                "id,display_name",
-                null,
-                null
+                page
         );
 
         return new SearchFilterOptionsResponse(
@@ -168,70 +154,61 @@ public class SearchOptionsService {
         return options;
     }
 
-    private List<SearchFilterOptionsResponse.EntityOption> fetchEntityOptions(
-            String path,
+    private List<SearchFilterOptionsResponse.FacetOption> fetchScopedFacetOptions(
+            String groupBy,
             String keyword,
             int limit,
-            int page,
-            String selectFields,
-            String countField,
-            String defaultSort
+            int page
     ) {
-        Map<String, String> queryParams = createPagedQueryParams(limit, page);
-        queryParams.put("select", selectFields);
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
+        List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
 
-        if (StringUtils.hasText(keyword)) {
-            queryParams.put("search", keyword);
-        } else if (StringUtils.hasText(defaultSort)) {
-            queryParams.put("sort", defaultSort);
-        }
+        for (Map<String, Object> group : groups) {
+            String key = openAlexMapReader.getString(group, "key");
+            String label = openAlexMapReader.sanitizeDisplayText(
+                    openAlexMapReader.getString(group, "key_display_name")
+            );
+            long count = openAlexMapReader.getLong(group, "count", 0L);
 
-        Map<String, Object> response = openAlexClient.get(path, queryParams);
-        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
-        List<SearchFilterOptionsResponse.EntityOption> options = new ArrayList<>();
-
-        for (Map<String, Object> result : results) {
-            String id = openAlexMapReader.getString(result, "id");
-            String label = openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "display_name"));
-
-            if (id.isBlank() || label.isBlank()) {
+            if (key.isBlank() || label.isBlank() || !matchesKeyword(label, keyword)) {
                 continue;
             }
 
-            Long count = null;
-            if (countField != null && result.get(countField) != null) {
-                count = openAlexMapReader.getLong(result, countField, 0L);
-            }
-
-            options.add(new SearchFilterOptionsResponse.EntityOption(id, label, count));
+            options.add(new SearchFilterOptionsResponse.FacetOption(
+                    searchQuerySupport.normalizeGroupedValue(groupBy, key),
+                    label,
+                    count
+            ));
         }
 
         return options;
     }
 
-    private List<SearchFilterOptionsResponse.FacetOption> fetchCountryOptions(String keyword, int limit, int page) {
-        Map<String, String> queryParams = createPagedQueryParams(limit, page);
-        queryParams.put("select", "id,display_name,works_count");
+    private List<SearchFilterOptionsResponse.EntityOption> fetchScopedEntityOptions(
+            String groupBy,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
+        List<SearchFilterOptionsResponse.EntityOption> options = new ArrayList<>();
 
-        if (StringUtils.hasText(keyword)) {
-            queryParams.put("search", keyword);
-        }
+        for (Map<String, Object> group : groups) {
+            String id = openAlexMapReader.getString(group, "key");
+            String label = openAlexMapReader.sanitizeDisplayText(
+                    openAlexMapReader.getString(group, "key_display_name")
+            );
+            long count = openAlexMapReader.getLong(group, "count", 0L);
 
-        Map<String, Object> response = openAlexClient.get("/countries", queryParams);
-        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
-        List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
-
-        for (Map<String, Object> result : results) {
-            String id = openAlexMapReader.getString(result, "id");
-            String label = openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "display_name"));
-            long count = openAlexMapReader.getLong(result, "works_count", 0L);
-            String value = searchQuerySupport.normalizeCountryOptionValue(id);
-
-            if (value.isBlank() || label.isBlank()) {
+            if (id.isBlank() || label.isBlank() || !matchesKeyword(label, keyword)) {
                 continue;
             }
 
-            options.add(new SearchFilterOptionsResponse.FacetOption(value, label, count));
+            options.add(new SearchFilterOptionsResponse.EntityOption(id, label, count));
         }
 
         return options;
@@ -271,6 +248,22 @@ public class SearchOptionsService {
         queryParams.put("per_page", String.valueOf(limit));
         queryParams.put("page", String.valueOf(page));
         return queryParams;
+    }
+
+    private Map<String, String> createScopedGroupedQueryParams(String groupBy, int limit, int page) {
+        Map<String, String> queryParams = createPagedQueryParams(limit, page);
+        queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
+        queryParams.put("group_by", groupBy);
+        queryParams.put("sort", "count:desc");
+        return queryParams;
+    }
+
+    private boolean matchesKeyword(String label, String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return true;
+        }
+
+        return label.toLowerCase().contains(keyword.trim().toLowerCase());
     }
 
     private String buildDefaultCacheKey(int limit, int page) {
