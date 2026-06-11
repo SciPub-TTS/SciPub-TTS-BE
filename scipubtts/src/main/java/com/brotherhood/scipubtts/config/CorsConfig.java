@@ -8,6 +8,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 public class CorsConfig {
@@ -34,33 +36,35 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Tách chuỗi comma-separated từ file properties thành List cấu hình công khai
         if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
-            config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+            config.setAllowedOrigins(splitAndTrimCsv(allowedOrigins));
         }
 
         if (allowedMethods != null && !allowedMethods.isEmpty()) {
-            config.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
+            config.setAllowedMethods(splitAndTrimCsv(allowedMethods));
         }
 
         if (allowedHeaders != null && !allowedHeaders.isEmpty()) {
-            config.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
+            config.setAllowedHeaders(splitAndTrimCsv(allowedHeaders));
         }
 
         if (exposedHeaders != null && !exposedHeaders.isEmpty()) {
-            config.setExposedHeaders(Arrays.asList(exposedHeaders.split(",")));
+            config.setExposedHeaders(splitAndTrimCsv(exposedHeaders));
         }
 
-        // Credentials — QUAN TRỌNG cho cookie + Authorization
         config.setAllowCredentials(allowCredentials);
-
-        // Cache preflight
         config.setMaxAge(maxAge);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Áp dụng cho tất cả path
         source.registerCorsConfiguration("/**", config);
 
         return source;
+    }
+
+    private List<String> splitAndTrimCsv(String csv) {
+        return Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .collect(Collectors.toList());
     }
 }

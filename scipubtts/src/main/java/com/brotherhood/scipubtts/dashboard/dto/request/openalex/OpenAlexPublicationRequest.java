@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.dashboard.dto.request;
+package com.brotherhood.scipubtts.dashboard.dto.request.openalex;
 
 public record OpenAlexPublicationRequest (
         String yearFrom,
