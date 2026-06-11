@@ -50,6 +50,9 @@ public class AuthServiceImpl implements AuthService {
     @Value("${app.backend-base-url}")
     private String backendBaseUrl;
 
+    @Value("${app.frontend-base-url}")
+    private String frontendBaseUrl;
+
     @Override
     @Transactional
     public String registerLocal(RegisterLocalRequest request) {
@@ -218,8 +221,13 @@ public class AuthServiceImpl implements AuthService {
 
     private String buildRedirectUrl(String appBaseUrl) {
         if (appBaseUrl == null || appBaseUrl.isBlank()) {
-            appBaseUrl = "http://localhost:5173";
+            appBaseUrl = frontendBaseUrl;
         }
-        return appBaseUrl + "/login?verified=true";
+
+        return trimTrailingSlash(appBaseUrl) + "/login?verified=true";
+    }
+
+    private String trimTrailingSlash(String value) {
+        return value.replaceAll("/+$", "");
     }
 }

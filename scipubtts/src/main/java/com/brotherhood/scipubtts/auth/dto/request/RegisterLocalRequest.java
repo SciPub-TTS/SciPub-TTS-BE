@@ -25,6 +25,7 @@ public record RegisterLocalRequest(
         @NotBlank(message = "Confirm password is required")
         String confirmPassword,
 
+        @URL(message = "Invalid app base URL")
         String appBaseUrl
 
 
