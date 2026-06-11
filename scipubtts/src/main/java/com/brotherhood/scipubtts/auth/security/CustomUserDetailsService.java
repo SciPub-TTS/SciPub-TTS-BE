@@ -28,6 +28,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                         new UsernameNotFoundException(ErrorCode.USER_NOT_FOUND.getMessage())
                 );
 
+        if (user.isBanned()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_BANNED);
+        }
+
         return UserPrincipal.create(user);
     }
 
@@ -36,6 +40,11 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() ->
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
+
+        if (user.isBanned()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_BANNED);
+        }
+
         return UserPrincipal.create(user);
     }
 }

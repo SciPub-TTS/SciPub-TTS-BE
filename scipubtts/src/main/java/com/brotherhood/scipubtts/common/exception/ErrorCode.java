@@ -61,6 +61,16 @@ public enum ErrorCode {
     INVALID_USER_INFO(HttpStatus.BAD_REQUEST, "Email not found from Google provider."),
     OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No account is associated with this social email address."),
 
+    // ===== ADMIN =====
+    ADMIN_SELF_ACTION_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+            "Admin cannot perform this action on their own account."),
+    ADMIN_TARGET_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+            "Admin accounts cannot be banned or unbanned."),
+    ADMIN_ACCOUNT_ALREADY_BANNED(HttpStatus.CONFLICT,
+            "This account has already been banned."),
+    ADMIN_ACCOUNT_NOT_BANNED(HttpStatus.CONFLICT,
+            "This account is not banned."),
+
     // ===== EMAIL =====
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "The provided email address format is invalid."),
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Invalid email verification token."),

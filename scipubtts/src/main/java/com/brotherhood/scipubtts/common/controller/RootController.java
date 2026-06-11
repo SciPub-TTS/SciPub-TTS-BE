@@ -24,10 +24,5 @@ public class RootController {
                 )
         );
     }
-
-    @GetMapping("/favicon.ico")
-    public ResponseEntity<Void> favicon() {
-        return ResponseEntity.noContent().build();
-    }
 }
 
