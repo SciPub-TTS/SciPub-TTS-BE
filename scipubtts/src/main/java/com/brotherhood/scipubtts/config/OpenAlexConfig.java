@@ -13,8 +13,8 @@ public class OpenAlexConfig {
   private String openAlexBaseUrl;
 
   @Bean
-  public RestClient openAlexRestClient(RestClient.Builder restClientBuilder) {
-    return restClientBuilder
+  public RestClient openAlexRestClient() {
+    return RestClient.builder()
             .baseUrl(openAlexBaseUrl)
             .defaultHeader(HttpHeaders.USER_AGENT, "ScipubTTS")
             .build();
