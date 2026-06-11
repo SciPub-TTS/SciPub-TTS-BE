@@ -15,34 +15,34 @@ public class SearchWorksQueryRequest {
     @Schema(description = "Year filter mode", nullable = true, allowableValues = {"range", "exact"})
     private String yearMode;
 
-    @Schema(description = "Start year when yearMode=range", nullable = true, example = "2020")
+    @Schema(description = "Start year when yearMode=range", nullable = true, example = "2018")
     private Integer yearFrom;
 
-    @Schema(description = "End year when yearMode=range", nullable = true, example = "2025")
+    @Schema(description = "End year when yearMode=range", nullable = true, example = "2026")
     private Integer yearTo;
 
-    @Schema(description = "Exact year when yearMode=exact", nullable = true, example = "2024")
+    @Schema(description = "Exact year when yearMode=exact", nullable = true, example = "2006")
     private Integer yearExact;
 
-    @Schema(description = "Work types such as article or book-chapter", nullable = true, example = "[\"article\"]")
+    @Schema(description = "Work types such as article, book-chapter or v.v..", nullable = true, example = "[\"article\"]")
     private List<String> type;
 
     @Schema(description = "Filter only open-access works", nullable = true, example = "true")
     private Boolean openAccess;
 
-    @Schema(description = "OpenAlex subfield ids", nullable = true, example = "[\"subfields/1302\"]")
+    @Schema(description = "OpenAlex subfield ids", nullable = true, example = "[\"subfields/1702\"]")
     private List<String> subField;
 
-    @Schema(description = "OpenAlex author ids", nullable = true, example = "[\"A507823743\"]")
+    @Schema(description = "OpenAlex author ids", nullable = true, example = "[\"A5024995037\"]")
     private List<String> author;
 
-    @Schema(description = "OpenAlex institution ids", nullable = true, example = "[\"I71267560\"]")
+    @Schema(description = "OpenAlex institution ids", nullable = true, example = "[\"I201448701\"]")
     private List<String> institution;
 
     @Schema(description = "Filter works that have PDF content", nullable = true, example = "true")
     private Boolean pdf;
 
-    @Schema(description = "Country codes such as US, VN, KR", nullable = true, example = "[\"US\"]")
+    @Schema(description = "Country codes such as US, VN, KR", nullable = true, example = "[\"VN\"]")
     private List<String> country;
 
     @Schema(description = "Citation filter mode", nullable = true, allowableValues = {"range", "exact"})
@@ -57,10 +57,10 @@ public class SearchWorksQueryRequest {
     @Schema(description = "Exact citation count when citationMode=exact", nullable = true, example = "50")
     private Integer citationExact;
 
-    @Schema(description = "OpenAlex source ids", nullable = true, example = "[\"S4306400194\"]")
+    @Schema(description = "OpenAlex source ids", nullable = true, example = "[\"S64187185\"]")
     private List<String> source;
 
-    @Schema(description = "OpenAlex award ids", nullable = true, example = "[\"https://openalex.org/awards/A1969205030\"]")
+    @Schema(description = "OpenAlex award ids", nullable = true, example = "[\"G1204744554\"]")
     private List<String> award;
 
     @Schema(description = "ORCID filter", nullable = true, allowableValues = {"is", "is not"})

@@ -56,7 +56,7 @@ public class SearchController {
     @GetMapping("/works")
     @Operation(
             summary = "Search works",
-            description = "All query fields are optional. In Swagger, leave unused fields empty instead of sending placeholder values such as string, 0, or [\"\"]."
+            description = "All query fields are optional."
     )
     public ResponseEntity<ResponseObject> searchWorks(
             @ParameterObject @ModelAttribute SearchWorksQueryRequest request
@@ -69,42 +69,42 @@ public class SearchController {
         );
     }
 
-    @GetMapping("/history/recent")
-    public ResponseEntity<ResponseObject> getRecentSearches(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @RequestParam(defaultValue = "5") int limit
-    ) {
-        // Load the latest search history of the current user.
-        List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, limit);
-
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Loaded recent searches", data)
-        );
-    }
-
-    @PostMapping("/history")
-    public ResponseEntity<ResponseObject> saveSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @RequestBody SearchHistorySaveRequest request
-    ) {
-        // Save one search term for the current user.
-        searchService.saveSearchHistory(request.withUserId(userId));
-
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Saved search history", null)
-        );
-    }
-
-    @DeleteMapping("/history")
-    public ResponseEntity<ResponseObject> deleteSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @RequestParam String query
-    ) {
-        // Remove one search history entry for the current user.
-        searchService.deleteSearchHistory(userId, query);
-
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Deleted search history", null)
-        );
-    }
+//    @GetMapping("/history/recent")
+//    public ResponseEntity<ResponseObject> getRecentSearches(
+//            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+//            @RequestParam(defaultValue = "5") int limit
+//    ) {
+//        // Load the latest search history of the current user.
+//        List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, limit);
+//
+//        return ResponseEntity.ok(
+//                new ResponseObject(HttpStatus.OK.value(), "Loaded recent searches", data)
+//        );
+//    }
+//
+//    @PostMapping("/history")
+//    public ResponseEntity<ResponseObject> saveSearchHistory(
+//            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+//            @RequestBody SearchHistorySaveRequest request
+//    ) {
+//        // Save one search term for the current user.
+//        searchService.saveSearchHistory(request.withUserId(userId));
+//
+//        return ResponseEntity.ok(
+//                new ResponseObject(HttpStatus.OK.value(), "Saved search history", null)
+//        );
+//    }
+//
+//    @DeleteMapping("/history")
+//    public ResponseEntity<ResponseObject> deleteSearchHistory(
+//            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+//            @RequestParam String query
+//    ) {
+//        // Remove one search history entry for the current user.
+//        searchService.deleteSearchHistory(userId, query);
+//
+//        return ResponseEntity.ok(
+//                new ResponseObject(HttpStatus.OK.value(), "Deleted search history", null)
+//        );
+//    }
 }

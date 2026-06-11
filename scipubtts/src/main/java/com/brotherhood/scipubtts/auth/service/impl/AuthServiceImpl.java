@@ -153,23 +153,6 @@ public class AuthServiceImpl implements AuthService {
                 httpRequest,
                 httpResponse
         );
-//        RefreshTokenResult refreshResult =
-//                refreshTokenService.issue(user, request.rememberMe(), httpRequest);
-//
-//        refreshCookieService.addRefreshCookie(
-//                httpResponse,
-//                refreshResult.rawToken(),
-//                refreshResult.rememberMe(),
-//                Duration.between(OffsetDateTime.now(), refreshResult.expiresAt())
-//        );
-//
-//        String accessToken = jwtTokenService.generateAccessToken(UserPrincipal.create(user));
-//
-//        return new AuthResponse(
-//                accessToken,
-//                "Bearer",
-//                jwtTokenService.getAccessTokenExpiresInSeconds()
-//        );
     }
 
     @Override
@@ -217,9 +200,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String buildRedirectUrl(String appBaseUrl) {
-        if (appBaseUrl == null || appBaseUrl.isBlank()) {
-            appBaseUrl = "http://localhost:5173";
+        String resolvedBaseUrl = appBaseUrl;
+
+        if (resolvedBaseUrl == null || resolvedBaseUrl.isBlank()) {
+            resolvedBaseUrl = "http://localhost:5173";
         }
-        return appBaseUrl + "/login?verified=true";
+
+        return resolvedBaseUrl + "/login?verified=true";
     }
 }

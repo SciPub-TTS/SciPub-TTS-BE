@@ -11,7 +11,6 @@ import java.util.Locale;
 @Component
 public class SearchFilterBuilder {
 
-    // This class converts our request DTO into one OpenAlex filter string.
     private final SearchQuerySupport searchQuerySupport;
 
     public SearchFilterBuilder(SearchQuerySupport searchQuerySupport) {
@@ -21,105 +20,109 @@ public class SearchFilterBuilder {
     public String build(SearchWorksQueryRequest request) {
         List<String> filterParts = new ArrayList<>();
 
-        // Add each filter group one by one so the final string is easy to reason about.
         addYearFilter(request, filterParts);
-        addOrFilter(filterParts, "type", searchQuerySupport.normalizeTypeValues(request.getType()));
+        addListFilter(filterParts, "type", searchQuerySupport.normalizeTypeValues(request.getType()));
         addBooleanFilter(filterParts, "is_oa", request.getOpenAccess());
-        addOrFilter(filterParts, "primary_topic.subfield.id", searchQuerySupport.normalizeSubFieldValues(request.getSubField()));
-        addOrFilter(filterParts, "authorships.author.id", searchQuerySupport.normalizeEntityIds(request.getAuthor()));
-        addOrFilter(filterParts, "authorships.institutions.id", searchQuerySupport.normalizeEntityIds(request.getInstitution()));
+        addListFilter(
+                filterParts,
+                "primary_topic.subfield.id",
+                searchQuerySupport.normalizeSubFieldValues(request.getSubField())
+        );
+        addListFilter(filterParts, "authorships.author.id", searchQuerySupport.normalizeEntityIds(request.getAuthor()));
+        addListFilter(
+                filterParts,
+                "authorships.institutions.id",
+                searchQuerySupport.normalizeEntityIds(request.getInstitution())
+        );
         addBooleanFilter(filterParts, "has_content.pdf", request.getPdf());
-        addOrFilter(filterParts, "institutions.country_code", searchQuerySupport.normalizeCountryValues(request.getCountry()));
+        addListFilter(
+                filterParts,
+                "institutions.country_code",
+                searchQuerySupport.normalizeCountryValues(request.getCountry())
+        );
         addCitationFilter(request, filterParts);
-        addOrFilter(filterParts, "primary_location.source.id", searchQuerySupport.normalizeEntityIds(request.getSource()));
-        addOrFilter(filterParts, "awards.id", searchQuerySupport.normalizeEntityIds(request.getAward()));
-        addOrcidFilter(request.getIndexedByOrcid(), filterParts);
+        addListFilter(
+                filterParts,
+                "primary_location.source.id",
+                searchQuerySupport.normalizeEntityIds(request.getSource())
+        );
+        addListFilter(filterParts, "awards.id", searchQuerySupport.normalizeEntityIds(request.getAward()));
+        addOrcidFilter(filterParts, request.getIndexedByOrcid());
 
         return String.join(",", filterParts);
     }
 
     private void addYearFilter(SearchWorksQueryRequest request, List<String> filterParts) {
-        // Year can work in exact mode or range mode.
-        String yearMode = searchQuerySupport.normalizeMode(request.getYearMode());
-
-        if ("exact".equals(yearMode) && request.getYearExact() != null) {
-            filterParts.add("publication_year:" + request.getYearExact());
-            return;
-        }
-
-        Integer yearFrom = request.getYearFrom();
-        Integer yearTo = request.getYearTo();
-
-        if (yearFrom != null && yearTo != null) {
-            filterParts.add("publication_year:" + yearFrom + "-" + yearTo);
-            return;
-        }
-
-        if (yearFrom != null) {
-            filterParts.add("publication_year:>" + yearFrom);
-        }
-
-        if (yearTo != null) {
-            filterParts.add("publication_year:<" + yearTo);
-        }
+        addRangeFilter(
+                filterParts,
+                "publication_year",
+                searchQuerySupport.normalizeMode(request.getYearMode()),
+                request.getYearExact(),
+                request.getYearFrom(),
+                request.getYearTo()
+        );
     }
 
     private void addCitationFilter(SearchWorksQueryRequest request, List<String> filterParts) {
-        // Citation count also supports exact mode or range mode.
-        String citationMode = searchQuerySupport.normalizeMode(request.getCitationMode());
+        addRangeFilter(
+                filterParts,
+                "cited_by_count",
+                searchQuerySupport.normalizeMode(request.getCitationMode()),
+                request.getCitationExact(),
+                request.getCitationMin(),
+                request.getCitationMax()
+        );
+    }
 
-        if ("exact".equals(citationMode) && request.getCitationExact() != null) {
-            filterParts.add("cited_by_count:" + request.getCitationExact());
+    private void addRangeFilter(
+            List<String> filterParts,
+            String field,
+            String mode,
+            Integer exactValue,
+            Integer minValue,
+            Integer maxValue
+    ) {
+        if ("exact".equals(mode) && exactValue != null) {
+            filterParts.add(field + ":" + exactValue);
             return;
         }
 
-        Integer citationMin = request.getCitationMin();
-        Integer citationMax = request.getCitationMax();
-
-        if (citationMin != null && citationMax != null) {
-            filterParts.add("cited_by_count:" + citationMin + "-" + citationMax);
+        if (minValue != null && maxValue != null) {
+            filterParts.add(field + ":" + minValue + "-" + maxValue);
             return;
         }
 
-        if (citationMin != null) {
-            filterParts.add("cited_by_count:>" + citationMin);
+        if (minValue != null) {
+            filterParts.add(field + ":>" + minValue);
         }
 
-        if (citationMax != null) {
-            filterParts.add("cited_by_count:<" + citationMax);
+        if (maxValue != null) {
+            filterParts.add(field + ":<" + maxValue);
         }
     }
 
     private void addBooleanFilter(List<String> filterParts, String field, Boolean value) {
-        // Only add the boolean filter when the client actually sent one.
-        if (value == null) {
-            return;
+        if (value != null) {
+            filterParts.add(field + ":" + value);
         }
-
-        filterParts.add(field + ":" + value);
     }
 
-    private void addOrcidFilter(String indexedByOrcid, List<String> filterParts) {
-        // Frontend sends "is" or "is not"; OpenAlex expects true or false.
+    private void addOrcidFilter(List<String> filterParts, String indexedByOrcid) {
         if (!StringUtils.hasText(indexedByOrcid)) {
             return;
         }
 
-        String normalized = indexedByOrcid.trim().toLowerCase(Locale.ROOT);
+        String normalizedValue = indexedByOrcid.trim().toLowerCase(Locale.ROOT);
 
-        if ("is".equals(normalized)) {
+        if ("is".equals(normalizedValue)) {
             filterParts.add("has_orcid:true");
-            return;
-        }
-
-        if ("is not".equals(normalized)) {
+        } else if ("is not".equals(normalizedValue)) {
             filterParts.add("has_orcid:false");
         }
     }
 
-    private void addOrFilter(List<String> filterParts, String field, List<String> values) {
-        // OpenAlex OR syntax is value1|value2|value3.
-        if (values.isEmpty()) {
+    private void addListFilter(List<String> filterParts, String field, List<String> values) {
+        if (values == null || values.isEmpty()) {
             return;
         }
 

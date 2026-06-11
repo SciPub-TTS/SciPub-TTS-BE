@@ -9,10 +9,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.Year;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SearchOptionsService {
@@ -39,49 +39,52 @@ public class SearchOptionsService {
         int normalizedPage = searchQuerySupport.normalizeOptionPage(page);
         String normalizedKeyword = searchQuerySupport.normalizeKeyword(keyword);
 
-        if (!StringUtils.hasText(normalizedKeyword)) {
-            String cacheKey = normalizedLimit + ":" + normalizedPage;
-            CachedFilterOptions cachedOptions = defaultFilterOptionsCache.get(cacheKey);
-
-            if (cachedOptions != null && !cachedOptions.isExpired()) {
-                return cachedOptions.response();
-            }
-
-            SearchFilterOptionsResponse freshOptions = buildFilterOptionsResponse(
-                    normalizedKeyword,
-                    normalizedLimit,
-                    normalizedPage
-            );
-            defaultFilterOptionsCache.put(cacheKey, new CachedFilterOptions(
-                    freshOptions,
-                    Instant.now().plus(DEFAULT_FILTER_OPTIONS_CACHE_TTL)
-            ));
-
-            return freshOptions;
+        if (StringUtils.hasText(normalizedKeyword)) {
+            return buildFilterOptionsResponse(normalizedKeyword, normalizedLimit, normalizedPage);
         }
 
-        return buildFilterOptionsResponse(normalizedKeyword, normalizedLimit, normalizedPage);
+        return getDefaultFilterOptions(normalizedLimit, normalizedPage);
+    }
+
+    private SearchFilterOptionsResponse getDefaultFilterOptions(int limit, int page) {
+        String cacheKey = buildDefaultCacheKey(limit, page);
+        CachedFilterOptions cachedFilterOptions = defaultFilterOptionsCache.get(cacheKey);
+
+        if (cachedFilterOptions != null && !cachedFilterOptions.isExpired()) {
+            return cachedFilterOptions.getResponse();
+        }
+
+        SearchFilterOptionsResponse freshResponse = buildFilterOptionsResponse("", limit, page);
+        defaultFilterOptionsCache.put(
+                cacheKey,
+                new CachedFilterOptions(
+                        freshResponse,
+                        Instant.now().plus(DEFAULT_FILTER_OPTIONS_CACHE_TTL)
+                )
+        );
+
+        return freshResponse;
     }
 
     private SearchFilterOptionsResponse buildFilterOptionsResponse(
-            String normalizedKeyword,
-            int normalizedLimit,
-            int normalizedPage
+            String keyword,
+            int limit,
+            int page
     ) {
         List<SearchFilterOptionsResponse.FacetOption> typeOptions =
-                fetchGroupedWorkOptions("type", normalizedLimit, normalizedPage);
+                fetchGroupedWorkOptions("type", limit, page);
         List<SearchFilterOptionsResponse.FacetOption> subFieldOptions =
-                fetchGroupedWorkOptions("primary_topic.subfield.id", normalizedLimit, normalizedPage);
+                fetchGroupedWorkOptions("primary_topic.subfield.id", limit, page);
         List<SearchFilterOptionsResponse.FacetOption> countryOptions =
-                StringUtils.hasText(normalizedKeyword)
-                        ? fetchCountryOptions(normalizedKeyword, normalizedLimit, normalizedPage)
-                        : fetchGroupedWorkOptions("institutions.country_code", normalizedLimit, normalizedPage);
+                StringUtils.hasText(keyword)
+                        ? fetchCountryOptions(keyword, limit, page)
+                        : fetchGroupedWorkOptions("institutions.country_code", limit, page);
 
         List<SearchFilterOptionsResponse.EntityOption> sourceOptions = fetchEntityOptions(
                 "/sources",
-                normalizedKeyword,
-                normalizedLimit,
-                normalizedPage,
+                keyword,
+                limit,
+                page,
                 "id,display_name,works_count",
                 "works_count",
                 "works_count:desc"
@@ -89,9 +92,9 @@ public class SearchOptionsService {
 
         List<SearchFilterOptionsResponse.EntityOption> authorOptions = fetchEntityOptions(
                 "/authors",
-                normalizedKeyword,
-                normalizedLimit,
-                normalizedPage,
+                keyword,
+                limit,
+                page,
                 "id,display_name,works_count",
                 "works_count",
                 "works_count:desc"
@@ -99,9 +102,9 @@ public class SearchOptionsService {
 
         List<SearchFilterOptionsResponse.EntityOption> institutionOptions = fetchEntityOptions(
                 "/institutions",
-                normalizedKeyword,
-                normalizedLimit,
-                normalizedPage,
+                keyword,
+                limit,
+                page,
                 "id,display_name,works_count,country_code",
                 "works_count",
                 "works_count:desc"
@@ -109,28 +112,24 @@ public class SearchOptionsService {
 
         List<SearchFilterOptionsResponse.EntityOption> awardOptions = fetchEntityOptions(
                 "/awards",
-                normalizedKeyword,
-                normalizedLimit,
-                normalizedPage,
+                keyword,
+                limit,
+                page,
                 "id,display_name",
                 null,
                 null
         );
 
-        int currentYear = Year.now().getValue();
-        long totalWorks = fetchTotalWorksCount();
-        int maxCitation = fetchMaximumCitationCount();
-
         return new SearchFilterOptionsResponse(
-                totalWorks,
-                new SearchFilterOptionsResponse.YearRange(SearchConstants.MIN_YEAR, currentYear),
+                fetchTotalWorksCount(),
+                new SearchFilterOptionsResponse.YearRange(SearchConstants.MIN_YEAR, Year.now().getValue()),
                 typeOptions,
                 new SearchFilterOptionsResponse.ToggleFilter("is_oa", false),
                 subFieldOptions,
                 authorOptions,
                 institutionOptions,
                 new SearchFilterOptionsResponse.ToggleFilter("has_content.pdf", false),
-                new SearchFilterOptionsResponse.CitationRange(SearchConstants.MIN_CITATION, maxCitation),
+                new SearchFilterOptionsResponse.CitationRange(SearchConstants.MIN_CITATION, fetchMaximumCitationCount()),
                 countryOptions,
                 sourceOptions,
                 awardOptions,
@@ -138,20 +137,9 @@ public class SearchOptionsService {
         );
     }
 
-    private record CachedFilterOptions(
-            SearchFilterOptionsResponse response,
-            Instant expiresAt
-    ) {
-        private boolean isExpired() {
-            return Instant.now().isAfter(expiresAt);
-        }
-    }
-
     private List<SearchFilterOptionsResponse.FacetOption> fetchGroupedWorkOptions(String groupBy, int limit, int page) {
-        Map<String, String> queryParams = new LinkedHashMap<>();
+        Map<String, String> queryParams = createPagedQueryParams(limit, page);
         queryParams.put("group_by", groupBy);
-        queryParams.put("per_page", String.valueOf(limit));
-        queryParams.put("page", String.valueOf(page));
         queryParams.put("sort", "count:desc");
 
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
@@ -160,7 +148,9 @@ public class SearchOptionsService {
 
         for (Map<String, Object> group : groups) {
             String key = openAlexMapReader.getString(group, "key");
-            String label = openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(group, "key_display_name"));
+            String label = openAlexMapReader.sanitizeDisplayText(
+                    openAlexMapReader.getString(group, "key_display_name")
+            );
             long count = openAlexMapReader.getLong(group, "count", 0L);
 
             if (key.isBlank() || label.isBlank()) {
@@ -186,9 +176,7 @@ public class SearchOptionsService {
             String countField,
             String defaultSort
     ) {
-        Map<String, String> queryParams = new LinkedHashMap<>();
-        queryParams.put("per_page", String.valueOf(limit));
-        queryParams.put("page", String.valueOf(page));
+        Map<String, String> queryParams = createPagedQueryParams(limit, page);
         queryParams.put("select", selectFields);
 
         if (StringUtils.hasText(keyword)) {
@@ -221,9 +209,7 @@ public class SearchOptionsService {
     }
 
     private List<SearchFilterOptionsResponse.FacetOption> fetchCountryOptions(String keyword, int limit, int page) {
-        Map<String, String> queryParams = new LinkedHashMap<>();
-        queryParams.put("per_page", String.valueOf(limit));
-        queryParams.put("page", String.valueOf(page));
+        Map<String, String> queryParams = createPagedQueryParams(limit, page);
         queryParams.put("select", "id,display_name,works_count");
 
         if (StringUtils.hasText(keyword)) {
@@ -274,7 +260,35 @@ public class SearchOptionsService {
             return 0;
         }
 
-        int maxCitationCount = openAlexMapReader.getInt(results.get(0), "cited_by_count", 0);
-        return Math.max(maxCitationCount, 0);
+        return Math.max(openAlexMapReader.getInt(results.getFirst(), "cited_by_count", 0), 0);
+    }
+
+    private Map<String, String> createPagedQueryParams(int limit, int page) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("per_page", String.valueOf(limit));
+        queryParams.put("page", String.valueOf(page));
+        return queryParams;
+    }
+
+    private String buildDefaultCacheKey(int limit, int page) {
+        return limit + ":" + page;
+    }
+
+    private static class CachedFilterOptions {
+        private final SearchFilterOptionsResponse response;
+        private final Instant expiresAt;
+
+        private CachedFilterOptions(SearchFilterOptionsResponse response, Instant expiresAt) {
+            this.response = response;
+            this.expiresAt = expiresAt;
+        }
+
+        private SearchFilterOptionsResponse getResponse() {
+            return response;
+        }
+
+        private boolean isExpired() {
+            return Instant.now().isAfter(expiresAt);
+        }
     }
 }
