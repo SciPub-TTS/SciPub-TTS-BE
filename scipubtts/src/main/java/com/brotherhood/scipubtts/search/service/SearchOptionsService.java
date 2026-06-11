@@ -139,6 +139,7 @@ public class SearchOptionsService {
 
     private List<SearchFilterOptionsResponse.FacetOption> fetchGroupedWorkOptions(String groupBy, int limit, int page) {
         Map<String, String> queryParams = createPagedQueryParams(limit, page);
+        queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
         queryParams.put("group_by", groupBy);
         queryParams.put("sort", "count:desc");
 
@@ -238,6 +239,7 @@ public class SearchOptionsService {
 
     private long fetchTotalWorksCount() {
         Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
         queryParams.put("per_page", "1");
         queryParams.put("select", "id");
 
@@ -249,6 +251,7 @@ public class SearchOptionsService {
 
     private int fetchMaximumCitationCount() {
         Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
         queryParams.put("per_page", "1");
         queryParams.put("sort", "cited_by_count:desc");
         queryParams.put("select", "cited_by_count");

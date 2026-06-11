@@ -19,6 +19,7 @@ public class SearchFilterBuilder {
 
     public String build(SearchWorksQueryRequest request) {
         List<String> filterParts = new ArrayList<>();
+        filterParts.add(SearchConstants.WORKS_SCOPE_FILTER);
 
         addYearFilter(request, filterParts);
         addListFilter(filterParts, "type", searchQuerySupport.normalizeTypeValues(request.getType()));
