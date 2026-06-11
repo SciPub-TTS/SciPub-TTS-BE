@@ -17,6 +17,9 @@ import java.util.Optional;
 @Slf4j
 public class HttpCookieOAuth2AuthorizationRequestRepository implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
     public static final String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
+    public static final String OAUTH2_FLOW_MODE_COOKIE_NAME = "oauth2_flow_mode";
+    public static final String OAUTH2_FLOW_MODE_LOGIN = "login";
+    public static final String OAUTH2_FLOW_MODE_REGISTER = "register";
     private static final int COOKIE_EXPIRE_SECONDS = 180;
 
     @Override
@@ -42,11 +45,33 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
         response.addCookie(cookie);
     }
 
+    public void saveFlowMode(HttpServletResponse response, String mode) {
+        Cookie cookie = new Cookie(OAUTH2_FLOW_MODE_COOKIE_NAME, mode);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(COOKIE_EXPIRE_SECONDS);
+        response.addCookie(cookie);
+    }
+
+    public Optional<String> loadFlowMode(HttpServletRequest request) {
+        return getCookie(request, OAUTH2_FLOW_MODE_COOKIE_NAME)
+                .map(Cookie::getValue)
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .filter(mode ->
+                        OAUTH2_FLOW_MODE_LOGIN.equals(mode)
+                                || OAUTH2_FLOW_MODE_REGISTER.equals(mode)
+                );
+    }
+
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
         OAuth2AuthorizationRequest authRequest = this.loadAuthorizationRequest(request);
         if (getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME).isPresent()) {
             deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+        }
+        if (getCookie(request, OAUTH2_FLOW_MODE_COOKIE_NAME).isPresent()) {
+            deleteCookie(request, response, OAUTH2_FLOW_MODE_COOKIE_NAME);
         }
         return authRequest;
     }
