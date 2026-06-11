@@ -5,8 +5,11 @@ import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.Year;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +17,12 @@ import java.util.Map;
 @Service
 public class SearchOptionsService {
 
+    private static final Duration DEFAULT_FILTER_OPTIONS_CACHE_TTL = Duration.ofMinutes(5);
+
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
     private final OpenAlexMapReader openAlexMapReader;
+    private final Map<String, CachedFilterOptions> defaultFilterOptionsCache = new ConcurrentHashMap<>();
 
     public SearchOptionsService(
             OpenAlexClient openAlexClient,
@@ -33,6 +39,35 @@ public class SearchOptionsService {
         int normalizedPage = searchQuerySupport.normalizeOptionPage(page);
         String normalizedKeyword = searchQuerySupport.normalizeKeyword(keyword);
 
+        if (!StringUtils.hasText(normalizedKeyword)) {
+            String cacheKey = normalizedLimit + ":" + normalizedPage;
+            CachedFilterOptions cachedOptions = defaultFilterOptionsCache.get(cacheKey);
+
+            if (cachedOptions != null && !cachedOptions.isExpired()) {
+                return cachedOptions.response();
+            }
+
+            SearchFilterOptionsResponse freshOptions = buildFilterOptionsResponse(
+                    normalizedKeyword,
+                    normalizedLimit,
+                    normalizedPage
+            );
+            defaultFilterOptionsCache.put(cacheKey, new CachedFilterOptions(
+                    freshOptions,
+                    Instant.now().plus(DEFAULT_FILTER_OPTIONS_CACHE_TTL)
+            ));
+
+            return freshOptions;
+        }
+
+        return buildFilterOptionsResponse(normalizedKeyword, normalizedLimit, normalizedPage);
+    }
+
+    private SearchFilterOptionsResponse buildFilterOptionsResponse(
+            String normalizedKeyword,
+            int normalizedLimit,
+            int normalizedPage
+    ) {
         List<SearchFilterOptionsResponse.FacetOption> typeOptions =
                 fetchGroupedWorkOptions("type", normalizedLimit, normalizedPage);
         List<SearchFilterOptionsResponse.FacetOption> subFieldOptions =
@@ -101,6 +136,15 @@ public class SearchOptionsService {
                 awardOptions,
                 new SearchFilterOptionsResponse.EnumFilter("has_orcid", List.of("is", "is not"), "")
         );
+    }
+
+    private record CachedFilterOptions(
+            SearchFilterOptionsResponse response,
+            Instant expiresAt
+    ) {
+        private boolean isExpired() {
+            return Instant.now().isAfter(expiresAt);
+        }
     }
 
     private List<SearchFilterOptionsResponse.FacetOption> fetchGroupedWorkOptions(String groupBy, int limit, int page) {
