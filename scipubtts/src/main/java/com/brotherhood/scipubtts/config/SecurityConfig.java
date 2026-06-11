@@ -20,6 +20,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -109,9 +110,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/", "/error", "/favicon.ico",
                                 "/api/auth/register",
+                                "/api/auth/register/google/**",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
-                                "/api/auth/logout",
                                 "/api/auth/verify-email",
                                 "/api/auth/forgot-password/**",
                                 "/oauth2/**",
