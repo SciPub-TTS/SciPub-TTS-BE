@@ -38,6 +38,7 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
                 errorCode = "cancelled";
             } else if ("invalid_user_info".equals(subErrorCode)
                     || "oauth2_user_not_found".equals(subErrorCode)
+                    || "account_banned".equals(subErrorCode)
                     || "google_email_not_verified".equals(subErrorCode)) {
                 errorCode = subErrorCode;
             }

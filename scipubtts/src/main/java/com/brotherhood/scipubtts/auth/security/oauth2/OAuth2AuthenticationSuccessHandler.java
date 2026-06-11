@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -19,6 +20,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final AuthSessionService authSessionService;
     private final UserRepository userRepository;
@@ -33,38 +35,43 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
-        if (!(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
-            throw new ServletException("Invalid OAuth2 principal type. Expected OAuth2User.");
+        try {
+            if (!(authentication.getPrincipal() instanceof OAuth2User oauth2User)) {
+                throw new ServletException("Invalid OAuth2 principal type. Expected OAuth2User.");
+            }
+
+            String email = oauth2User.getAttribute("email");
+            if (email == null) {
+                redirectWithError(request, response, "invalid_user_info");
+                return;
+            }
+
+            var userOptional = userRepository.findByEmail(email);
+            if (userOptional.isEmpty()) {
+                redirectWithError(request, response, "oauth2_user_not_found");
+                return;
+            }
+
+            authSessionService.issueSession(
+                    userOptional.get(),
+                    false,
+                    request,
+                    response
+            );
+
+            authorizationRequestRepository.removeAuthorizationRequest(request, response);
+
+            String targetUrl = UriComponentsBuilder
+                    .fromUriString(frontendBaseUrl)
+                    .path("/oauth2/success")
+                    .build()
+                    .toUriString();
+
+            getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        } catch (Exception ex) {
+            log.error("Google OAuth2 success flow failed after callback", ex);
+            redirectWithError(request, response, "oauth2_failed");
         }
-
-        String email = oauth2User.getAttribute("email");
-        if (email == null) {
-            redirectWithError(request, response, "invalid_user_info");
-            return;
-        }
-
-        var userOptional = userRepository.findByEmail(email);
-        if (userOptional.isEmpty()) {
-            redirectWithError(request, response, "oauth2_user_not_found");
-            return;
-        }
-
-        authSessionService.issueSession(
-                userOptional.get(),
-                false,
-                request,
-                response
-        );
-
-        authorizationRequestRepository.removeAuthorizationRequest(request, response);
-
-        String targetUrl = UriComponentsBuilder
-                .fromUriString(frontendBaseUrl)
-                .path("/oauth2/success")
-                .build()
-                .toUriString();
-
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 
     private void redirectWithError(
