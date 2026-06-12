@@ -59,27 +59,35 @@ public class SearchQuerySupport {
         return mode.trim().toLowerCase(Locale.ROOT);
     }
 
-    public String resolveSort(String requestedSort, boolean hasSearchQuery) {
+    public String normalizeTrendingMode(String trendingMode) {
+        if (!StringUtils.hasText(trendingMode)) {
+            return "none";
+        }
+
+        String normalizedValue = trendingMode.trim().toLowerCase(Locale.ROOT);
+
+        return switch (normalizedValue) {
+            case "keyword", "topic", "both" -> normalizedValue;
+            default -> "none";
+        };
+    }
+
+    public String resolveSort(String sortBy, String sortDirection, boolean hasSearchQuery) {
         String defaultSort = hasSearchQuery ? "relevance_score:desc" : "cited_by_count:desc";
 
-        if (!StringUtils.hasText(requestedSort)) {
+        if (!StringUtils.hasText(sortBy)) {
             return defaultSort;
         }
 
-        String normalizedSort = requestedSort.trim().toLowerCase(Locale.ROOT);
+        String normalizedSortBy = sortBy.trim().toLowerCase(Locale.ROOT);
+        String normalizedSortDirection =
+                "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
 
-        return switch (normalizedSort) {
-            case "most cited", "most_cited", "citation_most_cited", "cited_by_count:desc", "trending" ->
-                    "cited_by_count:desc";
-            case "least cited", "least_cited", "citation_least_cited", "cited_by_count:asc" ->
-                    "cited_by_count:asc";
-            case "latest", "published_latest", "publication_year:desc" ->
-                    "publication_year:desc";
-            case "oldest", "published_oldest", "publication_year:asc" ->
-                    "publication_year:asc";
-            case "trending_keyword", "trending_topic", "relevance", "relevance_score:desc" ->
-                    defaultSort;
-            default -> normalizedSort.contains(":") ? normalizedSort : defaultSort;
+        return switch (normalizedSortBy) {
+            case "citation" -> "cited_by_count:" + normalizedSortDirection;
+            case "published" -> "publication_year:" + normalizedSortDirection;
+            case "relevance" -> defaultSort;
+            default -> defaultSort;
         };
     }
 
@@ -96,6 +104,10 @@ public class SearchQuerySupport {
 
     public List<String> normalizeSubFieldValues(List<String> values) {
         return normalizeOpenAlexIds(values);
+    }
+
+    public String normalizeEntityValue(String value) {
+        return extractLastSegment(value).trim();
     }
 
     public List<String> normalizeEntityIds(List<String> values) {

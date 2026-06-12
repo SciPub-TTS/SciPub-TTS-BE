@@ -5,74 +5,79 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 @Schema(
-        name = "SearchWorksQueryRequest",
-        description = "All search filters are optional. Leave unused fields empty in Swagger."
+        name = "SearchWorksQueryRequest"
 )
 public class SearchWorksQueryRequest {
-    @Schema(description = "Keyword matched against OpenAlex works", nullable = true, example = "AI")
+    @Schema(nullable = true, example = "AI")
     private String query;
 
-    @Schema(description = "Year filter mode", nullable = true, allowableValues = {"range", "exact"})
+    @Schema(nullable = true, allowableValues = {"range", "exact"})
     private String yearMode;
 
-    @Schema(description = "Start year when yearMode=range", nullable = true, example = "2018")
+    @Schema(nullable = true, example = "2018")
     private Integer yearFrom;
 
-    @Schema(description = "End year when yearMode=range", nullable = true, example = "2026")
+    @Schema(nullable = true, example = "2026")
     private Integer yearTo;
 
-    @Schema(description = "Exact year when yearMode=exact", nullable = true, example = "2006")
+    @Schema(nullable = true, example = "2006")
     private Integer yearExact;
 
-    @Schema(description = "Work types such as article, book-chapter or v.v..", nullable = true, example = "[\"article\"]")
+    @Schema(nullable = true, example = "[\"article\"]")
     private List<String> type;
 
-    @Schema(description = "Filter only open-access works", nullable = true, example = "true")
+    @Schema(nullable = true, example = "true")
     private Boolean openAccess;
 
-    @Schema(description = "OpenAlex subfield ids", nullable = true, example = "[\"subfields/1702\"]")
+    @Schema(nullable = true, example = "[\"2202\"]")
     private List<String> subField;
 
-    @Schema(description = "OpenAlex author ids", nullable = true, example = "[\"A5024995037\"]")
+    @Schema(nullable = true, example = "[\"A5024995037\"]")
     private List<String> author;
 
-    @Schema(description = "OpenAlex institution ids", nullable = true, example = "[\"I201448701\"]")
+    @Schema(nullable = true, example = "[\"I201448701\"]")
     private List<String> institution;
 
-    @Schema(description = "Filter works that have PDF content", nullable = true, example = "true")
+    @Schema(nullable = true, example = "true")
     private Boolean pdf;
 
-    @Schema(description = "Country codes such as US, VN, KR", nullable = true, example = "[\"VN\"]")
+    @Schema(nullable = true, example = "[\"VN\"]")
     private List<String> country;
 
-    @Schema(description = "Citation filter mode", nullable = true, allowableValues = {"range", "exact"})
+    @Schema(nullable = true, allowableValues = {"range", "exact"})
     private String citationMode;
 
-    @Schema(description = "Minimum citation count when citationMode=range", nullable = true, example = "10")
+    @Schema(nullable = true, example = "10")
     private Integer citationMin;
 
-    @Schema(description = "Maximum citation count when citationMode=range", nullable = true, example = "100")
+    @Schema(nullable = true, example = "100")
     private Integer citationMax;
 
-    @Schema(description = "Exact citation count when citationMode=exact", nullable = true, example = "50")
+    @Schema(nullable = true, example = "50")
     private Integer citationExact;
 
-    @Schema(description = "OpenAlex source ids", nullable = true, example = "[\"S64187185\"]")
+    @Schema(nullable = true, example = "[\"S64187185\"]")
     private List<String> source;
 
-    @Schema(description = "OpenAlex award ids", nullable = true, example = "[\"G1204744554\"]")
+    @Schema(nullable = true, example = "[\"G1204744554\"]")
     private List<String> award;
 
-    @Schema(description = "ORCID filter", nullable = true, allowableValues = {"is", "is not"})
+    @Schema(nullable = true, allowableValues = {"is", "is not"})
     private String indexedByOrcid;
 
-    @Schema(description = "Sort expression", nullable = true, example = "cited_by_count:desc")
-    private String sort;
+    @Schema(nullable = true, allowableValues = {"none", "keyword", "topic", "both"})
+    private String trendingMode;
 
-    @Schema(description = "Page number", nullable = true, example = "1", defaultValue = "1")
+    @Schema(nullable = true, allowableValues = {"relevance", "citation", "published"})
+    private String sortBy;
+
+    @Schema(nullable = true, allowableValues = {"asc", "desc"})
+    private String sortDirection;
+
+    @Schema(nullable = true, example = "1", defaultValue = "1")
     private Integer page;
 
-    @Schema(description = "Page size", nullable = true, example = "20", defaultValue = "20")
+    @Schema(nullable = true, example = "20", defaultValue = "20")
     private Integer perPage;
 
     public static SearchWorksQueryRequest empty() {
@@ -231,12 +236,28 @@ public class SearchWorksQueryRequest {
         this.indexedByOrcid = indexedByOrcid;
     }
 
-    public String getSort() {
-        return sort;
+    public String getTrendingMode() {
+        return trendingMode;
     }
 
-    public void setSort(String sort) {
-        this.sort = sort;
+    public void setTrendingMode(String trendingMode) {
+        this.trendingMode = trendingMode;
+    }
+
+    public String getSortBy() {
+        return sortBy;
+    }
+
+    public void setSortBy(String sortBy) {
+        this.sortBy = sortBy;
+    }
+
+    public String getSortDirection() {
+        return sortDirection;
+    }
+
+    public void setSortDirection(String sortDirection) {
+        this.sortDirection = sortDirection;
     }
 
     public Integer getPage() {

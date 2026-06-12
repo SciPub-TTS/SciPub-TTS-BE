@@ -27,15 +27,17 @@ public class SearchHistoryService {
         this.searchQuerySupport = searchQuerySupport;
     }
 
-    public List<SearchHistoryItemResponse> getRecentSearches(UUID userId, int limit) {
+    public List<SearchHistoryItemResponse> getRecentSearches(UUID userId, String keyword, int limit) {
         if (userId == null) {
             return List.of();
         }
 
         int normalizedLimit = searchQuerySupport.normalizeRecentSearchLimit(limit);
+        String normalizedKeyword = normalizeKeyword(keyword);
         List<SearchHistoryRepository.RecentSearchProjection> recentSearches =
                 searchHistoryRepository.findRecentDistinctSearches(
                         userId,
+                        normalizedKeyword,
                         PageRequest.of(0, normalizedLimit)
                 );
 
@@ -53,8 +55,11 @@ public class SearchHistoryService {
             return;
         }
 
+        String normalizedQuery = request.getQuery().trim();
+        searchHistoryRepository.deleteByUserIdAndContentIgnoreCase(request.getUserId(), normalizedQuery);
+
         SearchHistory searchHistory = new SearchHistory();
-        searchHistory.setContent(request.getQuery().trim());
+        searchHistory.setContent(normalizedQuery);
         searchHistory.setUserId(request.getUserId());
 
         searchHistoryRepository.save(searchHistory);
@@ -80,5 +85,9 @@ public class SearchHistoryService {
                 recentSearch.getContent(),
                 savedAt
         );
+    }
+
+    private String normalizeKeyword(String keyword) {
+        return StringUtils.hasText(keyword) ? keyword.trim() : "";
     }
 }

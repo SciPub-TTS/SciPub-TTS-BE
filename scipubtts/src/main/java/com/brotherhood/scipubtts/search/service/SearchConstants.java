@@ -14,7 +14,7 @@ public final class SearchConstants {
             "primary_topic.domain.id:3,primary_topic.field.id:17|22";
 
     public static final String WORKS_SELECT_FIELDS =
-            "id,display_name,abstract_inverted_index,doi,publication_year,cited_by_count,type,primary_topic,primary_location,authorships,open_access,best_oa_location,has_content";
+            "id,display_name,abstract_inverted_index,doi,publication_year,cited_by_count,type,primary_topic,primary_location,authorships,open_access,best_oa_location,has_content,keywords";
 
     private SearchConstants() {
     }

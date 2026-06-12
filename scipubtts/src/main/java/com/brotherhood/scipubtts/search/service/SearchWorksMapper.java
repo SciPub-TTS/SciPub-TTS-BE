@@ -12,9 +12,14 @@ public class SearchWorksMapper {
 
     // OpenAlex returns dynamic JSON, so OpenAlexMapReader extracts data safely.
     private final OpenAlexMapReader openAlexMapReader;
+    private final SearchQuerySupport searchQuerySupport;
 
-    public SearchWorksMapper(OpenAlexMapReader openAlexMapReader) {
+    public SearchWorksMapper(
+            OpenAlexMapReader openAlexMapReader,
+            SearchQuerySupport searchQuerySupport
+    ) {
         this.openAlexMapReader = openAlexMapReader;
+        this.searchQuerySupport = searchQuerySupport;
     }
 
     public SearchWorksResponse map(
@@ -60,10 +65,11 @@ public class SearchWorksMapper {
         Map<String, Object> primaryLocation = openAlexMapReader.getMap(result, "primary_location");
         Map<String, Object> source = openAlexMapReader.getMap(primaryLocation, "source");
         List<Map<String, Object>> authorships = openAlexMapReader.getMapList(result, "authorships");
+        List<Map<String, Object>> keywords = openAlexMapReader.getMapList(result, "keywords");
 
         // Build one DTO that the frontend can consume directly.
         return new SearchWorksResponse.WorkItem(
-                openAlexMapReader.getString(result, "id"),
+                searchQuerySupport.normalizeEntityValue(openAlexMapReader.getString(result, "id")),
                 openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "display_name")),
                 openAlexMapReader.deriveAbstractText(openAlexMapReader.getMap(result, "abstract_inverted_index")),
                 openAlexMapReader.getString(result, "doi"),
@@ -76,9 +82,13 @@ public class SearchWorksMapper {
                 openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(result, "type")),
                 openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(primaryTopic, "display_name")),
                 openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(subField, "display_name")),
-                openAlexMapReader.getString(source, "id"),
+                searchQuerySupport.normalizeEntityValue(openAlexMapReader.getString(source, "id")),
                 openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(source, "display_name")),
-                mapAuthorNames(authorships)
+                mapAuthorNames(authorships),
+                mapKeywords(keywords),
+                false,
+                false,
+                0.0
         );
     }
 
@@ -91,6 +101,26 @@ public class SearchWorksMapper {
             String name = openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(author, "display_name"));
             if (!name.isBlank()) {
                 names.add(name);
+            }
+        }
+
+        return names;
+    }
+
+    private List<String> mapKeywords(List<Map<String, Object>> keywords) {
+        List<String> names = new ArrayList<>();
+
+        for (Map<String, Object> keyword : keywords) {
+            String name = openAlexMapReader.sanitizeDisplayText(
+                    openAlexMapReader.getString(keyword, "display_name")
+            );
+
+            if (!name.isBlank()) {
+                names.add(name);
+            }
+
+            if (names.size() == 8) {
+                break;
             }
         }
 

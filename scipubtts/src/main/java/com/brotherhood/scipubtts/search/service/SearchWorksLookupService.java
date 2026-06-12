@@ -49,6 +49,10 @@ public class SearchWorksLookupService {
         );
 
         Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
+//        String normalizedTrendingMode = searchQuerySupport.normalizeTrendingMode(safeRequest.getTrendingMode());
+//        if (!"none".equals(normalizedTrendingMode)) {
+//            openAlexResponse = applyTrendingRanking(openAlexResponse, normalizedTrendingMode);
+//        }
         return searchWorksMapper.map(openAlexResponse, appliedFilter, appliedSort, page, perPage);
     }
 
@@ -63,7 +67,11 @@ public class SearchWorksLookupService {
     private String resolveSort(SearchWorksQueryRequest request) {
         boolean hasSearchQuery = StringUtils.hasText(request.getQuery());
 
-        return searchQuerySupport.resolveSort(request.getSort(), hasSearchQuery);
+        return searchQuerySupport.resolveSort(
+                request.getSortBy(),
+                request.getSortDirection(),
+                hasSearchQuery
+        );
     }
 
     private Map<String, String> buildOpenAlexQueryParams(
