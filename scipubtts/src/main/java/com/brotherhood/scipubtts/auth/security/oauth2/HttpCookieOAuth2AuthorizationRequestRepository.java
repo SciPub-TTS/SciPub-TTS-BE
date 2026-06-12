@@ -9,7 +9,6 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.Base64;
 import java.util.Optional;
@@ -20,10 +19,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
     public static final String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
-    public static final String OAUTH2_FLOW_MODE_COOKIE_NAME = "oauth2_flow_mode";
-    public static final String OAUTH2_FLOW_MODE_LOGIN = "login";
-    public static final String OAUTH2_FLOW_MODE_REGISTER = "register";
-    private static final String FLOW_MODE_REQUEST_PARAM = "flow_mode";
     private static final int COOKIE_EXPIRE_SECONDS = 180;
 
     @Override
@@ -44,14 +39,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
             return;
         }
 
-        String flowMode = normalizeFlowMode(request.getParameter(FLOW_MODE_REQUEST_PARAM));
-        if (flowMode != null) {
-            authorizationRequest = OAuth2AuthorizationRequest
-                    .from(authorizationRequest)
-                    .attributes(attributes -> attributes.put(OAUTH2_FLOW_MODE_COOKIE_NAME, flowMode))
-                    .build();
-        }
-
         String serializedRequest = Base64.getUrlEncoder()
                 .encodeToString(SerializationUtils.serialize(authorizationRequest));
 
@@ -62,36 +49,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         response.addCookie(cookie);
     }
 
-    public void saveFlowMode(HttpServletResponse response, String mode) {
-        String normalizedMode = normalizeFlowMode(mode);
-        if (normalizedMode == null) {
-            return;
-        }
-
-        Cookie cookie = new Cookie(OAUTH2_FLOW_MODE_COOKIE_NAME, normalizedMode);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(COOKIE_EXPIRE_SECONDS);
-        response.addCookie(cookie);
-    }
-
-    public Optional<String> loadFlowMode(HttpServletRequest request) {
-        OAuth2AuthorizationRequest authorizationRequest = loadAuthorizationRequest(request);
-        if (authorizationRequest != null) {
-            String modeFromRequest = normalizeFlowMode(
-                    (String) authorizationRequest.getAttributes().get(OAUTH2_FLOW_MODE_COOKIE_NAME)
-            );
-            if (modeFromRequest != null) {
-                return Optional.of(modeFromRequest);
-            }
-        }
-
-        return getCookie(request, OAUTH2_FLOW_MODE_COOKIE_NAME)
-                .map(Cookie::getValue)
-                .map(this::normalizeFlowMode)
-                .filter(StringUtils::hasText);
-    }
-
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(
             HttpServletRequest request,
@@ -100,9 +57,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         OAuth2AuthorizationRequest authRequest = this.loadAuthorizationRequest(request);
         if (getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME).isPresent()) {
             deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
-        }
-        if (getCookie(request, OAUTH2_FLOW_MODE_COOKIE_NAME).isPresent()) {
-            deleteCookie(request, response, OAUTH2_FLOW_MODE_COOKIE_NAME);
         }
         return authRequest;
     }
@@ -153,19 +107,5 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
             );
             return null;
         }
-    }
-
-    private String normalizeFlowMode(String mode) {
-        if (!StringUtils.hasText(mode)) {
-            return null;
-        }
-
-        String normalizedMode = mode.trim().toLowerCase();
-        if (OAUTH2_FLOW_MODE_LOGIN.equals(normalizedMode)
-                || OAUTH2_FLOW_MODE_REGISTER.equals(normalizedMode)) {
-            return normalizedMode;
-        }
-
-        return null;
     }
 }

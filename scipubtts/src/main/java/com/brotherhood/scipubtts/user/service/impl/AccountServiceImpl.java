@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -32,20 +33,31 @@ public class AccountServiceImpl implements AccountService {
             throw new BusinessException(ErrorCode.PASSWORD_CONFIRMATION_NOT_MATCH);
         }
 
-        if (request.newPassword() == null ||
-                request.newPassword().length() < 8 ||
-                request.newPassword().length() > 72) {
-            throw new BusinessException(ErrorCode.PASSWORD_TOO_WEAK);
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+        // Temporarily disable the "set password for Google-only account" flow
+        // while login/register is being tested in isolation.
+        //
+        // boolean hasLocalPassword = StringUtils.hasText(user.getPasswordHash());
+        //
+        // if (hasLocalPassword) {
+        //     if (!StringUtils.hasText(request.currentPassword())
+        //             || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+        //         throw new BusinessException(ErrorCode.CURRENT_PASSWORD_INVALID);
+        //     }
+        //
+        //     if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+        //         throw new BusinessException(ErrorCode.PASSWORD_REUSE_NOT_ALLOWED);
+        //     }
+        // }
+
+        if (!StringUtils.hasText(user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.LOCAL_PASSWORD_NOT_AVAILABLE);
         }
 
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+        if (!StringUtils.hasText(request.currentPassword())
+                || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.CURRENT_PASSWORD_INVALID);
         }
 
@@ -69,7 +81,9 @@ public class AccountServiceImpl implements AccountService {
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.isGoogleLinked(),
+                StringUtils.hasText(user.getPasswordHash())
         );
     }
 

@@ -15,25 +15,20 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
-    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Override
     @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
-        String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
         try {
-            return processGoogleUser(oAuth2User, registrationId);
+            return processGoogleUser(oAuth2User);
         } catch (AuthenticationException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -41,11 +36,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
     }
 
-    private OAuth2User processGoogleUser(OAuth2User oAuth2User, String registrationId) {
+    private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
         String email = (String) oAuth2User.getAttributes().get("email");
         String givenName = (String) oAuth2User.getAttributes().get("given_name");
         String familyName = (String) oAuth2User.getAttributes().get("family_name");
-        String flowMode = resolveFlowMode(registrationId);
 
         if (!StringUtils.hasText(email)) {
             throw new OAuth2AuthenticationException(
@@ -65,13 +59,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
-            if (HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN.equals(flowMode)) {
-                throw new OAuth2AuthenticationException(
-                        new OAuth2Error("oauth2_user_not_found"),
-                        "Account not found. Please register first"
-                );
-            }
-
             user = new User();
             user.setEmail(email);
             user.setUsername(email);
@@ -100,24 +87,5 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         userRepository.save(user);
         return UserPrincipal.create(user, oAuth2User.getAttributes());
-    }
-
-    private String resolveFlowMode(String registrationId) {
-        if ("google-register".equals(registrationId)) {
-            return HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_REGISTER;
-        }
-
-        if ("google-login".equals(registrationId)) {
-            return HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN;
-        }
-
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (!(requestAttributes instanceof ServletRequestAttributes servletRequestAttributes)) {
-            return HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN;
-        }
-
-        return authorizationRequestRepository
-                .loadFlowMode(servletRequestAttributes.getRequest())
-                .orElse(HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN);
     }
 }

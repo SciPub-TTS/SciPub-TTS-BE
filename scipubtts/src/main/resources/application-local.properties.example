@@ -11,12 +11,6 @@ spring.mail.password=dien_mat_khau_ung_dung_smtp
 # Google Auth Security
 spring.security.oauth2.client.registration.google.client-id=dien_google_client_id
 spring.security.oauth2.client.registration.google.client-secret=dien_google_client_secret
-spring.security.oauth2.client.registration.google-login.provider=google
-spring.security.oauth2.client.registration.google-login.client-id=dien_google_client_id
-spring.security.oauth2.client.registration.google-login.client-secret=dien_google_client_secret
-spring.security.oauth2.client.registration.google-register.provider=google
-spring.security.oauth2.client.registration.google-register.client-id=dien_google_client_id
-spring.security.oauth2.client.registration.google-register.client-secret=dien_google_client_secret
 
 # Security Secrets
 app.jwt.secret=chuoi_key_ngau_nhien_co_do_dai_tren_32_ky_tu_cho_local

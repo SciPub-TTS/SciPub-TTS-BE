@@ -4,7 +4,6 @@ import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.CurrentUserResponse;
-import com.brotherhood.scipubtts.auth.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.brotherhood.scipubtts.auth.service.AuthService;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
@@ -28,16 +27,13 @@ import java.util.UUID;
 public class AuthController {
     private final AuthService authService;
     private final AccountService accountService;
-    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     public AuthController(
             AuthService authService,
-            AccountService accountService,
-            HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository
+            AccountService accountService
     ) {
         this.authService = authService;
         this.accountService = accountService;
-        this.authorizationRequestRepository = authorizationRequestRepository;
     }
 
     @PostMapping("/register")
@@ -53,22 +49,8 @@ public class AuthController {
     }
 
     @GetMapping("/oauth2/google")
-    public void startGoogleAuth(
-            @RequestParam(defaultValue = HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN) String mode,
-            HttpServletResponse response
-    ) throws IOException {
-        String normalizedMode = mode.trim().toLowerCase();
-        if (!HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN.equals(normalizedMode)
-                && !HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_REGISTER.equals(normalizedMode)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Google auth mode");
-        }
-
-        authorizationRequestRepository.saveFlowMode(response, normalizedMode);
-        String registrationId =
-                HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_REGISTER.equals(normalizedMode)
-                        ? "google-register"
-                        : "google-login";
-        response.sendRedirect("/oauth2/authorization/" + registrationId);
+    public void startGoogleAuth(HttpServletResponse response) throws IOException {
+        response.sendRedirect("/oauth2/authorization/google");
     }
 
     @GetMapping("/verify-email")
