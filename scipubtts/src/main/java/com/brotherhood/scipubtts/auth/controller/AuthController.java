@@ -64,7 +64,11 @@ public class AuthController {
         }
 
         authorizationRequestRepository.saveFlowMode(response, normalizedMode);
-        response.sendRedirect("/oauth2/authorization/google?flow_mode=" + normalizedMode);
+        String registrationId =
+                HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_REGISTER.equals(normalizedMode)
+                        ? "google-register"
+                        : "google-login";
+        response.sendRedirect("/oauth2/authorization/" + registrationId);
     }
 
     @GetMapping("/verify-email")

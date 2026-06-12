@@ -1,11 +1,9 @@
 package com.brotherhood.scipubtts.auth.security.oauth2;
 
+import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
-import com.brotherhood.scipubtts.auth.security.UserPrincipal;
-import com.brotherhood.scipubtts.common.exception.BusinessException;
-import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
@@ -29,12 +27,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Override
-    @Transactional // Đảm bảo an toàn dữ liệu và tránh lỗi Lazy Loading Chắt chẽ
+    @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
+        String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
         try {
-            return processGoogleUser(oAuth2User);
+            return processGoogleUser(oAuth2User, registrationId);
         } catch (AuthenticationException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -42,30 +41,35 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
     }
 
-    private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
+    private OAuth2User processGoogleUser(OAuth2User oAuth2User, String registrationId) {
         String email = (String) oAuth2User.getAttributes().get("email");
         String givenName = (String) oAuth2User.getAttributes().get("given_name");
         String familyName = (String) oAuth2User.getAttributes().get("family_name");
-        String flowMode = resolveFlowMode();
+        String flowMode = resolveFlowMode(registrationId);
 
         if (!StringUtils.hasText(email)) {
-            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
-                    "Email not found from Google");
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("invalid_user_info"),
+                    "Email not found from Google"
+            );
         }
 
         Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
-
         if (!Boolean.TRUE.equals(googleEmailVerified)) {
-            throw new OAuth2AuthenticationException(new OAuth2Error("google_email_not_verified"),
-                    "Google account email is not verified");
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("google_email_not_verified"),
+                    "Google account email is not verified"
+            );
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
             if (HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN.equals(flowMode)) {
-                throw new OAuth2AuthenticationException(new OAuth2Error("oauth2_user_not_found"),
-                        "Account not found. Please register first");
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("oauth2_user_not_found"),
+                        "Account not found. Please register first"
+                );
             }
 
             user = new User();
@@ -80,8 +84,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setBanned(false);
         } else {
             if (user.isBanned()) {
-                throw new OAuth2AuthenticationException(new OAuth2Error("account_banned"),
-                        "Account is banned");
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("account_banned"),
+                        "Account is banned"
+                );
             }
             if (!StringUtils.hasText(user.getFirstName())) {
                 user.setFirstName(givenName);
@@ -96,7 +102,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return UserPrincipal.create(user, oAuth2User.getAttributes());
     }
 
-    private String resolveFlowMode() {
+    private String resolveFlowMode(String registrationId) {
+        if ("google-register".equals(registrationId)) {
+            return HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_REGISTER;
+        }
+
+        if ("google-login".equals(registrationId)) {
+            return HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN;
+        }
+
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (!(requestAttributes instanceof ServletRequestAttributes servletRequestAttributes)) {
             return HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_FLOW_MODE_LOGIN;
