@@ -64,7 +64,7 @@ public class AuthController {
         }
 
         authorizationRequestRepository.saveFlowMode(response, normalizedMode);
-        response.sendRedirect("/oauth2/authorization/google");
+        response.sendRedirect("/oauth2/authorization/google?flow_mode=" + normalizedMode);
     }
 
     @GetMapping("/verify-email")

@@ -9,17 +9,21 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Base64;
 import java.util.Optional;
 
 @Component
 @Slf4j
-public class HttpCookieOAuth2AuthorizationRequestRepository implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
+public class HttpCookieOAuth2AuthorizationRequestRepository
+        implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
+
     public static final String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
     public static final String OAUTH2_FLOW_MODE_COOKIE_NAME = "oauth2_flow_mode";
     public static final String OAUTH2_FLOW_MODE_LOGIN = "login";
     public static final String OAUTH2_FLOW_MODE_REGISTER = "register";
+    private static final String FLOW_MODE_REQUEST_PARAM = "flow_mode";
     private static final int COOKIE_EXPIRE_SECONDS = 180;
 
     @Override
@@ -30,14 +34,27 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
     }
 
     @Override
-    public void saveAuthorizationRequest(OAuth2AuthorizationRequest authorizationRequest,
-                                         HttpServletRequest request, HttpServletResponse response) {
+    public void saveAuthorizationRequest(
+            OAuth2AuthorizationRequest authorizationRequest,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
         if (authorizationRequest == null) {
             deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
             return;
         }
-        // Mã hóa thông tin Request và ném vào Cookie
-        String serializedRequest = Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(authorizationRequest));
+
+        String flowMode = normalizeFlowMode(request.getParameter(FLOW_MODE_REQUEST_PARAM));
+        if (flowMode != null) {
+            authorizationRequest = OAuth2AuthorizationRequest
+                    .from(authorizationRequest)
+                    .attributes(attributes -> attributes.put(OAUTH2_FLOW_MODE_COOKIE_NAME, flowMode))
+                    .build();
+        }
+
+        String serializedRequest = Base64.getUrlEncoder()
+                .encodeToString(SerializationUtils.serialize(authorizationRequest));
+
         Cookie cookie = new Cookie(OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, serializedRequest);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
@@ -46,7 +63,12 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
     }
 
     public void saveFlowMode(HttpServletResponse response, String mode) {
-        Cookie cookie = new Cookie(OAUTH2_FLOW_MODE_COOKIE_NAME, mode);
+        String normalizedMode = normalizeFlowMode(mode);
+        if (normalizedMode == null) {
+            return;
+        }
+
+        Cookie cookie = new Cookie(OAUTH2_FLOW_MODE_COOKIE_NAME, normalizedMode);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge(COOKIE_EXPIRE_SECONDS);
@@ -54,18 +76,27 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
     }
 
     public Optional<String> loadFlowMode(HttpServletRequest request) {
+        OAuth2AuthorizationRequest authorizationRequest = loadAuthorizationRequest(request);
+        if (authorizationRequest != null) {
+            String modeFromRequest = normalizeFlowMode(
+                    (String) authorizationRequest.getAttributes().get(OAUTH2_FLOW_MODE_COOKIE_NAME)
+            );
+            if (modeFromRequest != null) {
+                return Optional.of(modeFromRequest);
+            }
+        }
+
         return getCookie(request, OAUTH2_FLOW_MODE_COOKIE_NAME)
                 .map(Cookie::getValue)
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .filter(mode ->
-                        OAUTH2_FLOW_MODE_LOGIN.equals(mode)
-                                || OAUTH2_FLOW_MODE_REGISTER.equals(mode)
-                );
+                .map(this::normalizeFlowMode)
+                .filter(StringUtils::hasText);
     }
 
     @Override
-    public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request, HttpServletResponse response) {
+    public OAuth2AuthorizationRequest removeAuthorizationRequest(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
         OAuth2AuthorizationRequest authRequest = this.loadAuthorizationRequest(request);
         if (getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME).isPresent()) {
             deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
@@ -78,26 +109,31 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
 
     private Optional<Cookie> getCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(name)) {
-                    return Optional.of(cookie);
-                }
+        if (cookies == null) {
+            return Optional.empty();
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals(name)) {
+                return Optional.of(cookie);
             }
         }
+
         return Optional.empty();
     }
 
     private void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
         Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(name)) {
-                    cookie.setValue("");
-                    cookie.setPath("/");
-                    cookie.setMaxAge(0);
-                    response.addCookie(cookie);
-                }
+        if (cookies == null) {
+            return;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals(name)) {
+                cookie.setValue("");
+                cookie.setPath("/");
+                cookie.setMaxAge(0);
+                response.addCookie(cookie);
             }
         }
     }
@@ -119,4 +155,17 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
         }
     }
 
+    private String normalizeFlowMode(String mode) {
+        if (!StringUtils.hasText(mode)) {
+            return null;
+        }
+
+        String normalizedMode = mode.trim().toLowerCase();
+        if (OAUTH2_FLOW_MODE_LOGIN.equals(normalizedMode)
+                || OAUTH2_FLOW_MODE_REGISTER.equals(normalizedMode)) {
+            return normalizedMode;
+        }
+
+        return null;
+    }
 }
