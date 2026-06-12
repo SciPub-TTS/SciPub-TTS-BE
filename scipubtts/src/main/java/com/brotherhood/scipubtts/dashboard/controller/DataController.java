@@ -6,10 +6,8 @@ import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.TopicServiceImpl;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -83,7 +81,7 @@ public class DataController {
   @GetMapping("/topicScore-all")
   public ResponseEntity<ResponseObject> getTopics(
           @RequestParam LocalDate startTime,
-          @RequestParam Local endTime,
+          @RequestParam LocalDate endTime,
           @RequestParam String fieldId,
           @RequestParam String formula
   ) {
