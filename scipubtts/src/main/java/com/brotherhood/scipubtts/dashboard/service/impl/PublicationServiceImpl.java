@@ -4,6 +4,7 @@ import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.dashboard.dto.request.PublicationTrendRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendResponse;
 import com.brotherhood.scipubtts.dashboard.entity.PublicationTrend;
 import com.brotherhood.scipubtts.dashboard.repository.PublicationTrendRepository;
@@ -11,13 +12,16 @@ import com.brotherhood.scipubtts.dashboard.service.PublicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
+import java.util.List;
+
 @RequiredArgsConstructor
 @Service
 public class PublicationServiceImpl implements PublicationService {
   private final OpenAlexServiceImpl openAlexService;
   private final PublicationTrendRepository publicationTrendRepository;
 
-  private PublicationTrendResponse takePublicationTrends(OpenAlexPublicationRequest request){
+  private PublicationTrendCalculateResponse takePublicationTrends(OpenAlexPublicationRequest request){
 
     var data = openAlexService.searchPublicationsByYear(request);
 
@@ -40,12 +44,12 @@ public class PublicationServiceImpl implements PublicationService {
                     )
                     .toList();
 
-    return new PublicationTrendResponse(
+    return new PublicationTrendCalculateResponse(
             publicationTrends
     );
   }
 
-  public PublicationTrendResponse calculateAndSavePublicationTrends(
+  public PublicationTrendCalculateResponse calculateAndSavePublicationTrends(
           OpenAlexPublicationRequest request
   ) {
 
@@ -73,30 +77,43 @@ public class PublicationServiceImpl implements PublicationService {
 
   public PublicationTrendResponse getPublicationTrendsFromDb() {
 
-    var result =
+    List<PublicationTrendResponse.PublicationTrendItem> result =
             publicationTrendRepository.findAll()
                     .stream()
                     .sorted(
-                            java.util.Comparator.comparing(
+                            Comparator.comparing(
                                     PublicationTrend::getYear
+                            )
+                    )
+                    .map(item ->
+                            new PublicationTrendResponse.PublicationTrendItem(
+                                    item.getPublications(),
+                                    item.getYear()
                             )
                     )
                     .toList();
 
-    return new PublicationTrendResponse(
-            result
-    );
+    return new PublicationTrendResponse(result);
   }
 
   public PublicationTrendResponse getPublicationTrendsFromDb(
           PublicationTrendRequest request
   ) {
 
-    var result = publicationTrendRepository
-            .findByYearBetweenOrderByYear(
-                    request.startYear(),
-                    request.endYear()
-            );
+    List<PublicationTrendResponse.PublicationTrendItem> result =
+            publicationTrendRepository
+                    .findByYearBetweenOrderByYear(
+                            request.startYear(),
+                            request.endYear()
+                    )
+                    .stream()
+                    .map(item ->
+                            new PublicationTrendResponse.PublicationTrendItem(
+                                    item.getPublications(),
+                                    item.getYear()
+                            )
+                    )
+                    .toList();
 
     return new PublicationTrendResponse(result);
   }

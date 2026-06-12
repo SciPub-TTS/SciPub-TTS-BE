@@ -1,10 +1,11 @@
 package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendResponse;
 
 public interface PublicationService {
-  PublicationTrendResponse calculateAndSavePublicationTrends(
+  PublicationTrendCalculateResponse calculateAndSavePublicationTrends(
           OpenAlexPublicationRequest request
   );
 
