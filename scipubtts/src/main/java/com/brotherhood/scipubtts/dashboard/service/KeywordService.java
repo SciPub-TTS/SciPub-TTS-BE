@@ -22,7 +22,7 @@ public interface KeywordService {
           KeywordCalculateAllRequest request
   );
 
-  public KeywordCalculateResponse getKeywordsRanking(
+  KeywordCalculateResponse getKeywordsRanking(
           KeywordRankingRequest request
   );
 }

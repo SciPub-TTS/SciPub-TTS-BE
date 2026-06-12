@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.dashboard.service.impl;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.dashboard.dto.request.PublicationTrendRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.PublicationTrendResponse;
 import com.brotherhood.scipubtts.dashboard.entity.PublicationTrend;
@@ -85,5 +86,18 @@ public class PublicationServiceImpl implements PublicationService {
     return new PublicationTrendResponse(
             result
     );
+  }
+
+  public PublicationTrendResponse getPublicationTrendsFromDb(
+          PublicationTrendRequest request
+  ) {
+
+    var result = publicationTrendRepository
+            .findByYearBetweenOrderByYear(
+                    request.startYear(),
+                    request.endYear()
+            );
+
+    return new PublicationTrendResponse(result);
   }
 }

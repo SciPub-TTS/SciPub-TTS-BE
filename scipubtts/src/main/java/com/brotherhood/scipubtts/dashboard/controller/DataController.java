@@ -9,9 +9,12 @@ import com.brotherhood.scipubtts.dashboard.service.impl.TopicServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RequiredArgsConstructor
 @RestController
@@ -36,8 +39,36 @@ public class DataController {
     );
   }
 
-  @PostMapping("/metrics")
-  public ResponseEntity<ResponseObject> getMetrics(@Valid @RequestBody PeriodRequest request, HttpServletRequest httpServletRequest){
+  @GetMapping("/publication-trends/filter")
+  public ResponseEntity<ResponseObject> getPublicationTrendsFromDb(
+          @RequestParam Integer startYear,
+          @RequestParam Integer endYear
+  ) {
+
+    var request = new PublicationTrendRequest(
+            startYear,
+            endYear
+    );
+
+    var data = publicationService.getPublicationTrendsFromDb(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get publication trends from database",
+                    data
+            )
+    );
+  }
+
+  @GetMapping("/metrics")
+  public ResponseEntity<ResponseObject> getMetrics(@Valid @RequestParam LocalDate startTime,
+   @RequestParam LocalDate endTime ){
+
+    PeriodRequest request = new PeriodRequest(
+            startTime.toString(),
+            endTime.toString()
+    );
     var data = metricService.getMetricsFromDb(request);
 
     return ResponseEntity.ok(
@@ -49,11 +80,20 @@ public class DataController {
     );
   }
 
-  @PostMapping("/topicScore-all")
+  @GetMapping("/topicScore-all")
   public ResponseEntity<ResponseObject> getTopics(
-          @Valid @RequestBody TopicRankingRequest request,
-          HttpServletRequest httpServletRequest
+          @RequestParam LocalDate startTime,
+          @RequestParam Local endTime,
+          @RequestParam String fieldId,
+          @RequestParam String formula
   ) {
+
+    var request = new TopicRankingRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId,
+            formula
+    );
 
     var data = topicService.getTopicsRanking(request);
 
@@ -66,16 +106,17 @@ public class DataController {
     );
   }
 
-  @PostMapping("/topicScore-single")
+  @GetMapping("/topicScore-single")
   public ResponseEntity<ResponseObject> getTopic(
-          @Valid @RequestBody TopicCalculateSingleRequest request,
-          HttpServletRequest httpServletRequest
+          @RequestParam String topicId,
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime
   ) {
 
     var data = topicService.getTopicFromDb(
-            request.topicId(),
-            request.startTime(),
-            request.endTime()
+            topicId,
+            startTime.toString(),
+            endTime.toString()
     );
 
     return ResponseEntity.ok(
@@ -87,12 +128,23 @@ public class DataController {
     );
   }
 
-  @PostMapping("/keywordScore-all")
-  public ResponseEntity<ResponseObject> getTopic(
-          @Valid @RequestBody KeywordRankingRequest request,
-          HttpServletRequest httpServletRequest
-  ){
+  @GetMapping("/keywordScore-all")
+  public ResponseEntity<ResponseObject> getKeywords(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId,
+          @RequestParam String formula
+  ) {
+
+    var request = new KeywordRankingRequest(
+            startTime,
+            endTime,
+            fieldId,
+            formula
+    );
+
     var data = keywordService.getKeywordsRanking(request);
+
     return ResponseEntity.ok(
             new ResponseObject(
                     HttpStatus.OK.value(),
