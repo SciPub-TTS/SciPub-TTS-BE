@@ -1,66 +1,118 @@
 package com.brotherhood.scipubtts.dashboard.service.impl;
 
+import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.dto.request.KeywordCalculateAllRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.KeywordRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.KeywordCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 import com.brotherhood.scipubtts.dashboard.repository.KeywordRepository;
+import com.brotherhood.scipubtts.dashboard.service.CalculationService;
 import com.brotherhood.scipubtts.dashboard.service.KeywordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class KeywordServiceImpl implements KeywordService {
   private final OpenAlexServiceImpl openAlexService;
   private final KeywordRepository keywordRepository;
+  private final CalculationService calculationService;
 
   public KeywordCalculateResponse calculateAndSaveKeywords(
           KeywordCalculateAllRequest request
   ) {
+    List<Keyword> existingKeywords =
+            keywordRepository.findByFieldIdAndStartTimeAndEndTime(
+                    request.fieldId(),
+                    request.recentStart(),
+                    request.recentEnd()
+            );
+
+    if (!existingKeywords.isEmpty()) {
+      return new KeywordCalculateResponse(existingKeywords);
+    }
+
     var hotKeywords = openAlexService.filterHotKeyword();
 
     List<Keyword> result = new ArrayList<>();
 
     for (Keyword kw : hotKeywords.keywordList()) {
       result.add(
-              calculateAndSaveKeyword(
+              calculateKeywordMetrics(
                       kw,
                       request
               )
       );
     }
 
+    result = saveRankedKeywords(result);
+
     return new KeywordCalculateResponse(result);
   }
 
-  public Keyword calculateAndSaveKeyword(
+  public Keyword calculateKeywordMetrics(
           Keyword keyword,
           KeywordCalculateAllRequest request
   ) {
-
-    var existing = keywordRepository.findByKeywordAndFieldIdAndStartTimeAndEndTime(
-            keyword.getKeyword(),
-            request.fieldId(),
-            request.recentStart(),
-            request.recentEnd()
-    );
-
-    if (existing.isPresent()) {
-      return existing.get();
-    }
-
-    Keyword calculatedKeyword = calculateKeyword(keyword, request);
-
-    return keywordRepository.save(calculatedKeyword);
+    return calculateKeyword(keyword, request);
   }
 
   public List<Keyword> getByPeriod(KeywordCalculateAllRequest request) {
     return keywordRepository.findByFieldIdAndStartTimeAndEndTime(
             request.fieldId(), request.recentStart(), request.recentEnd()
     );
+  }
+
+  @Override
+  public KeywordCalculateResponse getKeywordsRanking(
+          KeywordRankingRequest request
+  ) {
+
+    List<Keyword> keywords =
+            keywordRepository.findByFieldIdAndStartTimeAndEndTime(
+                    request.fieldId(),
+                    request.startTime(),
+                    request.endTime()
+            );
+
+    if (keywords.isEmpty()) {
+      return null;
+    }
+
+    return calculationService.calculateKeywordsFinalScore(
+            request.formula(),
+            keywords
+    );
+  }
+
+  private List<Keyword> saveRankedKeywords(List<Keyword> keywords) {
+    Set<String> selectedKeywords = new HashSet<>();
+    List<FormulaType> formulas = List.of(
+            FormulaType.BALANCED,
+            FormulaType.TRENDING,
+            FormulaType.EMERGING,
+            FormulaType.DOMINANT
+    );
+
+    for (FormulaType formula : formulas) {
+      KeywordCalculateResponse response = calculationService.calculateKeywordsFinalScore(formula.getFormula(), keywords);
+
+      for (Keyword keyword : response.keywordList()) {
+        selectedKeywords.add(keyword.getKeywordId());
+      }
+    }
+
+    List<Keyword> keywordsToSave = keywords.stream()
+            .filter(keyword -> selectedKeywords.contains(keyword.getKeywordId()))
+            .toList();
+
+    keywordRepository.saveAll(keywordsToSave);
+    return keywordsToSave;
   }
 
   // Calculate all

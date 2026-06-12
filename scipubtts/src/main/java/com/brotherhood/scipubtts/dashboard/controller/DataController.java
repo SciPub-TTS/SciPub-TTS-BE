@@ -89,10 +89,10 @@ public class DataController {
 
   @PostMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> getTopic(
-          @Valid @RequestBody KeywordCalculateAllRequest request,
+          @Valid @RequestBody KeywordRankingRequest request,
           HttpServletRequest httpServletRequest
   ){
-    var data = keywordService.getByPeriod(request);
+    var data = keywordService.getKeywordsRanking(request);
     return ResponseEntity.ok(
             new ResponseObject(
                     HttpStatus.OK.value(),

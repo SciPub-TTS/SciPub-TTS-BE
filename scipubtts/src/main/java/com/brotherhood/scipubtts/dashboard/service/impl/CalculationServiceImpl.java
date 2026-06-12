@@ -173,6 +173,17 @@ public class CalculationServiceImpl implements CalculationService {
 
   @Override
   public KeywordCalculateResponse calculateKeywordsFinalScore(String formula, List<Keyword> keywordList) {
+    keywordList = keywordList.stream()
+            .filter(k ->
+                    k.getPgr() != null
+                            && k.getCagr() != null
+                            && k.getPs() != null)
+            .toList();
+
+    if (keywordList.isEmpty()) {
+      return new KeywordCalculateResponse(List.of());
+    }
+
     FormulaType formulaType = FormulaType.from(formula);
     KeywordWeight weight = resolveKeywordWeight(formulaType);
     KeywordMetricStatistic stat = buildKeywordStatistic(keywordList);

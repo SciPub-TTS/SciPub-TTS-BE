@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.dashboard.dto.request.KeywordCalculateAllRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.KeywordRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.KeywordCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 
@@ -12,7 +13,7 @@ public interface KeywordService {
           KeywordCalculateAllRequest request
   );
 
-  Keyword calculateAndSaveKeyword(
+  Keyword calculateKeywordMetrics(
           Keyword keyword,
           KeywordCalculateAllRequest request
   );
@@ -21,4 +22,7 @@ public interface KeywordService {
           KeywordCalculateAllRequest request
   );
 
+  public KeywordCalculateResponse getKeywordsRanking(
+          KeywordRankingRequest request
+  );
 }
