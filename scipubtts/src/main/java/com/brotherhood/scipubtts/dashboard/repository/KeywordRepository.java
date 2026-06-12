@@ -11,8 +11,8 @@ import java.util.Optional;
 @Repository
 public interface KeywordRepository extends JpaRepository<Keyword, Long> {
 
-  Optional<Keyword> findByKeywordAndFieldIdAndStartTimeAndEndTime(
-          String keyword, String fieldId, LocalDate startTime, LocalDate endTime
+  Optional<Keyword> findByKeywordIdAndFieldIdAndStartTimeAndEndTime(
+          String keywordId, String fieldId, LocalDate startTime, LocalDate endTime
   );
 
   List<Keyword> findByFieldIdAndStartTimeAndEndTime(
@@ -29,7 +29,10 @@ public interface KeywordRepository extends JpaRepository<Keyword, Long> {
           LocalDate startTime, LocalDate endTime
   );
 
-  boolean existsByKeywordAndStartTimeAndEndTime(
-          String keyword, LocalDate startTime, LocalDate endTime
+  boolean existsByKeywordIdAndFieldIdAndStartTimeAndEndTime(
+          String keywordId,
+          String fieldId,
+          LocalDate startTime,
+          LocalDate endTime
   );
 }

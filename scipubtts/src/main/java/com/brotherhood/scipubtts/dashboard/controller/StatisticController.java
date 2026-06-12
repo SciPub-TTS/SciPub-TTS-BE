@@ -3,10 +3,10 @@ package com.brotherhood.scipubtts.dashboard.controller;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.dashboard.dto.request.*;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
-import com.brotherhood.scipubtts.dashboard.service.KeywordService;
-import com.brotherhood.scipubtts.dashboard.service.MetricService;
-import com.brotherhood.scipubtts.dashboard.service.PublicationService;
-import com.brotherhood.scipubtts.dashboard.service.TopicService;
+import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
+import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
+import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
+import com.brotherhood.scipubtts.dashboard.service.impl.TopicServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/statistic")
 public class StatisticController {
-  private final PublicationService publicationService;
-  private final MetricService metricService;
-  private final TopicService topicService;
-  private final KeywordService keywordService;
+  private final PublicationServiceImpl publicationService;
+  private final MetricServiceImpl metricService;
+  private final TopicServiceImpl topicService;
+  private final KeywordServiceImpl keywordService;
 
   @PostMapping("/publication-trends")
   public ResponseEntity<ResponseObject> takePublicationTrend(@Valid @RequestBody OpenAlexPublicationRequest request, HttpServletRequest httpServletRequest){
@@ -82,7 +82,7 @@ public class StatisticController {
           HttpServletRequest httpServletRequest){
     long startTime = System.currentTimeMillis();
 
-    var data = topicService.calculateAndSaveTopic(
+    var data = topicService.calculateTopic(
             request.topicId(),
             request.startTime(),
             request.endTime(),
