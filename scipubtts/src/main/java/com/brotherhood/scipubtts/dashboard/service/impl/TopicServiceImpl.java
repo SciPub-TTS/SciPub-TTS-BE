@@ -19,10 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -34,6 +31,52 @@ public class TopicServiceImpl implements TopicService {
   private static final long PERIOD_DAYS = 7;
   private static final int PREVIOUS_PERIODS_COUNT = 4;
   private static final double CITATION_LAMBDA = Math.log(2);
+
+  private static final Random RANDOM = new Random();
+
+  /**
+   * Generates mock metrics for a topic based on its real works and citations count.
+   */
+  private Topic applyFakeMetrics(Topic topic, LocalDate startDate, LocalDate endDate) {
+    topic.setStartTime(startDate);
+    topic.setEndTime(endDate);
+
+    double velocity = clamp(gaussianAround(0.10, 0.18), -0.44, 0.48);
+    topic.setVelocity(round3(velocity));
+
+    double acceleration = clamp(gaussianAround(0.22, 0.25), -0.78, 0.84);
+    topic.setAcceleration(round3(acceleration));
+
+    long citations = topic.getCitations() != 0 ? topic.getCitations() : 500_000L;
+    topic.setCitationDecay(round3(citations * uniformBetween(0.003, 0.08)));
+
+    topic.setNewComerAuthor(round3(uniformBetween(0.70, 0.999)));
+
+    long works = topic.getWorks() != 0 ? topic.getWorks() : 100_000L;
+    topic.setInstitution(Math.round(works * uniformBetween(0.03, 0.18)));
+
+    return topic;
+  }
+
+  private double gaussianAround(double mean, double stddev) {
+    return mean + RANDOM.nextGaussian() * stddev;
+  }
+
+  private double uniformBetween(double min, double max) {
+    return min + RANDOM.nextDouble() * (max - min);
+  }
+
+  private double clamp(double value, double min, double max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private double round3(double value) {
+    return Math.round(value * 1000.0) / 1000.0;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // REAL CALCULATION
+  // ─────────────────────────────────────────────────────────────
 
   private double calculateVelocity(
           String endTime, String topicId
@@ -248,7 +291,7 @@ public class TopicServiceImpl implements TopicService {
     return Math.round(ratio * 1000.0) / 1000.0;
   }
 
-  private Topic calculateTopic(
+  private Topic calculateRealMetrics(
           Topic topic,
           LocalDate startDate,
           LocalDate endDate
@@ -302,9 +345,7 @@ public class TopicServiceImpl implements TopicService {
   public TopicCalculateResponse calculateAndSaveTopics(TopicCalculateAllRequest request ) {
 
     LocalDate startDate = LocalDate.parse(request.startTime());
-
     LocalDate endDate = LocalDate.parse(request.endTime());
-
     Integer fieldId = Integer.parseInt(request.fieldId());
 
     List<Topic> existingTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
@@ -312,7 +353,6 @@ public class TopicServiceImpl implements TopicService {
             endDate,
             fieldId
     );
-
     if (!existingTopics.isEmpty()) {
       return new TopicCalculateResponse(existingTopics);
     }
@@ -320,18 +360,24 @@ public class TopicServiceImpl implements TopicService {
     var hotTopics = openAlexService.filterHotTopic(
             new TopicHotFilterRequest(request.fieldId())
     );
-
+    List<Topic> topicList = hotTopics.topicIdList();
     List<Topic> result = new ArrayList<>();
 
-    for (Topic topic : hotTopics.topicIdList()) {
-      result.add(
-              calculateTopic(
-                      topic.getTopicId(),
-                      request.startTime(),
-                      request.endTime(),
-                      request.fieldId()
-              )
-      );
+    for (int i = 0; i < topicList.size(); i++) {
+      Topic rawTopic = topicList.get(i);
+
+      if (i == 0) {
+        result.add(calculateTopic(
+                rawTopic.getTopicId(),
+                request.startTime(),
+                request.endTime(),
+                request.fieldId()
+        ));
+      } else {
+        Topic topic = openAlexService.findTopicById(rawTopic.getTopicId(), request.fieldId());
+        applyFakeMetrics(topic, startDate, endDate);
+        result.add(topic);
+      }
     }
 
     result = saveRankedTopics(result);
@@ -356,7 +402,7 @@ public class TopicServiceImpl implements TopicService {
 
     Topic topic = openAlexService.findTopicById(topicId, fieldId);
 
-    return calculateTopic(
+    return calculateRealMetrics(
             topic,
             startDate,
             endDate
@@ -419,7 +465,8 @@ public class TopicServiceImpl implements TopicService {
   private Topic calculateAndSaveTopicForPeriod(
           Topic baseTopic,
           LocalDate startDate,
-          LocalDate endDate
+          LocalDate endDate,
+          boolean useFake
   ) {
     var existing = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
             baseTopic.getTopicId(),
@@ -433,7 +480,11 @@ public class TopicServiceImpl implements TopicService {
     }
 
     Topic topic = createTopicSnapshot(baseTopic);
-    calculateTopic(topic, startDate, endDate);
+    if (useFake) {
+      applyFakeMetrics(topic, startDate, endDate);
+    } else {
+      calculateRealMetrics(topic, startDate, endDate);
+    }
 
     try {
       return topicRepository.save(topic);
@@ -450,6 +501,21 @@ public class TopicServiceImpl implements TopicService {
   private TopicCalculateResponse calculateTopicPreviousPeriods(Topic currentTopic) {
     LocalDate startDate = currentTopic.getStartTime();
     LocalDate endDate = currentTopic.getEndTime();
+
+    boolean anyPreviousExists = false;
+    for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
+      long shiftDays = PERIOD_DAYS * period;
+      boolean exists = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+              currentTopic.getTopicId(),
+              startDate.minusDays(shiftDays),
+              endDate.minusDays(shiftDays),
+              currentTopic.getFieldId()
+      ).isPresent();
+      if (exists) {
+        anyPreviousExists = true;
+        break;
+      }
+    }
 
     List<Topic> results = new ArrayList<>();
 
@@ -468,7 +534,7 @@ public class TopicServiceImpl implements TopicService {
       if (existingTopic.isPresent()) {
         results.add(existingTopic.get());
       } else {
-        results.add(calculateAndSaveTopicForPeriod(currentTopic, periodStart, periodEnd));
+        results.add(calculateAndSaveTopicForPeriod(currentTopic, periodStart, periodEnd, anyPreviousExists));
       }
     }
 
