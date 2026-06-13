@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
-import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -33,10 +32,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final UserRepository userRepository;
     private final GoogleSignupTokenRepository googleSignupTokenRepository;
     private final SecureValueService secureValueService;
-
+    // Team rule:
+    // Keep success/failure handlers on the same AuthorizationRequestRepository implementation that
+    // SecurityConfig uses for oauth2Login(). If one side uses cookie storage and the other uses
+    // HttpSession storage, Google login/register will become flaky on production.
     private final AuthorizationRequestRepository<OAuth2AuthorizationRequest>
-            authorizationRequestRepository =
-            new HttpSessionOAuth2AuthorizationRequestRepository();
+            authorizationRequestRepository;
 
     @Value("${app.frontend-base-url:http://localhost:5173}")
     private String frontendBaseUrl;
