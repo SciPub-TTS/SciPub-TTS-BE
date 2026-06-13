@@ -126,6 +126,31 @@ public class DataController {
     );
   }
 
+  @GetMapping("/topicScore-periods")
+  public ResponseEntity<ResponseObject> getTopicAcrossPeriods(
+          @RequestParam String topicId,
+          @RequestParam String fieldId,
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime
+  ) {
+    var request = new TopicCalculateSingleRequest(
+            startTime.toString(),
+            endTime.toString(),
+            topicId,
+            fieldId
+    );
+
+    var data = topicService.getTopicAcrossPeriods(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic across periods successfully",
+                    data
+            )
+    );
+  }
+
   @GetMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> getKeywords(
           @RequestParam LocalDate startTime,

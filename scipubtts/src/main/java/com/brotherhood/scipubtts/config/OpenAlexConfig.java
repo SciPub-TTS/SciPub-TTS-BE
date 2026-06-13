@@ -2,7 +2,10 @@ package com.brotherhood.scipubtts.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.support.HttpRequestWrapper;
 import org.springframework.web.client.RestClient;
+
+import java.net.URI;
 
 @Configuration
 public class OpenAlexConfig {
@@ -12,6 +15,15 @@ public class OpenAlexConfig {
     return RestClient.builder()
             .baseUrl("https://api.openalex.org")
             .defaultHeader("User-Agent", "ScipubTTS")
+            .requestInterceptor((request, body, execution) -> {
+              URI originalUri = request.getURI();
+              String separator = originalUri.getQuery() == null ? "?" : "&";
+              URI newUri = URI.create(originalUri + separator + "api_key=" + "b6CPNoHsLmESY4uE9JgdLJ");
+              return execution.execute(new HttpRequestWrapper(request) {
+                @Override
+                public URI getURI() { return newUri; }
+              }, body);
+            })
             .build();
   }
 }
