@@ -62,6 +62,12 @@ public enum ErrorCode {
     INVALID_USER_INFO(HttpStatus.BAD_REQUEST, "Email not found from Google provider."),
     OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No account is associated with this social email address."),
 
+    INVALID_GOOGLE_SIGNUP_TOKEN(HttpStatus.BAD_REQUEST,
+            "The registration token is invalid."),
+    GOOGLE_SIGNUP_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST,
+            "This registration token has already been used."),
+    GOOGLE_SIGNUP_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
+            "This registration token has expired."),
     // ===== ADMIN =====
     ADMIN_SELF_ACTION_NOT_ALLOWED(HttpStatus.FORBIDDEN,
             "Admin cannot perform this action on their own account."),

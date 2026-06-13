@@ -1,9 +1,11 @@
 package com.brotherhood.scipubtts.auth.controller;
 
+import com.brotherhood.scipubtts.auth.dto.request.CompleteGoogleRegisterRequest;
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.CurrentUserResponse;
+import com.brotherhood.scipubtts.auth.dto.response.GoogleSignupPreviewResponse;
 import com.brotherhood.scipubtts.auth.service.AuthService;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
@@ -111,4 +113,34 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/register/google/complete")
+    public ResponseEntity<ResponseObject> completeGoogleRegister(
+            @Valid @RequestBody CompleteGoogleRegisterRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        System.out.println("===== HIT GOOGLE COMPLETE REGISTER =====");
+        AuthResponse data = authService.completeGoogleRegister(request, httpRequest, httpResponse);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                new ResponseObject(
+                        HttpStatus.CREATED.value(),
+                        "Register with Google successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("/register/google/preview")
+    public ResponseEntity<ResponseObject> previewGoogleRegister(@RequestParam String token) {
+        GoogleSignupPreviewResponse data = authService.previewGoogleRegister(token);
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Get Google signup information successfully",
+                        data
+                )
+        );
+    }
 }
