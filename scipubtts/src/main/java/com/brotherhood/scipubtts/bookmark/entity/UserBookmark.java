@@ -54,9 +54,11 @@ public class UserBookmark {
     private String shareToken;
 
     @Column(name = "is_public", nullable = false)
+    @Builder.Default
     private boolean isPublic = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
 }
