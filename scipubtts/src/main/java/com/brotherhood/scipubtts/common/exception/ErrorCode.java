@@ -39,8 +39,6 @@ public enum ErrorCode {
             "Password confirmation does not match."),
     PASSWORD_REUSE_NOT_ALLOWED(HttpStatus.BAD_REQUEST,
             "The new password cannot be the same as your current password."),
-    PASSWORD_TOO_WEAK(HttpStatus.BAD_REQUEST,
-            "The password does not meet the minimum security requirements."),
 
     PASSWORD_RESET_CODE_INVALID(HttpStatus.BAD_REQUEST,
             "Invalid verification code."),
@@ -55,6 +53,8 @@ public enum ErrorCode {
 
     REQUEST_BODY_REQUIRED(HttpStatus.BAD_REQUEST,
             "Request body is required."),
+    INVALID_SEARCH_FILTER_COMBINATION(HttpStatus.BAD_REQUEST,
+            "%s"),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
             "Too many requests. Please try again later."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -62,6 +62,12 @@ public enum ErrorCode {
     INVALID_USER_INFO(HttpStatus.BAD_REQUEST, "Email not found from Google provider."),
     OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No account is associated with this social email address."),
 
+    INVALID_GOOGLE_SIGNUP_TOKEN(HttpStatus.BAD_REQUEST,
+            "The registration token is invalid."),
+    GOOGLE_SIGNUP_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST,
+            "This registration token has already been used."),
+    GOOGLE_SIGNUP_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
+            "This registration token has expired."),
     // ===== ADMIN =====
     ADMIN_SELF_ACTION_NOT_ALLOWED(HttpStatus.FORBIDDEN,
             "Admin cannot perform this action on their own account."),
@@ -108,4 +114,5 @@ public enum ErrorCode {
 
     private final HttpStatus status;
     private final String message;
+
 }

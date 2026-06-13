@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.search.service;
 
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
 import com.brotherhood.scipubtts.search.dto.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.entity.SearchHistory;
@@ -27,15 +29,17 @@ public class SearchHistoryService {
         this.searchQuerySupport = searchQuerySupport;
     }
 
-    public List<SearchHistoryItemResponse> getRecentSearches(UUID userId, int limit) {
+    public List<SearchHistoryItemResponse> getRecentSearches(UUID userId, String keyword, int limit) {
         if (userId == null) {
             return List.of();
         }
 
         int normalizedLimit = searchQuerySupport.normalizeRecentSearchLimit(limit);
+        String normalizedKeyword = normalizeKeyword(keyword);
         List<SearchHistoryRepository.RecentSearchProjection> recentSearches =
                 searchHistoryRepository.findRecentDistinctSearches(
                         userId,
+                        normalizedKeyword,
                         PageRequest.of(0, normalizedLimit)
                 );
 
@@ -49,12 +53,19 @@ public class SearchHistoryService {
 
     @Transactional
     public void saveSearchHistory(SearchHistorySaveRequest request) {
-        if (request == null || request.getUserId() == null || !StringUtils.hasText(request.getQuery())) {
+        if (request == null || !StringUtils.hasText(request.getQuery())) {
             return;
         }
 
+        if (request.getUserId() == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String normalizedQuery = request.getQuery().trim();
+        searchHistoryRepository.deleteByUserIdAndContentIgnoreCase(request.getUserId(), normalizedQuery);
+
         SearchHistory searchHistory = new SearchHistory();
-        searchHistory.setContent(request.getQuery().trim());
+        searchHistory.setContent(normalizedQuery);
         searchHistory.setUserId(request.getUserId());
 
         searchHistoryRepository.save(searchHistory);
@@ -62,11 +73,24 @@ public class SearchHistoryService {
 
     @Transactional
     public void deleteSearchHistory(UUID userId, String query) {
-        if (userId == null || !StringUtils.hasText(query)) {
+        if (!StringUtils.hasText(query)) {
             return;
         }
 
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
         searchHistoryRepository.deleteByUserIdAndContentIgnoreCase(userId, query.trim());
+    }
+
+    @Transactional
+    public void clearSearchHistory(UUID userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        searchHistoryRepository.deleteByUserId(userId);
     }
 
     private SearchHistoryItemResponse mapRecentSearch(SearchHistoryRepository.RecentSearchProjection recentSearch) {
@@ -80,5 +104,9 @@ public class SearchHistoryService {
                 recentSearch.getContent(),
                 savedAt
         );
+    }
+
+    private String normalizeKeyword(String keyword) {
+        return StringUtils.hasText(keyword) ? keyword.trim() : "";
     }
 }
