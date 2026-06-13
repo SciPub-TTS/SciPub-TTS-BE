@@ -39,8 +39,6 @@ public enum ErrorCode {
             "Password confirmation does not match."),
     PASSWORD_REUSE_NOT_ALLOWED(HttpStatus.BAD_REQUEST,
             "The new password cannot be the same as your current password."),
-    PASSWORD_TOO_WEAK(HttpStatus.BAD_REQUEST,
-            "The password does not meet the minimum security requirements."),
 
     PASSWORD_RESET_CODE_INVALID(HttpStatus.BAD_REQUEST,
             "Invalid verification code."),

@@ -1,11 +1,9 @@
 package com.brotherhood.scipubtts.auth.security.oauth2;
 
+import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
-import com.brotherhood.scipubtts.auth.security.UserPrincipal;
-import com.brotherhood.scipubtts.common.exception.BusinessException;
-import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
@@ -25,7 +23,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final UserRepository userRepository;
 
     @Override
-    @Transactional // Đảm bảo an toàn dữ liệu và tránh lỗi Lazy Loading Chắt chẽ
+    @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
@@ -41,6 +39,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
 
         String email = (String) oAuth2User.getAttributes().get("email");
+        String givenName = (String) oAuth2User.getAttributes().get("given_name");
+        String familyName = (String) oAuth2User.getAttributes().get("family_name");
 
         if (!StringUtils.hasText(email)) {
             throw new OAuth2AuthenticationException(
@@ -61,15 +61,31 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         User user = userRepository.findByEmail(email).orElse(null);
 
-        if (user != null && user.isBanned()) {
-            throw new OAuth2AuthenticationException(
-                    new OAuth2Error("account_banned"),
-                    "Account is banned"
-            );
-        }
-
-        if (user != null) {
-            return UserPrincipal.create(user, oAuth2User.getAttributes());
+        if (user == null) {
+            user = new User();
+            user.setEmail(email);
+            user.setUsername(email);
+            user.setFirstName(givenName);
+            user.setLastName(familyName);
+            user.setRole(Role.RESEARCHER);
+            user.setEmailVerified(true);
+            user.setPasswordHash(null);
+            user.setGoogleLinked(true);
+            user.setBanned(false);
+        } else {
+            if (user.isBanned()) {
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("account_banned"),
+                        "Account is banned"
+                );
+            }
+            if (!StringUtils.hasText(user.getFirstName())) {
+                user.setFirstName(givenName);
+            }
+            if (!StringUtils.hasText(user.getLastName())) {
+                user.setLastName(familyName);
+            }
+            user.setGoogleLinked(true);
         }
 
         return oAuth2User;

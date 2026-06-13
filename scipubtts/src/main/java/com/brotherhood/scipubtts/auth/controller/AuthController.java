@@ -19,6 +19,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -30,7 +31,10 @@ public class AuthController {
     private final AuthService authService;
     private final AccountService accountService;
 
-    public AuthController(AuthService authService, AccountService accountService) {
+    public AuthController(
+            AuthService authService,
+            AccountService accountService
+    ) {
         this.authService = authService;
         this.accountService = accountService;
     }
@@ -49,6 +53,11 @@ public class AuthController {
                         null
                 )
         );
+    }
+
+    @GetMapping("/oauth2/google")
+    public void startGoogleAuth(HttpServletResponse response) throws IOException {
+        response.sendRedirect("/oauth2/authorization/google");
     }
 
     @GetMapping("/verify-email")

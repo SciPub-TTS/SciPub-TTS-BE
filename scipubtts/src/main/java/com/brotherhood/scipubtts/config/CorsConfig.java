@@ -64,7 +64,12 @@ public class CorsConfig {
     private List<String> splitAndTrimCsv(String csv) {
         return Arrays.stream(csv.split(","))
                 .map(String::trim)
+                .map(this::trimTrailingSlash)
                 .filter(value -> !value.isEmpty())
                 .collect(Collectors.toList());
+    }
+
+    private String trimTrailingSlash(String value) {
+        return value.replaceAll("/+$", "");
     }
 }
