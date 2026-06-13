@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.search.service;
 
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
 import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
@@ -61,7 +63,40 @@ public class SearchWorksLookupService {
             return SearchWorksQueryRequest.empty();
         }
 
+        validateExclusiveRangeFilters(request);
         return request;
+    }
+
+    private void validateExclusiveRangeFilters(SearchWorksQueryRequest request) {
+        validateExactVsRange(
+                "Year exact cannot be combined with Year from/to.",
+                request.getYearExact(),
+                request.getYearFrom(),
+                request.getYearTo()
+        );
+        validateExactVsRange(
+                "Citation exact cannot be combined with Citation min/max.",
+                request.getCitationExact(),
+                request.getCitationMin(),
+                request.getCitationMax()
+        );
+    }
+
+    private void validateExactVsRange(
+            String errorMessage,
+            Integer exactValue,
+            Integer minValue,
+            Integer maxValue
+    ) {
+        boolean hasExactValue = exactValue != null;
+        boolean hasRangeValue = minValue != null || maxValue != null;
+
+        if (hasExactValue && hasRangeValue) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_SEARCH_FILTER_COMBINATION,
+                    errorMessage
+            );
+        }
     }
 
     private String resolveSort(SearchWorksQueryRequest request) {

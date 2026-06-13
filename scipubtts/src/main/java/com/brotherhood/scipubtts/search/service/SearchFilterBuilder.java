@@ -57,7 +57,6 @@ public class SearchFilterBuilder {
         addRangeFilter(
                 filterParts,
                 "publication_year",
-                searchQuerySupport.normalizeMode(request.getYearMode()),
                 request.getYearExact(),
                 request.getYearFrom(),
                 request.getYearTo()
@@ -68,7 +67,6 @@ public class SearchFilterBuilder {
         addRangeFilter(
                 filterParts,
                 "cited_by_count",
-                searchQuerySupport.normalizeMode(request.getCitationMode()),
                 request.getCitationExact(),
                 request.getCitationMin(),
                 request.getCitationMax()
@@ -78,12 +76,11 @@ public class SearchFilterBuilder {
     private void addRangeFilter(
             List<String> filterParts,
             String field,
-            String mode,
             Integer exactValue,
             Integer minValue,
             Integer maxValue
     ) {
-        if ("exact".equals(mode) && exactValue != null) {
+        if (exactValue != null) {
             filterParts.add(field + ":" + exactValue);
             return;
         }

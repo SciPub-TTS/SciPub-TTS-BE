@@ -25,5 +25,7 @@ public interface SearchService {
     void saveSearchHistory(SearchHistorySaveRequest request);
 
     void deleteSearchHistory(UUID userId, String query);
+
+    void clearSearchHistory(UUID userId);
 }
 

@@ -33,5 +33,7 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
     );
 
     long deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
+
+    long deleteByUserId(UUID userId);
 }
 

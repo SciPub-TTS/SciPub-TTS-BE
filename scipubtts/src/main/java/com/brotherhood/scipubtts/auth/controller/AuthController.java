@@ -9,6 +9,7 @@ import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.user.service.AccountService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,6 +34,10 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Operation(
+            summary = "Register a local account",
+            description = "Creates a new local account and sends an email verification link."
+    )
     public ResponseEntity<ResponseObject> register(@Valid @RequestBody RegisterLocalRequest request, HttpServletRequest httpRequest) {
         String message = authService.registerLocal(request);
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -45,12 +50,27 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email")
-    public void verifyEmail(@RequestParam String token, HttpServletResponse response) throws IOException {
+    @Operation(
+            summary = "Verify email",
+            description = "Opens the email verification flow with the token sent to the user's email."
+    )
+    public void verifyEmail(
+            @Parameter(
+                    description = "Email verification token from the verification email.",
+                    example = "eyJhbGciOiJIUzI1NiJ9.verify.email.token"
+            )
+            @RequestParam String token,
+            HttpServletResponse response
+    ) throws IOException {
         String redirectUrl = authService.verifyEmail(token);
         response.sendRedirect(redirectUrl);
     }
 
     @PostMapping("/login")
+    @Operation(
+            summary = "Login",
+            description = "Authenticates the user and returns access token data. A refresh token cookie is also issued."
+    )
     public ResponseEntity<ResponseObject> login(@Valid @RequestBody LoginRequest request,
                                                 HttpServletRequest httpRequest,
                                                 HttpServletResponse httpResponse) {
@@ -67,6 +87,10 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Operation(
+            summary = "Refresh access token",
+            description = "Uses the refresh token cookie issued at login. No request body is required."
+    )
     public ResponseEntity<ResponseObject> refresh(HttpServletRequest request,
                                                   HttpServletResponse response) {
 
@@ -82,6 +106,10 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @Operation(
+            summary = "Logout",
+            description = "Revokes the current session and clears the refresh token cookie."
+    )
     public ResponseEntity<ResponseObject> logout(
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request,
@@ -99,6 +127,10 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @Operation(
+            summary = "Get current user profile",
+            description = "Returns profile information for the currently authenticated user."
+    )
     public ResponseEntity<ResponseObject> me(@Parameter(hidden = true) @CurrentUserUUID UUID userId) {
         CurrentUserResponse data = accountService.getCurrentUser(userId);
 

@@ -67,4 +67,9 @@ public class SearchServiceImpl implements SearchService {
     public void deleteSearchHistory(UUID userId, String query) {
         searchHistoryService.deleteSearchHistory(userId, query);
     }
+
+    @Override
+    public void clearSearchHistory(UUID userId) {
+        searchHistoryService.clearSearchHistory(userId);
+    }
 }

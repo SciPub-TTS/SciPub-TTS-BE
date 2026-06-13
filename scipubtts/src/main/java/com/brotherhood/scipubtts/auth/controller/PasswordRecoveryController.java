@@ -6,6 +6,7 @@ import com.brotherhood.scipubtts.auth.dto.request.VerifyResetCodeRequest;
 import com.brotherhood.scipubtts.auth.dto.response.VerifyResetCodeResponse;
 import com.brotherhood.scipubtts.auth.service.PasswordRecoveryService;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,10 @@ public class PasswordRecoveryController {
     private final PasswordRecoveryService passwordRecoveryService;
 
     @PostMapping("/request")
+    @Operation(
+            summary = "Request forgot-password code",
+            description = "Sends a password reset verification code to the provided email if the account exists."
+    )
     public ResponseEntity<ResponseObject> requestReset(@Valid @RequestBody ForgotPasswordRequest request,
                                                        HttpServletRequest httpRequest) {
 
@@ -39,6 +44,10 @@ public class PasswordRecoveryController {
     }
 
     @PostMapping("/verify-code")
+    @Operation(
+            summary = "Verify forgot-password code",
+            description = "Checks the 6-digit verification code and returns a reset grant token when valid."
+    )
     public ResponseEntity<ResponseObject> verifyCode(@Valid @RequestBody VerifyResetCodeRequest request,
                                                      HttpServletRequest httpRequest) {
 
@@ -55,6 +64,10 @@ public class PasswordRecoveryController {
     }
 
     @PostMapping("/reset")
+    @Operation(
+            summary = "Reset password",
+            description = "Resets the password using the reset grant token returned by the verify-code endpoint."
+    )
     public ResponseEntity<ResponseObject> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
 
         passwordRecoveryService.resetPassword(
