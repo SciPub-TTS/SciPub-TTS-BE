@@ -26,7 +26,7 @@ public record SearchFilterOptionsResponse(
     public record FacetOption(String value, String label, long count) {
     }
 
-    public record EntityOption(String id, String label, Long count) {
+    public record EntityOption(String value, String label, long count) {
     }
 
     public record ToggleFilter(String openAlexFilterKey, boolean defaultValue) {

@@ -55,6 +55,8 @@ public enum ErrorCode {
 
     REQUEST_BODY_REQUIRED(HttpStatus.BAD_REQUEST,
             "Request body is required."),
+    INVALID_SEARCH_FILTER_COMBINATION(HttpStatus.BAD_REQUEST,
+            "%s"),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
             "Too many requests. Please try again later."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -114,4 +116,5 @@ public enum ErrorCode {
 
     private final HttpStatus status;
     private final String message;
+
 }
