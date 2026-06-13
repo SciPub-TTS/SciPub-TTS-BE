@@ -21,6 +21,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.*;
@@ -101,35 +102,30 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler)
                 )
                 .authenticationProvider(daoAuthenticationProvider)
-                .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
-                    auth.requestMatchers(
-                            "/", "/error", "/favicon.ico",
-                            "/api/auth/register",
-                            "/api/auth/login",
-                            "/api/auth/refresh",
-                            "/api/auth/logout",
-                            "/api/auth/oauth2/google",
-                            "/api/auth/verify-email",
-                            "/api/auth/forgot-password/**",
-                            "/oauth2/**",
-                            "/login/oauth2/**",
-                            "/api/search/**",
-                            "/api/papers/**",
-                            "/api/statistic/**"
-                    ).permitAll();
-
-                    if (docsPublicEnabled) {
-                        auth.requestMatchers(
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                "/", "/error", "/favicon.ico",
+                                "/api/auth/register",
+                                "/api/auth/register/google/**",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/verify-email",
+                                "/api/auth/forgot-password/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll();
-                    }
-
-                    auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
-                    auth.anyRequest().authenticated();
-                })
+                                "/swagger-ui.html",
+                                "/api/search/**",
+                                "/api/papers/**",
+                                "/api/statistic/**",
+                                "/api/data/**"
+                        )
+                        .permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
 
                 .oauth2Login(
 /*

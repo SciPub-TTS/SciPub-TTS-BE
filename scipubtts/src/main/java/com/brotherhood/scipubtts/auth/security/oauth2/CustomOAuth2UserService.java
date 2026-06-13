@@ -37,6 +37,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
+
         String email = (String) oAuth2User.getAttributes().get("email");
         String givenName = (String) oAuth2User.getAttributes().get("given_name");
         String familyName = (String) oAuth2User.getAttributes().get("family_name");
@@ -48,7 +49,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             );
         }
 
-        Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
+        Boolean googleEmailVerified =
+                (Boolean) oAuth2User.getAttributes().get("email_verified");
+
         if (!Boolean.TRUE.equals(googleEmailVerified)) {
             throw new OAuth2AuthenticationException(
                     new OAuth2Error("google_email_not_verified"),
@@ -85,7 +88,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user.setGoogleLinked(true);
         }
 
-        userRepository.save(user);
-        return UserPrincipal.create(user, oAuth2User.getAttributes());
+        return oAuth2User;
     }
 }
