@@ -1,97 +1,73 @@
 package com.brotherhood.scipubtts.dashboard.service;
 
-import com.brotherhood.scipubtts.dashboard.constant.OpenAlexEntity;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsInPeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsToPeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexPublicationRequest;
-import com.brotherhood.scipubtts.dashboard.dto.response.OpenAlexMetricsResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.OpenAlexPublicationResponse;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsInPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsToPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicationRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
+import com.brotherhood.scipubtts.dashboard.dto.response.KeywordHotFilterResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.TopicHotFilterResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexMetricsResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexPublicationResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexWorkCitationResponse;
+import com.brotherhood.scipubtts.dashboard.entity.Topic;
 
-@Component
-public class OpenAlexService {
-  private final RestClient restClient;
+import java.time.LocalDate;
+import java.util.Set;
 
-  public OpenAlexService(RestClient openAlexClient) {
-    this.restClient = openAlexClient;
-  }
+public interface OpenAlexService {
+  // Publication
+  OpenAlexPublicationResponse searchPublicationsByYear(
+          OpenAlexPublicationRequest request
+  );
 
-  public OpenAlexPublicationResponse searchPublicationsByYear(OpenAlexPublicationRequest request){
-    if(request.yearFrom().isEmpty() || request.yearTo().isEmpty()) {
-      return null;
-    }
+  // Metrics
+  OpenAlexMetricsResponse takeMetricsInPeriod(
+          OpenAlexMetricsInPeriodRequest request
+  );
 
-    var queryPeriod = String.format("publication_year:%s-%s", request.yearFrom(), request.yearTo());
+  OpenAlexMetricsResponse takeMetricsToPeriod(
+          OpenAlexMetricsToPeriodRequest request
+  );
 
-    return restClient.get()
-            .uri(uriBuilder ->
-                    uriBuilder
-                            .path("/works")
-                            .queryParam(
-                                    "filter",
-                                    queryPeriod
-                            )
-                            .queryParam(
-                                    "group_by",
-                                    "publication_year"
-                            )
-                            .build())
-            .retrieve()
-            .body(OpenAlexPublicationResponse.class);
-  }
+  // Topic
+  TopicHotFilterResponse filterHotTopic(
+          TopicHotFilterRequest request
+  );
 
-  public OpenAlexMetricsResponse takeMetricsInPeriod(OpenAlexMetricsInPeriodRequest request){
-    if(request.endTime().isEmpty() || request.startTime().isEmpty()){
-      return null;
-    }
+  Topic findTopicById(
+          String topicId,
+          String fieldId
+  );
 
-    var queryPeriod = String.format("from_publication_date:%s,to_publication_date:%s",
-            request.startTime(), request.endTime());
+  long numOfWorksInPeriodByTopic(
+          OpenAlexTopicFilterRequest request
+  );
 
-    return restClient.get()
-            .uri(uriBuilder ->
-                    uriBuilder
-                            .path("/works")
-                            .queryParam(
-                                    "filter",
-                                    queryPeriod
-                            )
-                            .queryParam(
-                                    "page",
-                                    1
-                            ).queryParam(
-                                    "per_page",
-                                    1
-                            ).queryParam(
-                                    "select",
-                                  "id"
-                            )
-                            .build())
-            .retrieve()
-            .body(OpenAlexMetricsResponse.class);
-  }
+  OpenAlexWorkCitationResponse takeWorkCitationList(
+          OpenAlexTopicFilterRequest request
+  );
 
-  public OpenAlexMetricsResponse takeMetricsToPeriod(
-          OpenAlexMetricsToPeriodRequest request) {
-    var path = String.format(("/%s"), request.entity().getPath());
+  long countInstitutionByTopic(
+          OpenAlexTopicFilterRequest request
+  );
 
-    return restClient.get()
-            .uri(uriBuilder ->
-                    uriBuilder
-                            .path(path)
-                            .queryParam(
-                                    "page",
-                                    1
-                            ).queryParam(
-                                    "per_page",
-                                    1
-                            ).queryParam(
-                                    "select",
-                                    "id"
-                            )
-                            .build())
-            .retrieve()
-            .body(OpenAlexMetricsResponse.class);
-  }
+  Set<String> takeDistinctAuthorIds(
+          OpenAlexTopicFilterRequest request
+  );
+
+  // Keyword
+  KeywordHotFilterResponse filterHotKeyword();
+
+  long numOfWorksInPeriodByKeyword(
+          String keywordId,
+          LocalDate start,
+          LocalDate end
+  );
+
+  long numOfWorksInPeriodByField(
+          String fieldId,
+          LocalDate start,
+          LocalDate end
+  );
 }

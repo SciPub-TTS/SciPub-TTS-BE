@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.LinkedHashMap;
+import java.net.URI;
 import java.util.Map;
 
 @Component

@@ -14,12 +14,13 @@ public enum ErrorCode {
             "Authentication is required to access this resource."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN,
             "You do not have permission to access this resource."),
-    EMAIL_EXISTS(HttpStatus.CONFLICT, "Email already exists"),
 
     ACCOUNT_BANNED(HttpStatus.FORBIDDEN,
             "This account has been banned."),
     EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN,
             "Please verify your email address before logging in."),
+    EMAIL_EXISTS(HttpStatus.FORBIDDEN,
+            "The email has been exist."),
     LOCAL_PASSWORD_NOT_AVAILABLE(HttpStatus.BAD_REQUEST,
             "This account does not support local password authentication."),
 
@@ -63,6 +64,22 @@ public enum ErrorCode {
     INVALID_USER_INFO(HttpStatus.BAD_REQUEST, "Email not found from Google provider."),
     OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No account is associated with this social email address."),
 
+    INVALID_GOOGLE_SIGNUP_TOKEN(HttpStatus.BAD_REQUEST,
+            "The registration token is invalid."),
+    GOOGLE_SIGNUP_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST,
+            "This registration token has already been used."),
+    GOOGLE_SIGNUP_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
+            "This registration token has expired."),
+    // ===== ADMIN =====
+    ADMIN_SELF_ACTION_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+            "Admin cannot perform this action on their own account."),
+    ADMIN_TARGET_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+            "Admin accounts cannot be banned or unbanned."),
+    ADMIN_ACCOUNT_ALREADY_BANNED(HttpStatus.CONFLICT,
+            "This account has already been banned."),
+    ADMIN_ACCOUNT_NOT_BANNED(HttpStatus.CONFLICT,
+            "This account is not banned."),
+
     // ===== EMAIL =====
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "The provided email address format is invalid."),
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Invalid email verification token."),
@@ -71,19 +88,25 @@ public enum ErrorCode {
 
     // ===== OPENALEX =====
     OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "OpenAlex entity not found"),
+            "OpenAlex entity not found."),
     OPENALEX_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE,
             "OpenAlex service returned empty or invalid data."),
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Could not parse response from OpenAlex"),
+            "Could not parse response from OpenAlex."),
     OPENALEX_REQUIRED(HttpStatus.BAD_REQUEST,
-            "Open Alex id is required."),
+            "OpenAlex id is required."),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "OpenAlex request failed after multiple attempts"),
+            "OpenAlex request failed after multiple attempts."),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
             "The retry process was interrupted."),
     OPENALEX_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY,
-            "Failed to retrieve publication data from OpenAlex"),
+            "Failed to retrieve publication data from OpenAlex."),
+
+    // ===== STATISTIC =====
+    TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,
+            "Request start time and end time must not be null."),
+    TOPIC_NOT_FOUND(HttpStatus.BAD_REQUEST,
+            "Can not find topic with this id."),
 
     // ===== BOOKMARK =====
     BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),

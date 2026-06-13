@@ -39,51 +39,39 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private OAuth2User processGoogleUser(OAuth2User oAuth2User) {
+
         String email = (String) oAuth2User.getAttributes().get("email");
-        String fullName = (String) oAuth2User.getAttributes().get("name");
-        String givenName = (String) oAuth2User.getAttributes().get("given_name");
-        String familyName = (String) oAuth2User.getAttributes().get("family_name");
 
         if (!StringUtils.hasText(email)) {
-            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_user_info"),
-                    "Email not found from Google");
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("invalid_user_info"),
+                    "Email not found from Google"
+            );
         }
 
-        Boolean googleEmailVerified = (Boolean) oAuth2User.getAttributes().get("email_verified");
+        Boolean googleEmailVerified =
+                (Boolean) oAuth2User.getAttributes().get("email_verified");
 
         if (!Boolean.TRUE.equals(googleEmailVerified)) {
-            throw new OAuth2AuthenticationException(new OAuth2Error("google_email_not_verified"),
-                    "Google account email is not verified");
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("google_email_not_verified"),
+                    "Google account email is not verified"
+            );
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
 
-        if (user == null) {
-            user = new User();
-            user.setEmail(email);
-            user.setUsername(email);
-            user.setFirstName(givenName);
-            user.setLastName(familyName);
-            user.setRole(Role.RESEARCHER);
-            user.setEmailVerified(false);
-            user.setPasswordHash(null);
-            user.setGoogleLinked(true);
-            user.setBanned(false);
-        } else {
-            if (user.isBanned()) {
-                throw new OAuth2AuthenticationException(new OAuth2Error("account_banned"),
-                        "Account is banned");
-            }
-            if (!StringUtils.hasText(user.getFirstName())) {
-                user.setFirstName(givenName);
-            }
-            if (!StringUtils.hasText(user.getLastName())) {
-                user.setLastName(familyName);
-            }
-            user.setGoogleLinked(true);
+        if (user != null && user.isBanned()) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("account_banned"),
+                    "Account is banned"
+            );
         }
 
-        userRepository.save(user);
-        return UserPrincipal.create(user, oAuth2User.getAttributes());
+        if (user != null) {
+            return UserPrincipal.create(user, oAuth2User.getAttributes());
+        }
+
+        return oAuth2User;
     }
 }

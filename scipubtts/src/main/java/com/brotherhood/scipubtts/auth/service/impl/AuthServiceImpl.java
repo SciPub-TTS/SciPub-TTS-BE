@@ -1,13 +1,14 @@
 package com.brotherhood.scipubtts.auth.service.impl;
 
+import com.brotherhood.scipubtts.auth.dto.request.CompleteGoogleRegisterRequest;
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
+import com.brotherhood.scipubtts.auth.dto.response.GoogleSignupPreviewResponse;
 import com.brotherhood.scipubtts.auth.dto.response.RefreshTokenResult;
-import com.brotherhood.scipubtts.auth.service.AuthService;
-import com.brotherhood.scipubtts.auth.service.AuthSessionService;
-import com.brotherhood.scipubtts.auth.service.RefreshCookieService;
-import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
+import com.brotherhood.scipubtts.auth.entity.GoogleSignupToken;
+import com.brotherhood.scipubtts.auth.repository.GoogleSignupTokenRepository;
+import com.brotherhood.scipubtts.auth.service.*;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.email.service.EmailService;
@@ -43,6 +44,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenService jwtTokenService;
     private final EmailService mailService;
     private final AuthSessionService authSessionService;
+    private final GoogleSignupTokenRepository googleSignupTokenRepository;
+    private final SecureValueService secureValueService;
 
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
@@ -198,6 +201,82 @@ public class AuthServiceImpl implements AuthService {
 
         refreshCookieService.clearRefreshCookie(response);
     }
+
+    @Override
+    @Transactional
+    public GoogleSignupPreviewResponse previewGoogleRegister(String rawToken) {
+        GoogleSignupToken token = googleSignupTokenRepository
+                .findByTokenHash(secureValueService.sha256(rawToken))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_GOOGLE_SIGNUP_TOKEN));
+
+        if (token.isUsed()) {
+            throw new BusinessException(ErrorCode.GOOGLE_SIGNUP_TOKEN_ALREADY_USED);
+        }
+
+        if (token.isExpired()) {
+            throw new BusinessException(ErrorCode.GOOGLE_SIGNUP_TOKEN_EXPIRED);
+        }
+
+        return new GoogleSignupPreviewResponse(
+                token.getEmail(),
+                token.getFirstName(),
+                token.getLastName()
+        );
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse completeGoogleRegister(
+            CompleteGoogleRegisterRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new BusinessException(ErrorCode.PASSWORD_CONFIRMATION_NOT_MATCH);
+        }
+
+        GoogleSignupToken token = googleSignupTokenRepository
+                .findByTokenHash(secureValueService.sha256(request.googleSignupToken()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_GOOGLE_SIGNUP_TOKEN));
+
+        if (token.isUsed()) {
+            throw new BusinessException(ErrorCode.GOOGLE_SIGNUP_TOKEN_ALREADY_USED);
+        }
+
+        if (token.isExpired()) {
+            throw new BusinessException(ErrorCode.GOOGLE_SIGNUP_TOKEN_EXPIRED);
+        }
+
+        if (userRepository.existsByEmail(token.getEmail())) {
+            throw new BusinessException(ErrorCode.EMAIL_EXISTS);
+        }
+
+        User user = User.builder()
+                .email(token.getEmail())
+                .username(token.getEmail())
+                .firstName(token.getFirstName())
+                .lastName(token.getLastName())
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .role(Role.RESEARCHER)
+                .emailVerified(true)
+                .googleLinked(true)
+                .banned(false)
+                .build();
+
+        userRepository.save(user);
+
+        token.setUsedAt(OffsetDateTime.now());
+        googleSignupTokenRepository.save(token);
+
+        return authSessionService.issueSession(
+                user,
+                Boolean.TRUE.equals(request.rememberMe()),
+                httpRequest,
+                httpResponse
+        );
+    }
+
+
 
     private String buildRedirectUrl(String appBaseUrl) {
         String resolvedBaseUrl = appBaseUrl;

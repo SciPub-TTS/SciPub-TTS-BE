@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.dashboard.dto.response;
+package com.brotherhood.scipubtts.dashboard.dto.response.openalex;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

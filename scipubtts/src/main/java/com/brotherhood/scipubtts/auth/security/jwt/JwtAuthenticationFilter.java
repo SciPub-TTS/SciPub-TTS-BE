@@ -31,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     private static final List<String> PUBLIC_PATH_PATTERNS = List.of(
             "/api/auth/register",
+            "/api/auth/register/google/**",
             "/api/auth/login",
             "/api/auth/refresh",
             "/api/auth/logout",
@@ -103,11 +104,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (ExpiredJwtException ex) {
-                request.setAttribute("auth_error", "Access token đã hết hạn");
+                request.setAttribute("auth_error", "Access token expired");
             } catch (BusinessException ex) {
                 request.setAttribute("auth_error", ex.getMessage());
             } catch (JwtException | IllegalArgumentException | UsernameNotFoundException ex) {
-                request.setAttribute("auth_error", "Access token không hợp lệ");
+                request.setAttribute("auth_error", "Invalid Access token ");
             }
         }
 

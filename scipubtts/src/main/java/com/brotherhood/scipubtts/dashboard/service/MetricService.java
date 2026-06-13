@@ -1,17 +1,12 @@
 package com.brotherhood.scipubtts.dashboard.service;
 
-import com.brotherhood.scipubtts.dashboard.constant.MetricTitle;
-import com.brotherhood.scipubtts.dashboard.constant.OpenAlexEntity;
-import com.brotherhood.scipubtts.dashboard.dto.request.MetricRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsInPeriodRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.OpenAlexMetricsToPeriodRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.MetricsResponse;
-import com.brotherhood.scipubtts.dashboard.entity.Metric;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.util.List;
+public interface MetricService {
+  MetricsResponse calculateAndSaveMetrics(
+          PeriodRequest request
+  );
 
 @Service
 @RequiredArgsConstructor
