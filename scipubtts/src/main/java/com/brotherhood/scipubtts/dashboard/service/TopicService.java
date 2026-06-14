@@ -2,9 +2,9 @@ package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicRankingRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.TopicRankingResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicRankingResponse;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 
 public interface TopicService {
@@ -20,7 +20,7 @@ public interface TopicService {
   );
 
   TopicRankingResponse getTopicsRanking(
-          TopicRankingRequest request
+          TopicDataRequest request
   );
 
   Topic getTopicFromDb(

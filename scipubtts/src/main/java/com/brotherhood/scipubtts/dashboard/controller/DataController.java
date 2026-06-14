@@ -25,6 +25,7 @@ public class DataController {
   private final KeywordServiceImpl keywordService;
   private final DataService dataService;
 
+  // PUBLICATION
   @GetMapping("/publication-trends")
   public ResponseEntity<ResponseObject> getPublicationTrends() {
 
@@ -61,6 +62,7 @@ public class DataController {
     );
   }
 
+  // METRICS
   @GetMapping("/metrics")
   public ResponseEntity<ResponseObject> getMetrics(@Valid @RequestParam LocalDate startTime,
    @RequestParam LocalDate endTime ){
@@ -80,6 +82,7 @@ public class DataController {
     );
   }
 
+  // TOPIC
   @GetMapping("/topicScore-all")
   public ResponseEntity<ResponseObject> getTopics(
           @RequestParam LocalDate startTime,
@@ -88,7 +91,7 @@ public class DataController {
           @RequestParam String formula
   ) {
 
-    var request = new TopicRankingRequest(
+    var request = new TopicDataRequest(
             startTime.toString(),
             endTime.toString(),
             fieldId,
@@ -153,6 +156,32 @@ public class DataController {
     );
   }
 
+  @GetMapping("/topic-momentum")
+  public ResponseEntity<ResponseObject> getTopicMomentums(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId,
+          @RequestParam String formula
+  ){
+    var request = new TopicDataRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId,
+            formula
+    );
+
+    var data = dataService.getTopicsMomentum(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic momentum successfully",
+                    data
+            )
+    );
+  }
+
+  // KEYWORD
   @GetMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> getKeywords(
           @RequestParam LocalDate startTime,

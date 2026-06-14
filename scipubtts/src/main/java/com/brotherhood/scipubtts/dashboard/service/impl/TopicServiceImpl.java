@@ -6,10 +6,10 @@ import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
-import com.brotherhood.scipubtts.dashboard.dto.request.TopicRankingRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.TopicRankingResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicRankingResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicScore;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
@@ -411,7 +411,7 @@ public class TopicServiceImpl implements TopicService {
     );
   }
 
-  public TopicRankingResponse getTopicsRanking(TopicRankingRequest request) {
+  public TopicRankingResponse getTopicsRanking(TopicDataRequest request) {
     LocalDate startDate = LocalDate.parse(request.startTime());
     LocalDate endDate   = LocalDate.parse(request.endTime());
     Integer   fieldId   = Integer.parseInt(request.fieldId());
