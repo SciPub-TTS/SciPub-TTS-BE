@@ -285,15 +285,10 @@ public class AuthServiceImpl implements AuthService {
         String resolvedBaseUrl = appBaseUrl;
 
         if (resolvedBaseUrl == null || resolvedBaseUrl.isBlank()) {
-            resolvedBaseUrl = "http://localhost:5173";
+            resolvedBaseUrl = frontendBaseUrl;
         }
 
-        return resolvedBaseUrl + "/login?verified=true";
-        if (appBaseUrl == null || appBaseUrl.isBlank()) {
-            appBaseUrl = frontendBaseUrl;
-        }
-
-        return trimTrailingSlash(appBaseUrl) + "/login?verified=true";
+        return trimTrailingSlash(resolvedBaseUrl) + "/login?verified=true";
     }
 
     private String trimTrailingSlash(String value) {

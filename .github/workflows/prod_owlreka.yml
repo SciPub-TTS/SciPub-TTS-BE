@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read #This is required for actions/checkout
+    defaults:
+      run:
+        working-directory: scipubtts
 
     steps:
       - uses: actions/checkout@v4
@@ -21,17 +24,18 @@ jobs:
       - name: Set up Java version
         uses: actions/setup-java@v4
         with:
-          java-version: 'java25'
-          distribution: 'microsoft'
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
 
       - name: Build with Maven
-        run: mvn clean install
+        run: ./mvnw -B clean package -DskipTests
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: '${{ github.workspace }}/target/*.jar'
+          path: '${{ github.workspace }}/scipubtts/target/*.jar'
 
   deploy:
     runs-on: ubuntu-latest
@@ -45,6 +49,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: java-app
+          path: '${{ github.workspace }}/deploy'
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -59,5 +64,5 @@ jobs:
         with:
           app-name: 'Owlreka'
           slot-name: 'Production'
-          package: '*.jar'
+          package: '${{ github.workspace }}/deploy/*.jar'
           

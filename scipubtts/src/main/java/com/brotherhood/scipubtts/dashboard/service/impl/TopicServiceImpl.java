@@ -286,9 +286,7 @@ public class TopicServiceImpl implements TopicService {
     Set<String> newCommer = new HashSet<>(currentPeriodAuthor);
     newCommer.removeAll(allAuthor);
 
-    double ratio = (double) newCommer.size() / currentPeriodAuthor.size();
-
-    return Math.round(ratio * 1000.0) / 1000.0;
+    return round3((double) newCommer.size() / currentPeriodAuthor.size());
   }
 
   private Topic calculateRealMetrics(
@@ -498,24 +496,9 @@ public class TopicServiceImpl implements TopicService {
     }
   }
 
-  private TopicCalculateResponse calculateTopicPreviousPeriods(Topic currentTopic) {
+  private TopicCalculateResponse calculateTopicPreviousPeriods(Topic currentTopic, boolean useFake) {
     LocalDate startDate = currentTopic.getStartTime();
     LocalDate endDate = currentTopic.getEndTime();
-
-    boolean anyPreviousExists = false;
-    for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
-      long shiftDays = PERIOD_DAYS * period;
-      boolean exists = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
-              currentTopic.getTopicId(),
-              startDate.minusDays(shiftDays),
-              endDate.minusDays(shiftDays),
-              currentTopic.getFieldId()
-      ).isPresent();
-      if (exists) {
-        anyPreviousExists = true;
-        break;
-      }
-    }
 
     List<Topic> results = new ArrayList<>();
 
@@ -534,7 +517,7 @@ public class TopicServiceImpl implements TopicService {
       if (existingTopic.isPresent()) {
         results.add(existingTopic.get());
       } else {
-        results.add(calculateAndSaveTopicForPeriod(currentTopic, periodStart, periodEnd, anyPreviousExists));
+        results.add(calculateAndSaveTopicForPeriod(currentTopic, periodStart, periodEnd, useFake));
       }
     }
 
@@ -558,10 +541,25 @@ public class TopicServiceImpl implements TopicService {
       throw new BusinessException(ErrorCode.TOPIC_NOT_FOUND);
     }
 
+    boolean anyTopicHasPrevious = currentTopics.stream().anyMatch(topic -> {
+      for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
+        long shiftDays = PERIOD_DAYS * period;
+        boolean exists = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+                topic.getTopicId(),
+                startDate.minusDays(shiftDays),
+                endDate.minusDays(shiftDays),
+                fieldId
+        ).isPresent();
+        if (exists) return true;
+      }
+      return false;
+    });
+
     List<Topic> results = new ArrayList<>();
 
     for (Topic currentTopic : currentTopics) {
-      results.addAll(calculateTopicPreviousPeriods(currentTopic).topicList());
+      results.addAll(calculateTopicPreviousPeriods(currentTopic, anyTopicHasPrevious).topicList());
+      anyTopicHasPrevious = true; // just calc the first topic, all the others will be fake data
     }
 
     return new TopicCalculateResponse(results);
