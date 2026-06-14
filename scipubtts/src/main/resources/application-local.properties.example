@@ -1,10 +1,10 @@
 server.port=8080
 
-spring.datasource.url=jdbc:postgresql://localhost:5432/scipub_local
+spring.datasource.url=jdbc:postgresql://localhost:5432/owlreka_local
 spring.datasource.username=postgres
 spring.datasource.password=Dien_Mat_Khau_Local_Cua_Ban_Vao_Day
-spring.datasource.hikari.pool-name=scipub-local-hikari
-spring.datasource.hikari.data-source-properties.ApplicationName=scipub-local-be
+spring.datasource.hikari.pool-name=owlreka-local-hikari
+spring.datasource.hikari.data-source-properties.ApplicationName=owlreka-local-be
 spring.datasource.hikari.maximum-pool-size=5
 spring.datasource.hikari.minimum-idle=0
 spring.datasource.hikari.idle-timeout=30000
@@ -23,7 +23,7 @@ spring.security.oauth2.client.registration.google.client-secret=dien_google_clie
 app.jwt.secret=chuoi_key_ngau_nhien_co_do_dai_tren_32_ky_tu_cho_local
 app.backend-base-url=your_local_backend_base_url
 app.frontend-base-url=http://localhost:5173
-server.servlet.session.cookie.name=SCIPUB_SESSION_LOCAL
+server.servlet.session.cookie.name=OWLREKA_SESSION_LOCAL
 
 # CORS local
 app.cors.allowed-origins=http://localhost:5173,http://localhost:8080,https://yourdomain.com

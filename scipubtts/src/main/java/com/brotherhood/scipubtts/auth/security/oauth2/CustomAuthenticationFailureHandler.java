@@ -18,6 +18,9 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class CustomAuthenticationFailureHandler implements AuthenticationFailureHandler {
+    // Team rule:
+    // This handler must remove the same OAuth2 authorization request repository used by
+    // SecurityConfig and OAuth2AuthenticationSuccessHandler. Keep all 3 in sync.
     private final AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository;
 
     @Value("${app.frontend-base-url:http://localhost:5173}")

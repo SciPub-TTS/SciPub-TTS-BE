@@ -10,10 +10,10 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.brotherhood</groupId>
-	<artifactId>scipubtts</artifactId>
+	<artifactId>owlreka</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name />
-	<description />
+	<name>Owlreka</name>
+	<description>Owlreka backend service</description>
 	<url />
 	<licenses>
 		<license />
