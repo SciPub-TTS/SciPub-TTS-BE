@@ -112,6 +112,7 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/register/google/**",
                                 "/api/auth/oauth2/google",
+                                "/api/auth/oauth2/exchange",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/verify-email",

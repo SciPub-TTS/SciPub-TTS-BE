@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.auth.service.impl;
 
 import com.brotherhood.scipubtts.auth.dto.request.CompleteGoogleRegisterRequest;
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
+import com.brotherhood.scipubtts.auth.dto.request.OAuth2SessionExchangeRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.GoogleSignupPreviewResponse;
@@ -174,6 +175,35 @@ public class AuthServiceImpl implements AuthService {
 
         refreshCookieService.addRefreshCookie(
                 response,
+                rotated.rawToken(),
+                rotated.rememberMe(),
+                Duration.between(OffsetDateTime.now(), rotated.expiresAt())
+        );
+
+        String accessToken =
+                jwtTokenService.generateAccessToken(UserPrincipal.create(rotated.user()));
+
+        return new AuthResponse(
+                accessToken,
+                "Bearer",
+                jwtTokenService.getAccessTokenExpiresInSeconds()
+        );
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse exchangeOAuth2Session(
+            OAuth2SessionExchangeRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        RefreshTokenResult rotated = refreshTokenService.rotate(
+                request.rawRefreshToken(),
+                httpRequest
+        );
+
+        refreshCookieService.addRefreshCookie(
+                httpResponse,
                 rotated.rawToken(),
                 rotated.rememberMe(),
                 Duration.between(OffsetDateTime.now(), rotated.expiresAt())
