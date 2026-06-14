@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.dashboard.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.dashboard.dto.request.*;
+import com.brotherhood.scipubtts.dashboard.service.DataService;
 import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
@@ -22,6 +23,7 @@ public class DataController {
   private final MetricServiceImpl metricService;
   private final TopicServiceImpl topicService;
   private final KeywordServiceImpl keywordService;
+  private final DataService dataService;
 
   @GetMapping("/publication-trends")
   public ResponseEntity<ResponseObject> getPublicationTrends() {
@@ -93,7 +95,7 @@ public class DataController {
             formula
     );
 
-    var data = topicService.getTopicsRanking(request);
+    var data = dataService.getTopicsRanking(request);
 
     return ResponseEntity.ok(
             new ResponseObject(

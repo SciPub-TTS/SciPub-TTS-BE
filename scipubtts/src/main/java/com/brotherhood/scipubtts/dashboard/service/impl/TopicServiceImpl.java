@@ -9,6 +9,8 @@ import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.TopicRankingResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.TopicScore;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
 import com.brotherhood.scipubtts.dashboard.service.CalculationService;
@@ -322,12 +324,15 @@ public class TopicServiceImpl implements TopicService {
 
   private List<Topic> saveRankedTopics(List<Topic> topics) {
     Set<String> selectedTopicIds = new HashSet<>();
-    List<FormulaType> formulas = List.of(FormulaType.BALANCED, FormulaType.TRENDING, FormulaType.EMERGING, FormulaType.IMPACT);
+    List<FormulaType> formulas = List.of(
+            FormulaType.BALANCED, FormulaType.TRENDING,
+            FormulaType.EMERGING, FormulaType.IMPACT
+    );
 
     for (FormulaType formula : formulas) {
-      TopicCalculateResponse response = calculationService.calculateTopicsFinalScore(formula.getFormula(), topics);
-      for (Topic topic : response.topicList()) {
-        selectedTopicIds.add(topic.getTopicId());
+      List<TopicScore> scores = calculationService.calculateTopicsFinalScore(formula.getFormula(), topics);
+      for (TopicScore ts : scores) {
+        selectedTopicIds.add(ts.topic().getTopicId());
       }
     }
 
@@ -336,7 +341,6 @@ public class TopicServiceImpl implements TopicService {
             .toList();
 
     topicRepository.saveAll(topicsToSave);
-
     return topicsToSave;
   }
 
@@ -407,29 +411,34 @@ public class TopicServiceImpl implements TopicService {
     );
   }
 
-  public TopicCalculateResponse getTopicsRanking(
-          TopicRankingRequest request
-  ) {
-
+  public TopicRankingResponse getTopicsRanking(TopicRankingRequest request) {
     LocalDate startDate = LocalDate.parse(request.startTime());
-    LocalDate endDate = LocalDate.parse(request.endTime());
-    Integer fieldId = Integer.parseInt(request.fieldId());
+    LocalDate endDate   = LocalDate.parse(request.endTime());
+    Integer   fieldId   = Integer.parseInt(request.fieldId());
 
-    List<Topic> topics =
-            topicRepository.findByStartTimeAndEndTimeAndFieldId(
-                    startDate,
-                    endDate,
-                    fieldId
-            );
-
-    if (topics.isEmpty()) {
-      return null;
-    }
-
-    return calculationService.calculateTopicsFinalScore(
-            request.formula(),
-            topics
+    List<Topic> topics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+            startDate, endDate, fieldId
     );
+
+    if (topics.isEmpty()) return null;
+
+    List<TopicScore> scores = calculationService.calculateTopicsFinalScore(
+            request.formula(), topics
+    );
+
+    List<TopicRankingResponse.TopicData> topicDataList = scores.stream()
+            .map(ts -> new TopicRankingResponse.TopicData(
+                    ts.topic().getName(),
+                    (int) ts.topic().getWorks(),
+                    (int) ts.topic().getCitations(),
+                    ts.score(),
+                    null,
+                    null,
+                    false
+            ))
+            .toList();
+
+    return new TopicRankingResponse(topicDataList);
   }
 
   public Topic getTopicFromDb(

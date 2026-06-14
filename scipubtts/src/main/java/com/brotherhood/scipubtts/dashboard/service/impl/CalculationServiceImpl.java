@@ -5,6 +5,7 @@ import com.brotherhood.scipubtts.dashboard.constant.weight.KeywordWeight;
 import com.brotherhood.scipubtts.dashboard.constant.weight.TopicWeight;
 import com.brotherhood.scipubtts.dashboard.dto.response.KeywordCalculateResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.TopicScore;
 import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.service.CalculationService;
@@ -134,7 +135,7 @@ public class CalculationServiceImpl implements CalculationService {
   // ── public API ───────────────────────────────────────────────────────────────
 
   @Override
-  public TopicCalculateResponse calculateTopicsFinalScore(String formula, List<Topic> topicList) {
+  public List<TopicScore> calculateTopicsFinalScore(String formula, List<Topic> topicList) {
     FormulaType formulaType = FormulaType.from(formula);
     TopicWeight weight = resolveTopicWeight(formulaType);
     TopicMetricStatistic stat = buildTopicStatistic(topicList);
@@ -144,16 +145,11 @@ public class CalculationServiceImpl implements CalculationService {
       scoreMap.put(topic.getTopicId(), calculateTopicScore(topic, weight, stat));
     }
 
-    Map<String, Topic> topicById = topicList.stream()
-            .collect(Collectors.toMap(Topic::getTopicId, t -> t));
-
-    List<Topic> top10 = scoreMap.entrySet().stream()
-            .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+    return topicList.stream()
+            .map(topic -> new TopicScore(topic, calculateTopicScore(topic, weight, stat)))
+            .sorted(Comparator.comparing(TopicScore::score).reversed())
             .limit(10)
-            .map(e -> topicById.get(e.getKey()))
             .toList();
-
-    return new TopicCalculateResponse(top10);
   }
 
   @Override
