@@ -65,7 +65,17 @@ public class CalculationServiceImpl implements CalculationService {
     return (value - min) / (max - min);
   }
 
+  @Override
+  public double toNormalizedPercent(double value, double min, double max) {
+    return Math.round(normalize(value, min, max) * 10000.0) / 100.0;
+  }
+
   // ── statistic builders ───────────────────────────────────────────────────────
+
+  @Override
+  public TopicMetricStatistic buildTopicMetricStatistic(List<Topic> topics) {
+    return buildTopicStatistic(topics);
+  }
 
   private TopicMetricStatistic buildTopicStatistic(List<Topic> topics) {
     double velocityMin = Double.MAX_VALUE,    velocityMax = -Double.MAX_VALUE;

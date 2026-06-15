@@ -181,6 +181,30 @@ public class DataController {
     );
   }
 
+  @GetMapping("/topic-radar")
+  public ResponseEntity<ResponseObject> getTopicRadarData(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId
+  ) {
+
+    var request = new SpecificTopicDataRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId
+    );
+
+    var data = dataService.getSpecificTopicMetric(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic radar data successfully",
+                    data
+            )
+    );
+  }
+
   // KEYWORD
   @GetMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> getKeywords(

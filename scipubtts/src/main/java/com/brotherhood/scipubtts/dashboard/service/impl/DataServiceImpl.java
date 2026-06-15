@@ -1,6 +1,8 @@
 package com.brotherhood.scipubtts.dashboard.service.impl;
 
+import com.brotherhood.scipubtts.dashboard.dto.request.SpecificTopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
+import com.brotherhood.scipubtts.dashboard.dto.response.data.SpecificTopicMetricDataResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicMomentumResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicRankingResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicScore;
@@ -8,6 +10,7 @@ import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
 import com.brotherhood.scipubtts.dashboard.service.CalculationService;
 import com.brotherhood.scipubtts.dashboard.service.DataService;
+import com.brotherhood.scipubtts.dashboard.statistic.TopicMetricStatistic;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -113,5 +116,55 @@ public class DataServiceImpl implements DataService {
             .toList();
 
     return new TopicMomentumResponse(metrics);
+  }
+
+  @Override
+  public SpecificTopicMetricDataResponse getSpecificTopicMetric(SpecificTopicDataRequest request){
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate   = LocalDate.parse(request.endTime());
+    Integer   fieldId   = Integer.parseInt(request.fieldId());
+
+    List<Topic> currentTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+            startDate, endDate, fieldId
+    );
+    if (currentTopics.isEmpty()) return null;
+
+    TopicMetricStatistic stat = calculationService.buildTopicMetricStatistic(currentTopics);
+
+    List<SpecificTopicMetricDataResponse.MetricData> topicMetrics = currentTopics.stream()
+            .map(topic -> toNormalizedMetricData(topic, stat))
+            .toList();
+
+    SpecificTopicMetricDataResponse.MetricData average = new SpecificTopicMetricDataResponse.MetricData(
+            "Average",
+            round(topicMetrics.stream().mapToDouble(SpecificTopicMetricDataResponse.MetricData::velocity).average().orElse(0)),
+            round(topicMetrics.stream().mapToDouble(SpecificTopicMetricDataResponse.MetricData::accelerate).average().orElse(0)),
+            round(topicMetrics.stream().mapToDouble(SpecificTopicMetricDataResponse.MetricData::citationDecay).average().orElse(0)),
+            round(topicMetrics.stream().mapToDouble(SpecificTopicMetricDataResponse.MetricData::newComerAuthor).average().orElse(0)),
+            round(topicMetrics.stream().mapToDouble(SpecificTopicMetricDataResponse.MetricData::institution).average().orElse(0))
+    );
+
+    return new SpecificTopicMetricDataResponse(
+            average,
+            topicMetrics
+    );
+  }
+
+  private SpecificTopicMetricDataResponse.MetricData toNormalizedMetricData(
+          Topic topic,
+          TopicMetricStatistic stat
+  ) {
+    return new SpecificTopicMetricDataResponse.MetricData(
+            topic.getName(),
+            calculationService.toNormalizedPercent(topic.getVelocity(), stat.velocityMin(), stat.velocityMax()),
+            calculationService.toNormalizedPercent(topic.getAcceleration(), stat.accelerationMin(), stat.accelerationMax()),
+            calculationService.toNormalizedPercent(topic.getCitationDecay(), stat.citationMin(), stat.citationMax()),
+            calculationService.toNormalizedPercent(topic.getNewComerAuthor(), stat.newcomerMin(), stat.newcomerMax()),
+            calculationService.toNormalizedPercent(topic.getInstitution(), stat.institutionMin(), stat.institutionMax())
+    );
+  }
+
+  private double round(double value) {
+    return Math.round(value * 100.0) / 100.0;
   }
 }
