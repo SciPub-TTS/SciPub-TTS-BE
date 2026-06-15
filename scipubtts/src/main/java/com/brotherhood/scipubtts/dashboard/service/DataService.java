@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.dashboard.service;
 
 import com.brotherhood.scipubtts.dashboard.dto.request.SpecificTopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
+import com.brotherhood.scipubtts.dashboard.dto.response.data.SpecificTopicHistoryResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.data.SpecificTopicMetricDataResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicMomentumResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicRankingResponse;
@@ -12,4 +13,6 @@ public interface DataService {
   TopicMomentumResponse getTopicsMomentum(TopicDataRequest request);
 
   SpecificTopicMetricDataResponse getSpecificTopicMetric(SpecificTopicDataRequest request);
+
+  SpecificTopicHistoryResponse getTopicHeatMAp(SpecificTopicDataRequest request);
 }

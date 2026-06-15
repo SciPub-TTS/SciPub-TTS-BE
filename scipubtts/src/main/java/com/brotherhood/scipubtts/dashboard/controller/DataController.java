@@ -205,6 +205,29 @@ public class DataController {
     );
   }
 
+  @GetMapping("/topic-heatmap")
+  public ResponseEntity<ResponseObject> getTopicHeatmapData(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId
+  ){
+    var request = new SpecificTopicDataRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId
+    );
+
+    var data = dataService.getTopicHeatMAp(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic radar data successfully",
+                    data
+            )
+    );
+  }
+
   // KEYWORD
   @GetMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> getKeywords(
