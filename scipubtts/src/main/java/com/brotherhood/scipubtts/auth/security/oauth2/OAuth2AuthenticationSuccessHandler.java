@@ -2,7 +2,8 @@ package com.brotherhood.scipubtts.auth.security.oauth2;
 
 import com.brotherhood.scipubtts.auth.entity.GoogleSignupToken;
 import com.brotherhood.scipubtts.auth.repository.GoogleSignupTokenRepository;
-import com.brotherhood.scipubtts.auth.service.AuthSessionService;
+import com.brotherhood.scipubtts.auth.dto.response.RefreshTokenResult;
+import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.auth.service.SecureValueService;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
@@ -28,10 +29,10 @@ import java.time.OffsetDateTime;
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final AuthSessionService authSessionService;
     private final UserRepository userRepository;
     private final GoogleSignupTokenRepository googleSignupTokenRepository;
     private final SecureValueService secureValueService;
+    private final RefreshTokenService refreshTokenService;
     // Team rule:
     // Keep success/failure handlers on the same AuthorizationRequestRepository implementation that
     // SecurityConfig uses for oauth2Login(). If one side uses cookie storage and the other uses
@@ -86,11 +87,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
             userRepository.save(user);
 
-            authSessionService.issueSession(
+            RefreshTokenResult refreshTokenResult = refreshTokenService.issue(
                     user,
                     false,
-                    request,
-                    response
+                    request
             );
 
             authorizationRequestRepository.removeAuthorizationRequest(request, response);
@@ -98,6 +98,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             String targetUrl = UriComponentsBuilder
                     .fromUriString(frontendBaseUrl)
                     .path("/oauth2/success")
+                    .fragment("refreshToken=" + refreshTokenResult.rawToken())
                     .build()
                     .toUriString();
 

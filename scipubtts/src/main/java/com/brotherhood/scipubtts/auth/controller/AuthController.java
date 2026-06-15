@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.auth.controller;
 
 import com.brotherhood.scipubtts.auth.dto.request.CompleteGoogleRegisterRequest;
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
+import com.brotherhood.scipubtts.auth.dto.request.OAuth2SessionExchangeRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.CurrentUserResponse;
@@ -111,6 +112,27 @@ public class AuthController {
                 new ResponseObject(
                         HttpStatus.OK.value(),
                         "Access token refreshed successfully",
+                        data
+                )
+        );
+    }
+
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<ResponseObject> exchangeOAuth2Session(
+            @Valid @RequestBody OAuth2SessionExchangeRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        AuthResponse data = authService.exchangeOAuth2Session(
+                request,
+                httpRequest,
+                httpResponse
+        );
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "OAuth2 session created successfully",
                         data
                 )
         );

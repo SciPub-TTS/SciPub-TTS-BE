@@ -33,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/register",
             "/api/auth/register/google/**",
             "/api/auth/login",
+            "/api/auth/oauth2/exchange",
             "/api/auth/refresh",
             "/api/auth/logout",
             "/api/auth/oauth2/google",
