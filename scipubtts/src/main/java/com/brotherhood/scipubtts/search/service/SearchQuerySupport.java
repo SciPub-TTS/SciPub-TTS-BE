@@ -11,65 +11,44 @@ import java.util.Locale;
 @Component
 public class SearchQuerySupport {
 
-    // Keep paging values inside a safe range accepted by our app and OpenAlex.
     public int normalizeFilterOptionLimit(int limit) {
-        if (limit <= 0) {
-            return SearchConstants.FILTER_OPTION_LIMIT;
-        }
-
-        if (limit > SearchConstants.FILTER_OPTION_LIMIT) {
-            return SearchConstants.FILTER_OPTION_LIMIT;
-        }
-
-        return limit;
+        return normalizePositiveInt(limit, SearchConstants.FILTER_OPTION_LIMIT, SearchConstants.FILTER_OPTION_LIMIT);
     }
 
     public int normalizeOptionPage(int page) {
-        if (page <= 0) {
-            return SearchConstants.DEFAULT_PAGE;
-        }
-
-        return page;
+        return normalizePositiveInt(page, SearchConstants.DEFAULT_PAGE, Integer.MAX_VALUE);
     }
 
     public int normalizeWorksPage(Integer page) {
-        if (page == null || page <= 0) {
+        if (page == null) {
             return SearchConstants.DEFAULT_PAGE;
         }
 
-        return page;
+        return normalizePositiveInt(page, SearchConstants.DEFAULT_PAGE, Integer.MAX_VALUE);
     }
 
     public int normalizePerPage(Integer perPage) {
-        if (perPage == null || perPage <= 0) {
+        if (perPage == null) {
             return SearchConstants.DEFAULT_WORKS_PER_PAGE;
         }
 
-        if (perPage > SearchConstants.WORKS_PER_PAGE_LIMIT) {
-            return SearchConstants.WORKS_PER_PAGE_LIMIT;
-        }
-
-        return perPage;
+        return normalizePositiveInt(
+                perPage,
+                SearchConstants.DEFAULT_WORKS_PER_PAGE,
+                SearchConstants.WORKS_PER_PAGE_LIMIT
+        );
     }
 
     public int normalizeRecentSearchLimit(int limit) {
-        if (limit <= 0) {
-            return SearchConstants.DEFAULT_RECENT_SEARCH_LIMIT;
-        }
-
-        if (limit > SearchConstants.MAX_RECENT_SEARCH_LIMIT) {
-            return SearchConstants.MAX_RECENT_SEARCH_LIMIT;
-        }
-
-        return limit;
+        return normalizePositiveInt(
+                limit,
+                SearchConstants.DEFAULT_RECENT_SEARCH_LIMIT,
+                SearchConstants.MAX_RECENT_SEARCH_LIMIT
+        );
     }
 
     public String normalizeKeyword(String keyword) {
-        if (keyword == null) {
-            return "";
-        }
-
-        return keyword.trim();
+        return keyword == null ? "" : keyword.trim();
     }
 
     public String normalizeMode(String mode) {
@@ -80,66 +59,43 @@ public class SearchQuerySupport {
         return mode.trim().toLowerCase(Locale.ROOT);
     }
 
-    public String resolveSort(String requestedSort, boolean hasSearchQuery) {
-        // When there is a keyword query, OpenAlex relevance is usually the best default.
-        // Without a keyword, "most cited" is a more useful default.
+    public String normalizeTrendingMode(String trendingMode) {
+        if (!StringUtils.hasText(trendingMode)) {
+            return "none";
+        }
+
+        String normalizedValue = trendingMode.trim().toLowerCase(Locale.ROOT);
+
+        return switch (normalizedValue) {
+            case "keyword", "topic", "both" -> normalizedValue;
+            default -> "none";
+        };
+    }
+
+    public String resolveSort(String sortBy, String sortDirection, boolean hasSearchQuery) {
         String defaultSort = hasSearchQuery ? "relevance_score:desc" : "cited_by_count:desc";
 
-        if (!StringUtils.hasText(requestedSort)) {
+        if (!StringUtils.hasText(sortBy)) {
             return defaultSort;
         }
 
-        String normalizedSort = requestedSort.trim().toLowerCase(Locale.ROOT);
+        String normalizedSortBy = sortBy.trim().toLowerCase(Locale.ROOT);
+        String normalizedSortDirection =
+                "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
 
-        if ("most cited".equals(normalizedSort)
-                || "most_cited".equals(normalizedSort)
-                || "citation_most_cited".equals(normalizedSort)
-                || "cited_by_count:desc".equals(normalizedSort)
-                || "trending".equals(normalizedSort)) {
-            return "cited_by_count:desc";
-        }
-
-        if ("least cited".equals(normalizedSort)
-                || "least_cited".equals(normalizedSort)
-                || "citation_least_cited".equals(normalizedSort)
-                || "cited_by_count:asc".equals(normalizedSort)) {
-            return "cited_by_count:asc";
-        }
-
-        if ("latest".equals(normalizedSort)
-                || "published_latest".equals(normalizedSort)
-                || "publication_year:desc".equals(normalizedSort)) {
-            return "publication_year:desc";
-        }
-
-        if ("oldest".equals(normalizedSort)
-                || "published_oldest".equals(normalizedSort)
-                || "publication_year:asc".equals(normalizedSort)) {
-            return "publication_year:asc";
-        }
-
-        if ("trending_keyword".equals(normalizedSort)
-                || "trending_topic".equals(normalizedSort)) {
-            return defaultSort;
-        }
-
-        if ("relevance".equals(normalizedSort) || "relevance_score:desc".equals(normalizedSort)) {
-            return defaultSort;
-        }
-
-        if (normalizedSort.contains(":")) {
-            return normalizedSort;
-        }
-
-        return defaultSort;
+        return switch (normalizedSortBy) {
+            case "citation" -> "cited_by_count:" + normalizedSortDirection;
+            case "published" -> "publication_year:" + normalizedSortDirection;
+            case "relevance" -> defaultSort;
+            default -> defaultSort;
+        };
     }
 
     public List<String> normalizeTypeValues(List<String> values) {
-        // Type values can arrive as labels or URLs. We only keep the last segment.
-        List<String> normalized = normalizeStringList(values);
+        List<String> normalizedValues = normalizeStringList(values);
         List<String> result = new ArrayList<>();
 
-        for (String value : normalized) {
+        for (String value : normalizedValues) {
             result.add(extractLastSegment(value).toLowerCase(Locale.ROOT));
         }
 
@@ -147,33 +103,22 @@ public class SearchQuerySupport {
     }
 
     public List<String> normalizeSubFieldValues(List<String> values) {
-        List<String> normalized = normalizeStringList(values);
-        List<String> result = new ArrayList<>();
+        return normalizeOpenAlexIds(values);
+    }
 
-        for (String value : normalized) {
-            result.add(extractLastSegment(value));
-        }
-
-        return result;
+    public String normalizeEntityValue(String value) {
+        return extractLastSegment(value).trim();
     }
 
     public List<String> normalizeEntityIds(List<String> values) {
-        // Author, institution, source and award filters use their OpenAlex ids.
-        List<String> normalized = normalizeStringList(values);
-        List<String> result = new ArrayList<>();
-
-        for (String value : normalized) {
-            result.add(extractLastSegment(value));
-        }
-
-        return result;
+        return normalizeOpenAlexIds(values);
     }
 
     public List<String> normalizeCountryValues(List<String> values) {
-        List<String> normalized = normalizeStringList(values);
+        List<String> normalizedValues = normalizeStringList(values);
         List<String> result = new ArrayList<>();
 
-        for (String value : normalized) {
+        for (String value : normalizedValues) {
             result.add(extractLastSegment(value).toUpperCase(Locale.ROOT));
         }
 
@@ -181,25 +126,21 @@ public class SearchQuerySupport {
     }
 
     public List<String> normalizeStringList(List<String> values) {
-        // Remove nulls, blanks and duplicates while keeping the original order.
         if (values == null || values.isEmpty()) {
             return List.of();
         }
 
-        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        LinkedHashSet<String> uniqueValues = new LinkedHashSet<>();
 
         for (String value : values) {
             if (!StringUtils.hasText(value)) {
                 continue;
             }
 
-            String trimmed = value.trim();
-            if (!trimmed.isBlank()) {
-                normalized.add(trimmed);
-            }
+            uniqueValues.add(value.trim());
         }
 
-        return new ArrayList<>(normalized);
+        return new ArrayList<>(uniqueValues);
     }
 
     public String normalizeGroupedValue(String groupBy, String rawKey) {
@@ -227,12 +168,32 @@ public class SearchQuerySupport {
             return "";
         }
 
-        int lastSlash = value.lastIndexOf('/');
+        String trimmedValue = value.trim();
+        int lastSlashIndex = trimmedValue.lastIndexOf('/');
 
-        if (lastSlash < 0 || lastSlash == value.length() - 1) {
-            return value;
+        if (lastSlashIndex < 0 || lastSlashIndex == trimmedValue.length() - 1) {
+            return trimmedValue;
         }
 
-        return value.substring(lastSlash + 1);
+        return trimmedValue.substring(lastSlashIndex + 1);
+    }
+
+    private List<String> normalizeOpenAlexIds(List<String> values) {
+        List<String> normalizedValues = normalizeStringList(values);
+        List<String> result = new ArrayList<>();
+
+        for (String value : normalizedValues) {
+            result.add(extractLastSegment(value));
+        }
+
+        return result;
+    }
+
+    private int normalizePositiveInt(int value, int defaultValue, int maxValue) {
+        if (value <= 0) {
+            return defaultValue;
+        }
+
+        return Math.min(value, maxValue);
     }
 }

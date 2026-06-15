@@ -14,34 +14,15 @@ import java.util.regex.Pattern;
 @Component
 public class OpenAlexMapReader {
 
-    // OpenAlex responses are dynamic JSON objects.
-    // We keep them as Map<String, Object> for flexibility, then read values safely here.
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("(?is)<[^>]+>");
     private static final Pattern MULTI_WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
-    @SuppressWarnings("unchecked")
     public Map<String, Object> getMap(Map<String, Object> source, String key) {
         if (source == null) {
             return new LinkedHashMap<>();
         }
 
-        Object value = source.get(key);
-        if (!(value instanceof Map<?, ?>)) {
-            return new LinkedHashMap<>();
-        }
-
-        Map<?, ?> rawMap = (Map<?, ?>) value;
-        Map<String, Object> result = new LinkedHashMap<>();
-        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
-            Object rawKey = entry.getKey();
-
-            if (rawKey instanceof String) {
-                String keyName = (String) rawKey;
-                result.put(keyName, entry.getValue());
-            }
-        }
-
-        return result;
+        return copyStringKeyMap(source.get(key));
     }
 
     public List<Map<String, Object>> getMapList(Map<String, Object> source, String key) {
@@ -53,27 +34,15 @@ public class OpenAlexMapReader {
     }
 
     public List<Map<String, Object>> getMapListFromObject(Object value) {
-        List<Map<String, Object>> result = new ArrayList<>();
-
-        if (!(value instanceof List<?>)) {
-            return result;
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
         }
 
-        List<?> rawList = (List<?>) value;
+        List<Map<String, Object>> result = new ArrayList<>();
+
         for (Object item : rawList) {
-            if (item instanceof Map<?, ?>) {
-                Map<?, ?> rawMap = (Map<?, ?>) item;
-                Map<String, Object> itemMap = new LinkedHashMap<>();
-
-                for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
-                    Object rawKey = entry.getKey();
-
-                    if (rawKey instanceof String) {
-                        String keyName = (String) rawKey;
-                        itemMap.put(keyName, entry.getValue());
-                    }
-                }
-
+            Map<String, Object> itemMap = copyStringKeyMap(item);
+            if (!itemMap.isEmpty()) {
                 result.add(itemMap);
             }
         }
@@ -82,15 +51,11 @@ public class OpenAlexMapReader {
     }
 
     public List<Object> getObjectList(Object value) {
-        List<Object> result = new ArrayList<>();
-
-        if (!(value instanceof List<?>)) {
-            return result;
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
         }
 
-        List<?> rawList = (List<?>) value;
-        result.addAll(rawList);
-        return result;
+        return new ArrayList<>(rawList);
     }
 
     public String getString(Map<String, Object> source, String key) {
@@ -167,8 +132,7 @@ public class OpenAlexMapReader {
     public Boolean deriveHasOrcid(List<Map<String, Object>> authorships) {
         for (Map<String, Object> authorship : authorships) {
             Map<String, Object> author = getMap(authorship, "author");
-            String orcid = getString(author, "orcid").trim();
-            if (!orcid.isBlank()) {
+            if (!getString(author, "orcid").trim().isBlank()) {
                 return true;
             }
         }
@@ -180,9 +144,9 @@ public class OpenAlexMapReader {
         Map<String, Object> bestOaLocation = getMap(work, "best_oa_location");
         Map<String, Object> openAccess = getMap(work, "open_access");
 
-        String bestOaPdfUrl = getString(bestOaLocation, "pdf_url").trim();
-        if (!bestOaPdfUrl.isBlank()) {
-            return bestOaPdfUrl;
+        String pdfUrl = getString(bestOaLocation, "pdf_url").trim();
+        if (!pdfUrl.isBlank()) {
+            return pdfUrl;
         }
 
         String openAccessUrl = getString(openAccess, "oa_url").trim();
@@ -190,30 +154,28 @@ public class OpenAlexMapReader {
             return openAccessUrl;
         }
 
-        String bestOaLandingPageUrl = getString(bestOaLocation, "landing_page_url").trim();
-        if (!bestOaLandingPageUrl.isBlank()) {
-            return bestOaLandingPageUrl;
+        String landingPageUrl = getString(bestOaLocation, "landing_page_url").trim();
+        if (!landingPageUrl.isBlank()) {
+            return landingPageUrl;
         }
 
         return null;
     }
 
     public String deriveAbstractText(Map<String, Object> abstractInvertedIndex) {
-        // OpenAlex stores the abstract as "word -> positions".
-        // We rebuild the sentence by sorting tokens by position.
         if (abstractInvertedIndex == null || abstractInvertedIndex.isEmpty()) {
             return null;
         }
 
         TreeMap<Integer, String> orderedTokens = new TreeMap<>();
+
         for (Map.Entry<String, Object> entry : abstractInvertedIndex.entrySet()) {
-            String token = entry.getKey();
             List<Object> positions = getObjectList(entry.getValue());
 
             for (Object positionValue : positions) {
                 int position = toInt(positionValue, -1);
                 if (position >= 0) {
-                    orderedTokens.putIfAbsent(position, token);
+                    orderedTokens.putIfAbsent(position, entry.getKey());
                 }
             }
         }
@@ -230,9 +192,25 @@ public class OpenAlexMapReader {
             return value;
         }
 
-        String unescaped = HtmlUtils.htmlUnescape(value);
-        String withoutHtmlTags = HTML_TAG_PATTERN.matcher(unescaped).replaceAll(" ");
+        String unescapedValue = HtmlUtils.htmlUnescape(value);
+        String withoutHtmlTags = HTML_TAG_PATTERN.matcher(unescapedValue).replaceAll(" ");
         return MULTI_WHITESPACE_PATTERN.matcher(withoutHtmlTags).replaceAll(" ").trim();
+    }
+
+    private Map<String, Object> copyStringKeyMap(Object value) {
+        if (!(value instanceof Map<?, ?> rawMap)) {
+            return new LinkedHashMap<>();
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+            if (entry.getKey() instanceof String key) {
+                result.put(key, entry.getValue());
+            }
+        }
+
+        return result;
     }
 
     private int toInt(Object value, int defaultValue) {

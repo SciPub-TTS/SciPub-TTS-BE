@@ -1,16 +1,19 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
 name: Build and deploy JAR app to Azure Web App - Owlreka
 
 on:
   push:
     branches:
-      - dev
+      - prod
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -18,39 +21,37 @@ jobs:
       - name: Set up Java version
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'maven'
+          java-version: 'java25'
+          distribution: 'microsoft'
 
       - name: Build with Maven
-        run: mvn clean package -DskipTests
-        working-directory: scipubtts
+        run: mvn clean install
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: scipubtts/target/*.jar
+          path: '${{ github.workspace }}/target/*.jar'
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
-
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+  
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: java-app
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1908C23EDE9A422BB7208809737CCC54 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A9B52DE5AD1D4761BA27DBC3A39DA08F }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_95DE68F59CC249719257DD68A6523671 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_78D8D18FBBF6452A9509A58E1D708599 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9F4FFA824BC34C4689777FEDE3E845BB }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EAAC8CD53B92414EBD653F00C4B67DA2 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
@@ -59,3 +60,4 @@ jobs:
           app-name: 'Owlreka'
           slot-name: 'Production'
           package: '*.jar'
+          

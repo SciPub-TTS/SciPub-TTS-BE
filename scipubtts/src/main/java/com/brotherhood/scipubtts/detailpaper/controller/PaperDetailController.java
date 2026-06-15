@@ -25,12 +25,9 @@ public class PaperDetailController {
     }
 
     @GetMapping("/{workId}")
-    @Operation(
-            summary = "Get work detail",
-            description = "Load one OpenAlex work by id. Example ids: W2125121305 or https://openalex.org/W2125121305."
-    )
+    @Operation(summary = "Get work detail")
     public ResponseEntity<ResponseObject> getWorkDetail(
-            @Parameter(description = "OpenAlex work id", example = "W2125121305")
+            @Parameter(example = "W2125121305")
             @PathVariable String workId
     ) {
         // Load one paper detail by OpenAlex work id.
