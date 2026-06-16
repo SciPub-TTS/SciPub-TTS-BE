@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.auth.service.impl;
 
 import com.brotherhood.scipubtts.auth.dto.request.CompleteGoogleRegisterRequest;
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
+import com.brotherhood.scipubtts.auth.dto.request.OAuth2SessionExchangeRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
 import com.brotherhood.scipubtts.auth.dto.response.GoogleSignupPreviewResponse;
@@ -191,6 +192,35 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public AuthResponse exchangeOAuth2Session(
+            OAuth2SessionExchangeRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        RefreshTokenResult rotated = refreshTokenService.rotate(
+                request.rawRefreshToken(),
+                httpRequest
+        );
+
+        refreshCookieService.addRefreshCookie(
+                httpResponse,
+                rotated.rawToken(),
+                rotated.rememberMe(),
+                Duration.between(OffsetDateTime.now(), rotated.expiresAt())
+        );
+
+        String accessToken =
+                jwtTokenService.generateAccessToken(UserPrincipal.create(rotated.user()));
+
+        return new AuthResponse(
+                accessToken,
+                "Bearer",
+                jwtTokenService.getAccessTokenExpiresInSeconds()
+        );
+    }
+
+    @Override
+    @Transactional
     public void logout(UserPrincipal principal,
                        HttpServletRequest request,
                        HttpServletResponse response) {
@@ -285,15 +315,10 @@ public class AuthServiceImpl implements AuthService {
         String resolvedBaseUrl = appBaseUrl;
 
         if (resolvedBaseUrl == null || resolvedBaseUrl.isBlank()) {
-            resolvedBaseUrl = "http://localhost:5173";
+            resolvedBaseUrl = frontendBaseUrl;
         }
 
-        return resolvedBaseUrl + "/login?verified=true";
-        if (appBaseUrl == null || appBaseUrl.isBlank()) {
-            appBaseUrl = frontendBaseUrl;
-        }
-
-        return trimTrailingSlash(appBaseUrl) + "/login?verified=true";
+        return trimTrailingSlash(resolvedBaseUrl) + "/login?verified=true";
     }
 
     private String trimTrailingSlash(String value) {

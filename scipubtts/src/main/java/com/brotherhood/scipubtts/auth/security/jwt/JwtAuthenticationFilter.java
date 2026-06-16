@@ -33,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/register",
             "/api/auth/register/google/**",
             "/api/auth/login",
+            "/api/auth/oauth2/exchange",
             "/api/auth/refresh",
             "/api/auth/logout",
             "/api/auth/oauth2/google",
@@ -78,6 +79,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // Team note:
+        // This log is intentionally kept for debugging token flow. If production logs are shared outside
+        // the backend team, remove or mask this header because it contains the raw bearer token.
         log.info("Authorization header = {}", request.getHeader("Authorization"));
 
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);

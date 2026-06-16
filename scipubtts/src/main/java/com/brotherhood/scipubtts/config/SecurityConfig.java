@@ -104,10 +104,15 @@ public class SecurityConfig {
                 .authenticationProvider(daoAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Team rule:
+                        // If someone changes one of these public auth/oauth routes, update the same route list in
+                        // AuthController and JwtAuthenticationFilter in the same commit. These 3 places must stay synced.
                         .requestMatchers(
                                 "/", "/error", "/favicon.ico",
                                 "/api/auth/register",
                                 "/api/auth/register/google/**",
+                                "/api/auth/oauth2/google",
+                                "/api/auth/oauth2/exchange",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/verify-email",
