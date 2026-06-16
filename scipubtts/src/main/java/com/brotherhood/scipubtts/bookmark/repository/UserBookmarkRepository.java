@@ -7,13 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID> {
 
     // ==========================================
@@ -38,7 +36,6 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
                   OR LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.sourceSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                  OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.topicSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
           )
     """)
@@ -142,25 +139,7 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     // ==========================================
     // ENDPOINT 7 & 8: DELETE
     // ==========================================
-    @Modifying
-    @Query("""
-        DELETE FROM UserBookmark b
-        WHERE b.id = :id
-          AND b.userId = :userId
-    """)
-    int deleteByIdAndUserId(
-            @Param("id") UUID id,
-            @Param("userId") UUID userId
-    );
+    int deleteByIdAndUserId(UUID id, UUID userId);
 
-    @Modifying
-    @Query("""
-        DELETE FROM UserBookmark b
-        WHERE b.userId = :userId
-          AND b.openAlexId = :openAlexId
-    """)
-    int deleteByUserIdAndOpenAlexId(
-            @Param("userId") UUID userId,
-            @Param("openAlexId") String openAlexId
-    );
+    int deleteByUserIdAndOpenAlexId(UUID userId, String openAlexId);
 }
