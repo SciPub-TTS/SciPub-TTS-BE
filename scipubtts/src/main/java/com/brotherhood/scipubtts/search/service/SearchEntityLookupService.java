@@ -270,11 +270,15 @@ public class SearchEntityLookupService {
             return null;
         }
 
-        return switch (entityType) {
-            case AUTHORS -> mapAuthorItem(entityType, rawResult, id, displayName);
-            case TOPICS -> mapTopicItem(entityType, rawResult, id, displayName);
-            case WORKS -> null;
-        };
+        if (SearchEntityType.AUTHORS.equals(entityType)) {
+            return mapAuthorItem(entityType, rawResult, id, displayName);
+        }
+
+        if (SearchEntityType.TOPICS.equals(entityType)) {
+            return mapTopicItem(entityType, rawResult, id, displayName);
+        }
+
+        return null;
     }
 
     private SearchEntitiesResponse.EntityItem mapAuthorItem(
