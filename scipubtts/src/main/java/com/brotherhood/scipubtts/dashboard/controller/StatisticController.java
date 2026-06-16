@@ -105,6 +105,21 @@ public class StatisticController {
     );
   }
 
+  @PostMapping("/topicScore-previous-periods")
+  public ResponseEntity<ResponseObject> calculateAllTopicsPreviousPeriods(
+          @Valid @RequestBody TopicCalculateAllRequest request,
+          HttpServletRequest httpServletRequest) {
+    var data = topicService.calculateAllTopicsPreviousPeriods(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Calculate previous periods for all topics",
+                    data
+            )
+    );
+  }
+
   @PostMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> calculateAllKeywordsScore(
           @Valid @RequestBody KeywordCalculateAllRequest request,

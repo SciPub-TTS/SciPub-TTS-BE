@@ -6,10 +6,8 @@ import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.TopicServiceImpl;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -83,7 +81,7 @@ public class DataController {
   @GetMapping("/topicScore-all")
   public ResponseEntity<ResponseObject> getTopics(
           @RequestParam LocalDate startTime,
-          @RequestParam Local endTime,
+          @RequestParam LocalDate endTime,
           @RequestParam String fieldId,
           @RequestParam String formula
   ) {
@@ -123,6 +121,31 @@ public class DataController {
             new ResponseObject(
                     HttpStatus.OK.value(),
                     "Get topic successfully",
+                    data
+            )
+    );
+  }
+
+  @GetMapping("/topicScore-periods")
+  public ResponseEntity<ResponseObject> getTopicAcrossPeriods(
+          @RequestParam String topicId,
+          @RequestParam String fieldId,
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime
+  ) {
+    var request = new TopicCalculateSingleRequest(
+            startTime.toString(),
+            endTime.toString(),
+            topicId,
+            fieldId
+    );
+
+    var data = topicService.getTopicAcrossPeriods(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic across periods successfully",
                     data
             )
     );
