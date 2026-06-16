@@ -1,8 +1,5 @@
 package com.brotherhood.scipubtts.auth.security.oauth2;
 
-import com.brotherhood.scipubtts.auth.security.UserPrincipal;
-import com.brotherhood.scipubtts.user.entity.Role;
-import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
@@ -13,7 +10,6 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -23,7 +19,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final UserRepository userRepository;
 
     @Override
-    @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
@@ -59,34 +54,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             );
         }
 
-        User user = userRepository.findByEmail(email).orElse(null);
-
-        if (user == null) {
-            user = new User();
-            user.setEmail(email);
-            user.setUsername(email);
-            user.setFirstName(givenName);
-            user.setLastName(familyName);
-            user.setRole(Role.RESEARCHER);
-            user.setEmailVerified(true);
-            user.setPasswordHash(null);
-            user.setGoogleLinked(true);
-            user.setBanned(false);
-        } else {
+        userRepository.findByEmail(email).ifPresent(user -> {
             if (user.isBanned()) {
                 throw new OAuth2AuthenticationException(
                         new OAuth2Error("account_banned"),
                         "Account is banned"
                 );
             }
-            if (!StringUtils.hasText(user.getFirstName())) {
-                user.setFirstName(givenName);
-            }
-            if (!StringUtils.hasText(user.getLastName())) {
-                user.setLastName(familyName);
-            }
-            user.setGoogleLinked(true);
-        }
+        });
 
         return oAuth2User;
     }

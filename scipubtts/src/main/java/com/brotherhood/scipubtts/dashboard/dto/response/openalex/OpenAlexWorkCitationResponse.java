@@ -1,34 +1,64 @@
 package com.brotherhood.scipubtts.dashboard.dto.response.openalex;
 
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.jdbc.Work;
 
 import java.util.List;
 
-public record OpenAlexWorkCitationResponse(
-        @JsonProperty("meta")
-        Meta meta,
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class OpenAlexWorkCitationResponse {
+    @JsonProperty("meta")
+    private Meta meta;
 
-        @JsonProperty("results")
-        List<WorkCitation> workCitationList
+    @JsonProperty("results")
+    private List<WorkCitation> workCitationList;
 
-) {
-  public record Meta(
 
-          @JsonProperty("count")
-          long count
+    public Meta meta() {
+        return meta;
+    }
 
-  ) {
+    public List<WorkCitation> workCitationList() {
+        return workCitationList;
+    }
+  @Getter
+  @Setter
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Meta {
+      @JsonProperty("count")
+      private long count;
+
+      public long count() {
+          return count;
+      }
   }
 
-  public record WorkCitation(
+  @Getter
+  @Setter
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class WorkCitation {
+      @JsonProperty("cited_by_count")
+      private long citedByCount;
 
-          @JsonProperty("cited_by_count")
-          long citedByCount,
+      @JsonProperty("publication_date")
+      private String publicationDate;
 
-          @JsonProperty("publication_date")
-          String publicationDate
+      public long citedByCount() {
+          return citedByCount;
+      }
 
-  ) {
+      public String publicationDate() {
+          return publicationDate;
+      }
   }
 }

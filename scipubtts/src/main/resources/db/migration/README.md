@@ -6,12 +6,12 @@ Quy uoc Flyway cho project nay
 
 Format khuyen dung:
 
-VYYYYMMDDHHMMSS__short_description.sql
+VYYYYMMDDHHMMSS\_\_short_description.sql
 
 Vi du:
 
-V20260613161000__add_saved_search_indexes.sql
-V20260613164500__create_user_preferences_table.sql
+V20260613161000**add_saved_search_indexes.sql
+V20260613164500**create_user_preferences_table.sql
 
 Vi sao project bat `out-of-order`:
 
@@ -24,7 +24,7 @@ Vi sao project bat `ignore future migration`:
 - Neu DB da co migration moi hon branch local cua ban, app local van co the chay tam.
 - Cau hinh nay chi giup local "do fail", khong thay the viec pull/rebase code con thieu.
 
-Quy trinh team nen theo:
+Quy trinh:
 
 1. Truoc khi tao migration moi, pull code moi nhat.
 2. Tao file migration moi bang timestamp hien tai.
