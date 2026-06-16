@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.detailpaper.service;
+package com.brotherhood.scipubtts.detail.works.service;
 
 import java.util.Map;
 

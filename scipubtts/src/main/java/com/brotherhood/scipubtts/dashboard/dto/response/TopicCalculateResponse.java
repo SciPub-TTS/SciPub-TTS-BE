@@ -1,10 +1,22 @@
 package com.brotherhood.scipubtts.dashboard.dto.response;
 
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 
 import java.util.List;
 
-public record TopicCalculateResponse(
-        List<Topic> topicList
-) {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class TopicCalculateResponse {
+    private List<Topic> topicList;
+
+    public List<Topic> topicList() {
+        return topicList;
+    }
 }

@@ -77,7 +77,7 @@ public class SecurityConfig {
 // 1. CẤU HÌNH QUẢN LÝ SESSION (SESSION MANAGEMENT POLICY)
 // =================================================================================
 /*
- * 🚨 TẠI SAO KHÔNG DÙNG 'SessionCreationPolicy.IF_REQUIRED' (Mặc định)?
+ *  TẠI SAO KHÔNG DÙNG 'SessionCreationPolicy.IF_REQUIRED' (Mặc định)?
  * - IF_REQUIRED có nghĩa là: "Backend sẽ không chủ động tạo Session, trừ khi có tính năng nào
  * đó bắt buộc phải cần (và OAuth2 Login mặc định của Spring chính là tính năng ép tạo Session)".
  * - HẬU QUẢ (Gây ra lỗi lệch UUID trước đó): Khi người dùng Đăng nhập bằng Google thành công,
@@ -89,7 +89,7 @@ public class SecurityConfig {
  * liền "hớn hở" lôi thông tin User Google cũ trong Session ra xài, đè hoàn toàn lên luồng xử lý
  * Token/Credentials mới bạn vừa nhập. Dẫn đến việc lấy sai thông tin và lệch UUID.
  *
- * 🎯 TẠI SAO CHỌN 'SessionCreationPolicy.STATELESS'?
+ *  TẠI SAO CHỌN 'SessionCreationPolicy.STATELESS'?
  * - Ra lệnh cho Spring Security HOÀN TOÀN KHÔNG tạo, không lưu và không sử dụng HTTP Session ở Backend.
  * Mọi Request gửi lên độc lập 100% và bắt buộc phải được xác thực thông qua Token (JWT/Refresh Token).
  * Điều này bẻ gãy hoàn toàn cơ chế tự động nhận dạng bằng Cookie `JSESSIONID`, giải quyết triệt để lỗi lệch UUID.
@@ -104,11 +104,8 @@ public class SecurityConfig {
                 .authenticationProvider(daoAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Team rule:
-                        // If someone changes one of these public auth/oauth routes, update the same route list in
-                        // AuthController and JwtAuthenticationFilter in the same commit. These 3 places must stay synced.
                         .requestMatchers(
-                                "/", "/error", "/favicon.ico",
+                                "/", "/error",
                                 "/api/auth/register",
                                 "/api/auth/register/google/**",
                                 "/api/auth/oauth2/google",
@@ -124,6 +121,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/api/search/**",
                                 "/api/papers/**",
+                                "/api/authors/**",
+                                "/api/topics/**",
                                 "/api/statistic/**",
                                 "/api/data/**"
                         )

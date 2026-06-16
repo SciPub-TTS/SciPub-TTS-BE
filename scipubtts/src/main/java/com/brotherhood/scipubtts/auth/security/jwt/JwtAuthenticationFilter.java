@@ -39,15 +39,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/oauth2/google",
             "/api/auth/verify-email",
             "/api/auth/forgot-password/**",
+            "/api/search/**",
             "/api/papers/**",
+            "/api/authors/**",
+            "/api/topics/**",
             "/api/statistic/**",
             "/oauth2/**",
             "/login/oauth2/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html",
-            "/error",
-            "/favicon.ico"
+            "/error"
     );
 
     private final JwtTokenService jwtTokenService;
