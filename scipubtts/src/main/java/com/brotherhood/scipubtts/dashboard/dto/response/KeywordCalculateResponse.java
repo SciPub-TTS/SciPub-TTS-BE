@@ -1,9 +1,22 @@
 package com.brotherhood.scipubtts.dashboard.dto.response;
 
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 
 import java.util.List;
 
-public record KeywordCalculateResponse(
-        List<Keyword> keywordList
-) {}
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class KeywordCalculateResponse {
+    private List<Keyword> keywordList;
+
+    public List<Keyword> keywordList() {
+        return keywordList;
+    }
+}

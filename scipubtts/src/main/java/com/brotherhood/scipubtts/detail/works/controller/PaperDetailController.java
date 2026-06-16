@@ -1,7 +1,7 @@
-package com.brotherhood.scipubtts.detailpaper.controller;
+package com.brotherhood.scipubtts.detail.works.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.detailpaper.service.PaperDetailService;
+import com.brotherhood.scipubtts.detail.works.service.PaperDetailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.HttpStatus;

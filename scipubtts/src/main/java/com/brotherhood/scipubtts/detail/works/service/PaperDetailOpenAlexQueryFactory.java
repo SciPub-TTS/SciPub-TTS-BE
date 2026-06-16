@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.detailpaper.service;
+package com.brotherhood.scipubtts.detail.works.service;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;

@@ -182,7 +182,6 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse
     ) {
-        System.out.println("===== HIT GOOGLE COMPLETE REGISTER =====");
         AuthResponse data = authService.completeGoogleRegister(request, httpRequest, httpResponse);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(

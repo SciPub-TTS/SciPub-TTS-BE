@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.search.dto;
+package com.brotherhood.scipubtts.search.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
