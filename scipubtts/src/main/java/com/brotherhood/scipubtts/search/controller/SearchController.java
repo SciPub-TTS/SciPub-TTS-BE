@@ -183,7 +183,7 @@ public class SearchController {
             description = "Returns up to the latest search keywords for the current user. This powers the search suggestion dialog under the search box."
     )
     public ResponseEntity<ResponseObject> getRecentSearches(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @Parameter(
                     description = "Optional prefix keyword used to filter recent searches.",
                     example = "AI"
@@ -205,7 +205,7 @@ public class SearchController {
             description = "Saves the current search keyword for the logged-in user so it can be suggested later in the search dialog."
     )
     public ResponseEntity<ResponseObject> saveSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
         searchService.saveSearchHistory(request.withUserId(userId));
@@ -221,7 +221,7 @@ public class SearchController {
             description = "Deletes one saved search keyword for the current user."
     )
     public ResponseEntity<ResponseObject> deleteSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @Parameter(
                     description = "Saved search keyword to delete.",
                     example = "AI in education"
@@ -241,7 +241,7 @@ public class SearchController {
             description = "Deletes every saved search keyword of the current user."
     )
     public ResponseEntity<ResponseObject> clearSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
         searchService.clearSearchHistory(userId);
 
