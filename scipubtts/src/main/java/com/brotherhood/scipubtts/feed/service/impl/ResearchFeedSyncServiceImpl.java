@@ -1,0 +1,302 @@
+package com.brotherhood.scipubtts.feed.service.impl;
+
+import com.brotherhood.scipubtts.feed.client.OpenAlexWorksClient;
+import com.brotherhood.scipubtts.feed.dto.response.OpenAlexWorksResponse;
+import com.brotherhood.scipubtts.feed.entity.ApiJob;
+import com.brotherhood.scipubtts.feed.model.FeedDraft;
+import com.brotherhood.scipubtts.feed.model.FeedKey;
+import com.brotherhood.scipubtts.feed.model.FeedReason;
+import com.brotherhood.scipubtts.feed.model.FollowTargetGroupView;
+import com.brotherhood.scipubtts.feed.repository.ApiJobRepository;
+import com.brotherhood.scipubtts.feed.service.FeedPersistenceService;
+import com.brotherhood.scipubtts.feed.service.ResearchFeedSyncService;
+import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientResponseException;
+
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
+    private static final String JOB_TYPE = "FEED_SYNC";
+    private static final String STATUS_RUNNING = "RUNNING";
+    private static final String STATUS_SUCCESS = "SUCCESS";
+    private static final String STATUS_PARTIAL_SUCCESS = "PARTIAL_SUCCESS";
+    private static final String STATUS_FAILED = "FAILED";
+
+    private final UserFollowRepository userFollowRepository;
+    private final OpenAlexWorksClient openAlexWorksClient;
+    private final FeedPersistenceService feedPersistenceService;
+    private final ApiJobRepository apiJobRepository;
+
+    @Value("${openalex.feed.default-lookback-days:7}")
+    private long defaultLookbackDays;
+
+    @Value("${openalex.feed.overlap-days:2}")
+    private long overlapDays;
+
+    @Value("${openalex.feed.max-pages-per-target:10}")
+    private int maxPagesPerTarget;
+
+    @Override
+    public void syncDailyFeed() {
+        OffsetDateTime startedAt = OffsetDateTime.now();
+
+        ApiJob job = ApiJob.builder()
+                .jobType(JOB_TYPE)
+                .status(STATUS_RUNNING)
+                .startedAt(startedAt)
+                .totalFetched(0)
+                .totalSaved(0)
+                .totalFailed(0)
+                .build();
+
+        job = apiJobRepository.save(job);
+
+        int totalFetched = 0;
+        int failedTargets = 0;
+        StringBuilder errorLog = new StringBuilder();
+
+        try {
+            LocalDate toDate = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+            LocalDate fromDate = resolveFromDate(toDate);
+
+            job.setRequestParams("""
+                    {"fromDate":"%s","toDate":"%s","strategy":"api_job_last_success_with_overlap"}
+                    """.formatted(fromDate, toDate));
+            apiJobRepository.save(job);
+
+            List<FollowTargetGroupView> groups = userFollowRepository.findFeedTargetGroups();
+
+            Map<FeedKey, FeedDraft> draftMap = new LinkedHashMap<>();
+
+            for (FollowTargetGroupView group : groups) {
+                try {
+                    int fetched = processOneTargetGroup(group, fromDate, toDate, draftMap);
+                    totalFetched += fetched;
+                } catch (Exception ex) {
+                    failedTargets++;
+                    appendError(errorLog, group, ex);
+                    log.warn("Feed sync target failed. type={}, id={}",
+                            group.getTargetType(),
+                            group.getTargetOpenalexId(),
+                            ex
+                    );
+                }
+            }
+
+            int saved = feedPersistenceService.saveFeedDrafts(draftMap.values());
+
+            job.setTotalFetched(totalFetched);
+            job.setTotalSaved(saved);
+            job.setTotalFailed(failedTargets);
+            job.setFinishedAt(OffsetDateTime.now());
+            job.setErrorLog(errorLog.isEmpty() ? null : errorLog.toString());
+
+            if (failedTargets == 0) {
+                job.setStatus(STATUS_SUCCESS);
+            } else if (saved > 0 || totalFetched > 0) {
+                job.setStatus(STATUS_PARTIAL_SUCCESS);
+            } else {
+                job.setStatus(STATUS_FAILED);
+            }
+
+            apiJobRepository.save(job);
+
+        } catch (Exception ex) {
+            job.setStatus(STATUS_FAILED);
+            job.setFinishedAt(OffsetDateTime.now());
+            job.setErrorLog(ex.getMessage());
+            apiJobRepository.save(job);
+
+            throw ex;
+        }
+    }
+
+    private LocalDate resolveFromDate(LocalDate toDate) {
+        return apiJobRepository
+                .findTopByJobTypeAndStatusOrderByFinishedAtDesc(JOB_TYPE, STATUS_SUCCESS)
+                .map(ApiJob::getFinishedAt)
+                .map(time -> time
+                        .atZoneSameInstant(ZoneId.of("Asia/Ho_Chi_Minh"))
+                        .toLocalDate()
+                        .minusDays(overlapDays)
+                )
+                .orElse(toDate.minusDays(defaultLookbackDays));
+    }
+
+    private int processOneTargetGroup(
+            FollowTargetGroupView group,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Map<FeedKey, FeedDraft> draftMap
+    ) {
+        List<UUID> followerIds = parseUserIds(group.getUserIds());
+
+        if (followerIds.isEmpty()) {
+            return 0;
+        }
+
+        String cursor = "*";
+        int page = 0;
+        int fetched = 0;
+
+        while (StringUtils.hasText(cursor) && page < maxPagesPerTarget) {
+            page++;
+
+            OpenAlexWorksResponse response = openAlexWorksClient.fetchWorksPage(
+                    group.getTargetType(),
+                    group.getTargetOpenalexId(),
+                    fromDate,
+                    toDate,
+                    cursor
+            );
+
+            if (response == null || response.results() == null || response.results().isEmpty()) {
+                break;
+            }
+
+            for (OpenAlexWorksResponse.OpenAlexWork work : response.results()) {
+                fetched++;
+
+                String workId = normalizeOpenAlexId(work.id());
+                if (!StringUtils.hasText(workId)) {
+                    continue;
+                }
+
+                for (UUID userId : followerIds) {
+                    FeedKey key = new FeedKey(userId, workId);
+
+                    FeedDraft draft = draftMap.computeIfAbsent(
+                            key,
+                            ignored -> createDraft(userId, workId, work)
+                    );
+
+                    draft.getReasons().add(
+                            new FeedReason(
+                                    group.getTargetType(),
+                                    normalizeOpenAlexId(group.getTargetOpenalexId()),
+                                    group.getDisplayNameSnapshot()
+                            )
+                    );
+
+                    draft.setRelevanceScore(
+                            Math.max(draft.getRelevanceScore(), calculateRelevanceScore(group.getTargetType()))
+                    );
+                }
+            }
+
+            cursor = response.meta() == null ? null : response.meta().nextCursor();
+
+            if (!StringUtils.hasText(cursor)) {
+                break;
+            }
+        }
+
+        return fetched;
+    }
+
+    private FeedDraft createDraft(
+            UUID userId,
+            String workId,
+            OpenAlexWorksResponse.OpenAlexWork work
+    ) {
+        FeedDraft draft = new FeedDraft(userId, workId);
+
+        draft.setTitleSnapshot(work.displayName());
+        draft.setAuthorsSnapshot(buildAuthorsSnapshot(work.authorships()));
+        draft.setSourceSnapshot(extractSourceName(work.primaryLocation()));
+        draft.setPublicationYear(work.publicationYear());
+        draft.setPublicationDate(work.publicationDate());
+        draft.setCitationSnapshot(work.citedByCount());
+        draft.setGeneratedAt(OffsetDateTime.now());
+        draft.setRelevanceScore(0.0);
+
+        return draft;
+    }
+
+    private String buildAuthorsSnapshot(List<OpenAlexWorksResponse.Authorship> authorships) {
+        if (authorships == null || authorships.isEmpty()) {
+            return null;
+        }
+
+        return authorships.stream()
+                .filter(a -> a.author() != null)
+                .map(a -> a.author().displayName())
+                .filter(StringUtils::hasText)
+                .limit(3)
+                .collect(Collectors.joining(", "));
+    }
+
+    private String extractSourceName(OpenAlexWorksResponse.PrimaryLocation primaryLocation) {
+        if (primaryLocation == null || primaryLocation.source() == null) {
+            return null;
+        }
+
+        return primaryLocation.source().displayName();
+    }
+
+    private double calculateRelevanceScore(String targetType) {
+        return switch (targetType) {
+            case "AUTHOR" -> 1.0;
+            case "TOPIC" -> 0.8;
+            default -> 0.5;
+        };
+    }
+
+    private List<UUID> parseUserIds(String userIds) {
+        if (!StringUtils.hasText(userIds)) {
+            return List.of();
+        }
+
+        return Arrays.stream(userIds.split(","))
+                .filter(StringUtils::hasText)
+                .map(UUID::fromString)
+                .toList();
+    }
+
+    private String normalizeOpenAlexId(String openalexId) {
+        if (!StringUtils.hasText(openalexId)) {
+            return openalexId;
+        }
+
+        int lastSlash = openalexId.lastIndexOf("/");
+        if (lastSlash >= 0) {
+            return openalexId.substring(lastSlash + 1);
+        }
+
+        return openalexId;
+    }
+
+    private void appendError(
+            StringBuilder errorLog,
+            FollowTargetGroupView group,
+            Exception ex
+    ) {
+        String message;
+
+        if (ex instanceof RestClientResponseException restEx) {
+            message = "HTTP " + restEx.getStatusCode().value() + " - " + restEx.getResponseBodyAsString();
+        } else {
+            message = ex.getMessage();
+        }
+
+        errorLog.append("[")
+                .append(group.getTargetType())
+                .append(":")
+                .append(group.getTargetOpenalexId())
+                .append("] ")
+                .append(message)
+                .append("\n");
+    }
+}
