@@ -75,26 +75,5 @@ public interface OpenAlexService {
           String fieldId,
           LocalDate start,
           LocalDate end
-  ) {
-    String filter = String.format(
-            "primary_topic.field.id:%s,from_publication_date:%s,to_publication_date:%s,type:article",
-            fieldId, start, end
-    );
-
-    var response = restClient.get()
-            .uri(uriBuilder -> uriBuilder
-                    .path("/works")
-                    .queryParam("filter", filter)
-                    .queryParam("page", 1)
-                    .queryParam("per_page", 1)
-                    .queryParam("select", "id")
-                    .build()
-            )
-            .retrieve()
-            .body(OpenAlexMetricsResponse.class);
-
-    if (response == null || response.meta() == null) return 0L;
-
-    return response.meta().count();
-  }
+  );
 }
