@@ -16,7 +16,7 @@ public class BookmarkStatusResponse {
 
     private UUID bookmarkId;
 
-    private String openAlexid;
+    private String openAlexId;
 
     public boolean bookmarked() {
         return bookmarked;
@@ -26,8 +26,8 @@ public class BookmarkStatusResponse {
         return bookmarkId;
     }
 
-    public String openAlexid() {
-        return openAlexid;
+    public String openAlexId() {
+        return openAlexId;
     }
 }
 

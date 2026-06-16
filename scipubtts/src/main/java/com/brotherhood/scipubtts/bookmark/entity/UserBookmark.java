@@ -30,6 +30,7 @@ public class UserBookmark {
     private String openAlexId;
 
     @Column(name = "entity_type", nullable = false)
+    @Builder.Default
     private String entityType = "WORK";
 
     @Column(name = "title_snapshot", columnDefinition = "TEXT")
