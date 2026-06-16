@@ -34,7 +34,7 @@ public class FeedController {
         return feedService.getFollowedTopics();
     }
 
-    @GetMapping("/followed-topics")
+    @GetMapping("/followed-authors")
     public List<FollowSummaryResponse> followedAuthors() {
         return feedService.getFollowedAuthors();
     }
