@@ -29,6 +29,9 @@ public class UserBookmark {
     @Column(name = "openalex_id", nullable = false, columnDefinition = "TEXT")
     private String openAlexId;
 
+    @Column(name = "entity_type", nullable = false)
+    private String entityType = "WORK";
+
     @Column(name = "title_snapshot", columnDefinition = "TEXT")
     private String titleSnapshot;
 

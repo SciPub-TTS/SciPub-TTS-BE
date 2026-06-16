@@ -81,6 +81,7 @@ public class BookmarkServiceImpl implements BookmarkService {
             UserBookmark bookmark = UserBookmark.builder()
                     .userId(userId)
                     .openAlexId(openAlexId)
+                    .entityType("WORK")
                     .titleSnapshot(normalizeNullable(request.titleSnapshot()))
                     .authorsSnapshot(normalizeNullable(request.authorsSnapshot()))
                     .sourceSnapshot(normalizeNullable(request.sourceSnapshot()))
