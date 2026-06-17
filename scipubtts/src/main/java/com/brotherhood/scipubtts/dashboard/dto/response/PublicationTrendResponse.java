@@ -5,8 +5,9 @@ import java.util.List;
 public record PublicationTrendResponse(
         List<PublicationTrendItem> publicationTrends
 ) {
-  public record PublicationTrendItem(
-          Long publications,
-          Integer year
-  ){}
+    public record PublicationTrendItem(
+            Long publications,
+            Integer year
+    ) {
+    }
 }

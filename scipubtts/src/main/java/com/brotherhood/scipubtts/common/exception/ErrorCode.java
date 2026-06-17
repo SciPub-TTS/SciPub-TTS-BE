@@ -99,6 +99,8 @@ public enum ErrorCode {
             "The retry process was interrupted."),
     OPENALEX_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY,
             "Failed to retrieve publication data from OpenAlex."),
+    JSON_SERIALIZATION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "An error occurred while processing system data."),
 
     // ===== STATISTIC =====
     TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,

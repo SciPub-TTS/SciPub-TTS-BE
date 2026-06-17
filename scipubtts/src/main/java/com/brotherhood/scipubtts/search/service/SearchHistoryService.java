@@ -2,8 +2,8 @@ package com.brotherhood.scipubtts.search.service;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
-import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
-import com.brotherhood.scipubtts.search.dto.SearchHistorySaveRequest;
+import com.brotherhood.scipubtts.search.dto.response.SearchHistoryItemResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.entity.SearchHistory;
 import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
 import org.springframework.data.domain.PageRequest;

@@ -1,11 +1,39 @@
 package com.brotherhood.scipubtts.bookmark.dto.response;
 
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.util.List;
 
-public record FilterOptionsResponse(
-        List<String> topics,
-        List<Integer> years,
-        List<String> sources,
-        List<String> authors
-) {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class FilterOptionsResponse {
+    private List<String> topics;
+
+    private List<Integer> years;
+
+    private List<String> sources;
+
+    private List<String> authors;
+
+    public List<String> topics() {
+        return topics;
+    }
+
+    public List<Integer> years() {
+        return years;
+    }
+
+    public List<String> sources() {
+        return sources;
+    }
+
+    public List<String> authors() {
+        return authors;
+    }
 }
+

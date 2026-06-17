@@ -1,6 +1,6 @@
 package com.brotherhood.scipubtts.search.service;
 
-import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -57,6 +57,18 @@ public class SearchWorksMapper {
         return new SearchWorksResponse(responseMeta, items);
     }
 
+    public List<SearchWorksResponse.WorkItem> mapWorkItems(
+            List<Map<String, Object>> results
+    ) {
+        List<SearchWorksResponse.WorkItem> items = new ArrayList<>();
+
+        for (Map<String, Object> result : results) {
+            items.add(mapWorkItem(result));
+        }
+
+        return items;
+    }
+
     private SearchWorksResponse.WorkItem mapWorkItem(Map<String, Object> result) {
         Map<String, Object> openAccess = openAlexMapReader.getMap(result, "open_access");
         Map<String, Object> hasContent = openAlexMapReader.getMap(result, "has_content");
@@ -85,7 +97,9 @@ public class SearchWorksMapper {
                 searchQuerySupport.normalizeEntityValue(openAlexMapReader.getString(source, "id")),
                 openAlexMapReader.sanitizeDisplayText(openAlexMapReader.getString(source, "display_name")),
                 mapAuthorNames(authorships),
+                mapAuthorRefs(authorships),
                 mapKeywords(keywords),
+                mapEntityRef(primaryTopic),
                 false,
                 false,
                 0.0
@@ -107,6 +121,21 @@ public class SearchWorksMapper {
         return names;
     }
 
+    private List<SearchWorksResponse.EntityRef> mapAuthorRefs(List<Map<String, Object>> authorships) {
+        List<SearchWorksResponse.EntityRef> authorRefs = new ArrayList<>();
+
+        for (Map<String, Object> authorship : authorships) {
+            Map<String, Object> author = openAlexMapReader.getMap(authorship, "author");
+            SearchWorksResponse.EntityRef authorRef = mapEntityRef(author);
+
+            if (authorRef != null) {
+                authorRefs.add(authorRef);
+            }
+        }
+
+        return authorRefs;
+    }
+
     private List<String> mapKeywords(List<Map<String, Object>> keywords) {
         List<String> names = new ArrayList<>();
 
@@ -125,5 +154,25 @@ public class SearchWorksMapper {
         }
 
         return names;
+    }
+
+    private SearchWorksResponse.EntityRef mapEntityRef(Map<String, Object> entity) {
+        String displayName = openAlexMapReader.sanitizeDisplayText(
+                openAlexMapReader.getString(entity, "display_name")
+        );
+
+        if (displayName.isBlank()) {
+            return null;
+        }
+
+        String normalizedId = searchQuerySupport.normalizeEntityValue(
+                openAlexMapReader.getString(entity, "id")
+        );
+
+        if (normalizedId.isBlank()) {
+            normalizedId = null;
+        }
+
+        return new SearchWorksResponse.EntityRef(normalizedId, displayName);
     }
 }

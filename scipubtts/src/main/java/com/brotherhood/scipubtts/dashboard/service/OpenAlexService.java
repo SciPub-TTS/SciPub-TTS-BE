@@ -7,9 +7,15 @@ import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexPublicat
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.KeywordHotFilterResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.TopicHotFilterResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexAuthorGroupResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexGroupByResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexHotKeywordFilterResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexHotTopicFilterResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexInstitutionResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexMetricsResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexPublicationResponse;
 import com.brotherhood.scipubtts.dashboard.dto.response.openalex.OpenAlexWorkCitationResponse;
+import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 
 import java.time.LocalDate;

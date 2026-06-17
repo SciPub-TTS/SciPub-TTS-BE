@@ -5,10 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record OpenAlexMetricsResponse(
         Meta meta
 ) {
-  public record Meta(
-          Long count,
+    public record Meta(
+            Long count,
 
-          @JsonProperty("cost_usd")
-          Double costUsd
-  ) {}
+            @JsonProperty("cost_usd")
+            Double costUsd
+    ) {
+    }
 }

@@ -1,8 +1,9 @@
 package com.brotherhood.scipubtts.search.service;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
-import com.brotherhood.scipubtts.search.dto.SearchFilterOptionListResponse;
-import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
+import com.brotherhood.scipubtts.search.dto.SearchEntityType;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -182,7 +183,7 @@ public class SearchOptionsService {
         );
 
         return new SearchFilterOptionsResponse(
-                searchSummaryService.getSummary().totalWorks(),
+                searchSummaryService.getSummary(SearchEntityType.WORKS).totalCount(),
                 new SearchFilterOptionsResponse.YearRange(SearchConstants.MIN_YEAR, Year.now().getValue()),
                 typeOptions,
                 new SearchFilterOptionsResponse.ToggleFilter("is_oa", false),

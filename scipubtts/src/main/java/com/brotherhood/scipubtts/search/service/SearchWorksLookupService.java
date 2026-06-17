@@ -3,8 +3,8 @@ package com.brotherhood.scipubtts.search.service;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
-import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
-import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
+import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -15,10 +15,10 @@ import java.util.Map;
 public class SearchWorksLookupService {
 
     // This service is the main search flow:
-    // 1. normalize request
-    // 2. build OpenAlex query
-    // 3. call OpenAlex
-    // 4. map response into our DTO
+    // normalize request
+    // build OpenAlex query
+    // call OpenAlex
+    // map response into our DTO
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
     private final SearchFilterBuilder searchFilterBuilder;
@@ -40,7 +40,10 @@ public class SearchWorksLookupService {
         SearchWorksQueryRequest safeRequest = getSafeRequest(request);
         int page = searchQuerySupport.normalizeWorksPage(safeRequest.getPage());
         int perPage = searchQuerySupport.normalizePerPage(safeRequest.getPerPage());
-        String appliedFilter = searchFilterBuilder.build(safeRequest);
+        String appliedFilter = combineFilters(
+                buildKeywordFilter(safeRequest.getQuery()),
+                searchFilterBuilder.build(safeRequest)
+        );
         String appliedSort = resolveSort(safeRequest);
         Map<String, String> queryParams = buildOpenAlexQueryParams(
                 safeRequest,
@@ -118,11 +121,6 @@ public class SearchWorksLookupService {
     ) {
         Map<String, String> queryParams = new LinkedHashMap<>();
 
-        // Keyword search is only sent when the user actually typed something.
-        if (StringUtils.hasText(request.getQuery())) {
-            queryParams.put("search", request.getQuery().trim());
-        }
-
         // Filter string is produced by SearchFilterBuilder.
         if (StringUtils.hasText(appliedFilter)) {
             queryParams.put("filter", appliedFilter);
@@ -135,5 +133,45 @@ public class SearchWorksLookupService {
         queryParams.put("select", SearchConstants.WORKS_SELECT_FIELDS);
 
         return queryParams;
+    }
+
+    private String buildKeywordFilter(String rawQuery) {
+        String normalizedQuery = normalizeFieldSpecificSearchQuery(rawQuery);
+
+        if (!StringUtils.hasText(normalizedQuery)) {
+            return null;
+        }
+
+        return "title_and_abstract.search:" + normalizedQuery;
+    }
+
+    private String combineFilters(String firstFilter, String secondFilter) {
+        boolean hasFirstFilter = StringUtils.hasText(firstFilter);
+        boolean hasSecondFilter = StringUtils.hasText(secondFilter);
+
+        if (!hasFirstFilter && !hasSecondFilter) {
+            return null;
+        }
+
+        if (!hasFirstFilter) {
+            return secondFilter;
+        }
+
+        if (!hasSecondFilter) {
+            return firstFilter;
+        }
+
+        return firstFilter + "," + secondFilter;
+    }
+
+    private String normalizeFieldSpecificSearchQuery(String rawQuery) {
+        if (!StringUtils.hasText(rawQuery)) {
+            return "";
+        }
+
+        return rawQuery
+                .trim()
+                .replace(',', ' ')
+                .replaceAll("\\s+", " ");
     }
 }

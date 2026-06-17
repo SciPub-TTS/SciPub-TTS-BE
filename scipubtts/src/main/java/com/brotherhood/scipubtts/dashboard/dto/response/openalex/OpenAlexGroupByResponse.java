@@ -6,17 +6,21 @@ import java.util.List;
 
 public record OpenAlexGroupByResponse(
         MetaResponse meta,
+
         @JsonProperty("group_by")
         List<GroupByItem> groupBy
 ) {
-  public record MetaResponse(
-          long count,
-          @JsonProperty("next_cursor")
-          String nextCursor
-  ) {}
+    public record MetaResponse(
+            long count,
 
-  public record GroupByItem(
-          String key,
-          long count
-  ) {}
+            @JsonProperty("next_cursor")
+            String nextCursor
+    ) {
+    }
+
+    public record GroupByItem(
+            String key,
+            long count
+    ) {
+    }
 }

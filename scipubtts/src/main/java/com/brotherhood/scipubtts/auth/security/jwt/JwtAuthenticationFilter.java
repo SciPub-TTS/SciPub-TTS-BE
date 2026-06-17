@@ -9,7 +9,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
-@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     private static final List<String> PUBLIC_PATH_PATTERNS = List.of(
@@ -39,15 +37,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/oauth2/google",
             "/api/auth/verify-email",
             "/api/auth/forgot-password/**",
+            "/api/search/summary",
+            "/api/search/filters/**",
+            "/api/search/works",
+            "/api/search/entities",
             "/api/papers/**",
+            "/api/authors/**",
+            "/api/topics/**",
             "/api/statistic/**",
             "/oauth2/**",
             "/login/oauth2/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-ui.html",
-            "/error",
-            "/favicon.ico"
+            "/error"
     );
 
     private final JwtTokenService jwtTokenService;
@@ -79,11 +82,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        // Team note:
-        // This log is intentionally kept for debugging token flow. If production logs are shared outside
-        // the backend team, remove or mask this header because it contains the raw bearer token.
-        log.info("Authorization header = {}", request.getHeader("Authorization"));
-
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
