@@ -64,8 +64,9 @@ public class DataController {
 
   // METRICS
   @GetMapping("/metrics")
-  public ResponseEntity<ResponseObject> getMetrics(@Valid @RequestParam LocalDate startTime,
-   @RequestParam LocalDate endTime ){
+  public ResponseEntity<ResponseObject> getMetrics(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime ){
 
     PeriodRequest request = new PeriodRequest(
             startTime.toString(),
@@ -157,7 +158,7 @@ public class DataController {
   }
 
   @GetMapping("/topic-momentum")
-  public ResponseEntity<ResponseObject> getTopicMomentums(
+  public ResponseEntity<ResponseObject> getTopicMomentum(
           @RequestParam LocalDate startTime,
           @RequestParam LocalDate endTime,
           @RequestParam String fieldId,

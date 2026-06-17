@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.dashboard.service.impl;
 
+import com.brotherhood.scipubtts.dashboard.constant.TopicStatus;
 import com.brotherhood.scipubtts.dashboard.dto.request.SpecificTopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.dto.response.data.SpecificTopicHistoryResponse;
@@ -28,32 +29,115 @@ public class DataServiceImpl implements DataService {
   private static final long PERIOD_DAYS = 7;
   private static final int HISTORY_WEEKS = 5;
 
+  private ScoreComparison calculateScoreComparison(
+          double rawCurrentScore,
+          String topicId,
+          Map<String, Double> pastScoreMap
+  ) {
+
+    double currentScore = Math.round(rawCurrentScore * 10000.0) / 100.0;
+
+    double rawPastScore = pastScoreMap.getOrDefault(topicId, 0D);
+
+    double pastScore = Math.round(rawPastScore * 10000.0) / 100.0;
+
+    double change = 0D;
+
+    if (Double.compare(pastScore, 0D) != 0) {
+      double rawChange =
+              ((currentScore - pastScore) / pastScore) * 100.0;
+
+      change = Math.round(rawChange * 100.0) / 100.0;
+    } else if (Double.compare(currentScore, 0D) > 0) {
+      change = 100.0;
+    }
+
+    return new ScoreComparison(
+            currentScore,
+            pastScore,
+            change
+    );
+  }
+
+  private Map<String, Double> buildPastScoreMap(
+          List<Topic> pastTopics,
+          String formula
+  ) {
+
+    if (pastTopics.isEmpty()) {
+      return Map.of();
+    }
+
+    return pastTopics.stream()
+            .collect(Collectors.toMap(
+                    Topic::getTopicId,
+                    topic -> calculationService.calculateTopicFinalScore(
+                            formula,
+                            topic.getTopicId(),
+                            pastTopics
+                    )
+            ));
+  }
+
   @Override
   public TopicRankingResponse getTopicsRanking(TopicDataRequest request) {
     LocalDate startDate = LocalDate.parse(request.startTime());
     LocalDate endDate   = LocalDate.parse(request.endTime());
-    Integer   fieldId   = Integer.parseInt(request.fieldId());
+    Integer fieldId     = Integer.parseInt(request.fieldId());
 
-    List<Topic> topics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
-            startDate, endDate, fieldId
-    );
+    List<Topic> currentTopics =
+            topicRepository.findByStartTimeAndEndTimeAndFieldId(
+                    startDate,
+                    endDate,
+                    fieldId
+            );
 
-    if (topics.isEmpty()) return null;
+    if (currentTopics.isEmpty()) {
+      return new TopicRankingResponse(List.of());
+    }
 
-    List<TopicScore> scores = calculationService.calculateTopicsFinalScore(
-            request.formula(), topics
-    );
+    LocalDate pastStartDate = startDate.minusDays(PERIOD_DAYS);
+    LocalDate pastEndDate   = endDate.minusDays(PERIOD_DAYS);
+
+    List<Topic> pastTopics =
+            topicRepository.findByStartTimeAndEndTimeAndFieldId(
+                    pastStartDate,
+                    pastEndDate,
+                    fieldId
+            );
+
+    List<TopicScore> scores =
+            calculationService.calculateTopicsFinalScore(
+                    request.formula(),
+                    currentTopics
+            );
+
+    Map<String, Double> pastScoreMap =
+            buildPastScoreMap(pastTopics, request.formula());
 
     List<TopicRankingResponse.TopicData> topicDataList = scores.stream()
-            .map(ts -> new TopicRankingResponse.TopicData(
-                    ts.topic().getName(),
-                    (int) ts.topic().getWorks(),
-                    (int) ts.topic().getCitations(),
-                    Math.round(ts.score() * 10000.0) / 100.0,
-                    null,
-                    null,
-                    false
-            ))
+            .map(ts -> {
+
+              Topic topic = ts.topic();
+
+              ScoreComparison comparison =
+                      calculateScoreComparison(
+                              ts.score(),
+                              topic.getTopicId(),
+                              pastScoreMap
+                      );
+
+              return new TopicRankingResponse.TopicData(
+                      topic.getName(),
+                      topic.getTopicId(),
+                      (int) topic.getWorks(),
+                      (int) topic.getCitations(),
+                      comparison.currentScore(),
+                      comparison.change(),
+                      TopicStatus.fromChange(comparison.change()),
+                      false
+              );
+            })
             .toList();
 
     return new TopicRankingResponse(topicDataList);
@@ -63,58 +147,62 @@ public class DataServiceImpl implements DataService {
   public TopicMomentumResponse getTopicsMomentum(TopicDataRequest request) {
     LocalDate startDate = LocalDate.parse(request.startTime());
     LocalDate endDate   = LocalDate.parse(request.endTime());
-    Integer   fieldId   = Integer.parseInt(request.fieldId());
+    Integer fieldId     = Integer.parseInt(request.fieldId());
 
-    List<Topic> currentTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
-            startDate, endDate, fieldId
-    );
-    if (currentTopics.isEmpty()) return null;
+    List<Topic> currentTopics =
+            topicRepository.findByStartTimeAndEndTimeAndFieldId(
+                    startDate,
+                    endDate,
+                    fieldId
+            );
 
-    LocalDate pastStartDate = startDate.minusDays(PERIOD_DAYS);
-    LocalDate pastEndDate = endDate.minusDays(PERIOD_DAYS);
-
-    List<Topic> pastTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
-            pastStartDate, pastEndDate, fieldId
-    );
-
-    List<TopicScore> currentScores = calculationService.calculateTopicsFinalScore(request.formula(), currentTopics);
-
-    // Map past topic scores for O(1) lookups
-    Map<String, Double> pastScoreMap = Map.of();
-    if (!pastTopics.isEmpty()) {
-      pastScoreMap = pastTopics.stream().collect(Collectors.toMap(
-              Topic::getTopicId,
-              t -> calculationService.calculateTopicFinalScore(request.formula(), t.getTopicId(), pastTopics)
-      ));
+    if (currentTopics.isEmpty()) {
+      return new TopicMomentumResponse(List.of());
     }
 
-    Map<String, Double> finalPastScoreMap = pastScoreMap;
-    List<TopicMomentumResponse.Momentum> metrics = currentScores.stream()
-            .map(ts -> {
-              Topic topic = ts.topic();
+    LocalDate pastStartDate = startDate.minusDays(PERIOD_DAYS);
+    LocalDate pastEndDate   = endDate.minusDays(PERIOD_DAYS);
 
-              double currentAvg = Math.round(ts.score() * 10000.0) / 100.0;
+    List<Topic> pastTopics =
+            topicRepository.findByStartTimeAndEndTimeAndFieldId(
+                    pastStartDate,
+                    pastEndDate,
+                    fieldId
+            );
 
-              double rawPastScore = finalPastScoreMap.getOrDefault(topic.getTopicId(), 0D);
-              double pastAvg = Math.round(rawPastScore * 10000.0) / 100.0;
+    List<TopicScore> currentScores =
+            calculationService.calculateTopicsFinalScore(
+                    request.formula(),
+                    currentTopics
+            );
 
-              // Calculate growth percentage: ((Current - Past) / Past) * 100
-              double growthPercentage = 0D;
-              if (Double.compare(pastAvg, 0D) != 0) {
-                double rawGrowth = ((currentAvg - pastAvg) / pastAvg) * 100.0;
-                growthPercentage = Math.round(rawGrowth * 100.0) / 100.0;
-              } else if (Double.compare(currentAvg, 0D) > 0) {
-                growthPercentage = 100.0;
-              }
+    Map<String, Double> pastScoreMap =
+            buildPastScoreMap(
+                    pastTopics,
+                    request.formula()
+            );
 
-              return new TopicMomentumResponse.Momentum(
-                      topic.getName(),
-                      currentAvg,
-                      pastAvg,
-                      growthPercentage
-              );
-            })
-            .toList();
+    List<TopicMomentumResponse.Momentum> metrics =
+            currentScores.stream()
+                    .map(ts -> {
+
+                      Topic topic = ts.topic();
+
+                      ScoreComparison comparison =
+                              calculateScoreComparison(
+                                      ts.score(),
+                                      topic.getTopicId(),
+                                      pastScoreMap
+                              );
+
+                      return new TopicMomentumResponse.Momentum(
+                              topic.getName(),
+                              comparison.currentScore(),
+                              comparison.pastScore(),
+                              comparison.change()
+                      );
+                    })
+                    .toList();
 
     return new TopicMomentumResponse(metrics);
   }
@@ -266,5 +354,11 @@ public class DataServiceImpl implements DataService {
           LocalDate endDate,
           List<Topic> topics,
           TopicMetricStatistic stat
+  ) {}
+
+  private record ScoreComparison(
+          double currentScore,
+          double pastScore,
+          double change
   ) {}
 }
