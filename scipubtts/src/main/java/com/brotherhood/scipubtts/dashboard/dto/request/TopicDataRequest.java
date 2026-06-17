@@ -1,6 +1,6 @@
 package com.brotherhood.scipubtts.dashboard.dto.request;
 
-public record TopicRankingRequest(
+public record TopicDataRequest(
         String startTime,
         String endTime,
         String fieldId,

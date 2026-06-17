@@ -10,19 +10,27 @@ public record OpenAlexWorkCitationResponse(
 
         @JsonProperty("results")
         List<WorkCitation> workCitationList
+
 ) {
-    public record Meta(
-            @JsonProperty("count")
-            long count
-    ) {
-    }
+  public record Meta(
 
-    public record WorkCitation(
-            @JsonProperty("cited_by_count")
-            long citedByCount,
+          @JsonProperty("count")
+          long count,
 
-            @JsonProperty("publication_date")
-            String publicationDate
-    ) {
-    }
+          @JsonProperty("next_cursor")
+          String nextCursor
+
+  ) {
+  }
+
+  public record WorkCitation(
+
+          @JsonProperty("cited_by_count")
+          long citedByCount,
+
+          @JsonProperty("publication_date")
+          String publicationDate
+
+  ) {
+  }
 }

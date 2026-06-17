@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.dashboard.controller;
 
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.dashboard.dto.request.*;
+import com.brotherhood.scipubtts.dashboard.service.DataService;
 import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
@@ -22,7 +23,9 @@ public class DataController {
   private final MetricServiceImpl metricService;
   private final TopicServiceImpl topicService;
   private final KeywordServiceImpl keywordService;
+  private final DataService dataService;
 
+  // PUBLICATION
   @GetMapping("/publication-trends")
   public ResponseEntity<ResponseObject> getPublicationTrends() {
 
@@ -59,6 +62,7 @@ public class DataController {
     );
   }
 
+  // METRICS
   @GetMapping("/metrics")
   public ResponseEntity<ResponseObject> getMetrics(@Valid @RequestParam LocalDate startTime,
    @RequestParam LocalDate endTime ){
@@ -78,6 +82,7 @@ public class DataController {
     );
   }
 
+  // TOPIC
   @GetMapping("/topicScore-all")
   public ResponseEntity<ResponseObject> getTopics(
           @RequestParam LocalDate startTime,
@@ -86,14 +91,14 @@ public class DataController {
           @RequestParam String formula
   ) {
 
-    var request = new TopicRankingRequest(
+    var request = new TopicDataRequest(
             startTime.toString(),
             endTime.toString(),
             fieldId,
             formula
     );
 
-    var data = topicService.getTopicsRanking(request);
+    var data = dataService.getTopicsRanking(request);
 
     return ResponseEntity.ok(
             new ResponseObject(
@@ -151,6 +156,79 @@ public class DataController {
     );
   }
 
+  @GetMapping("/topic-momentum")
+  public ResponseEntity<ResponseObject> getTopicMomentums(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId,
+          @RequestParam String formula
+  ){
+    var request = new TopicDataRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId,
+            formula
+    );
+
+    var data = dataService.getTopicsMomentum(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic momentum successfully",
+                    data
+            )
+    );
+  }
+
+  @GetMapping("/topic-radar")
+  public ResponseEntity<ResponseObject> getTopicRadarData(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId
+  ) {
+
+    var request = new SpecificTopicDataRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId
+    );
+
+    var data = dataService.getSpecificTopicMetric(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic radar data successfully",
+                    data
+            )
+    );
+  }
+
+  @GetMapping("/topic-heatmap")
+  public ResponseEntity<ResponseObject> getTopicHeatmapData(
+          @RequestParam LocalDate startTime,
+          @RequestParam LocalDate endTime,
+          @RequestParam String fieldId
+  ){
+    var request = new SpecificTopicDataRequest(
+            startTime.toString(),
+            endTime.toString(),
+            fieldId
+    );
+
+    var data = dataService.getTopicHeatMAp(request);
+
+    return ResponseEntity.ok(
+            new ResponseObject(
+                    HttpStatus.OK.value(),
+                    "Get topic radar data successfully",
+                    data
+            )
+    );
+  }
+
+  // KEYWORD
   @GetMapping("/keywordScore-all")
   public ResponseEntity<ResponseObject> getKeywords(
           @RequestParam LocalDate startTime,
