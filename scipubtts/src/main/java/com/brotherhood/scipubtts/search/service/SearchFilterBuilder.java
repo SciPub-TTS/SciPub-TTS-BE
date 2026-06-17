@@ -1,6 +1,6 @@
 package com.brotherhood.scipubtts.search.service;
 
-import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
+import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 

@@ -2,13 +2,16 @@ package com.brotherhood.scipubtts.search.controller;
 
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
-import com.brotherhood.scipubtts.search.dto.SearchFilterOptionListResponse;
-import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
-import com.brotherhood.scipubtts.search.dto.SearchHistorySaveRequest;
-import com.brotherhood.scipubtts.search.dto.SearchSummaryResponse;
-import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
-import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchEntitiesResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchEntityQueryRequest;
+import com.brotherhood.scipubtts.search.dto.SearchEntityType;
+import com.brotherhood.scipubtts.search.dto.response.SearchHistoryItemResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchHistorySaveRequest;
+import com.brotherhood.scipubtts.search.dto.response.SearchSummaryResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
+import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
 import com.brotherhood.scipubtts.search.service.SearchService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,10 +46,23 @@ public class SearchController {
     @GetMapping("/summary")
     @Operation(
             summary = "Get search summary",
-            description = "Returns the total indexed works shown at the top of the search page."
+            description = "Returns the total indexed count shown at the top of the search page for the selected entity type."
     )
-    public ResponseEntity<ResponseObject> getSummary() {
-        SearchSummaryResponse data = searchService.getSummary();
+    public ResponseEntity<ResponseObject> getSummary(
+            @Parameter(
+                    description = "Entity type to summarize.",
+                    example = "works",
+                    schema = @Schema(allowableValues = {
+                            "works",
+                            "authors",
+                            "topics"
+                    })
+            )
+            @RequestParam(defaultValue = "works") String entityType
+    ) {
+        SearchSummaryResponse data = searchService.getSummary(
+                SearchEntityType.fromParameter(entityType)
+        );
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded search summary", data)
@@ -130,13 +146,44 @@ public class SearchController {
         );
     }
 
+    @GetMapping("/entities")
+    @Operation(
+            summary = "Search non-work entities",
+            description = "Searches authors or topics by name."
+    )
+    public ResponseEntity<ResponseObject> searchEntities(
+            @Parameter(
+                    description = "Entity type to search.",
+                    example = "authors",
+                    schema = @Schema(allowableValues = {
+                            "authors",
+                            "topics"
+                    })
+            )
+            @RequestParam(defaultValue = "authors") String entityType,
+            @ParameterObject @ModelAttribute SearchEntityQueryRequest request
+    ) {
+        SearchEntitiesResponse data = searchService.searchEntities(
+                SearchEntityType.fromParameter(entityType),
+                request
+        );
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Search entities successfully",
+                        data
+                )
+        );
+    }
+
     @GetMapping("/history/recent")
     @Operation(
             summary = "Get recent search suggestions",
             description = "Returns up to the latest search keywords for the current user. This powers the search suggestion dialog under the search box."
     )
     public ResponseEntity<ResponseObject> getRecentSearches(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @Parameter(
                     description = "Optional prefix keyword used to filter recent searches.",
                     example = "AI"
@@ -158,7 +205,7 @@ public class SearchController {
             description = "Saves the current search keyword for the logged-in user so it can be suggested later in the search dialog."
     )
     public ResponseEntity<ResponseObject> saveSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
         searchService.saveSearchHistory(request.withUserId(userId));
@@ -174,7 +221,7 @@ public class SearchController {
             description = "Deletes one saved search keyword for the current user."
     )
     public ResponseEntity<ResponseObject> deleteSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId,
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @Parameter(
                     description = "Saved search keyword to delete.",
                     example = "AI in education"
@@ -194,7 +241,7 @@ public class SearchController {
             description = "Deletes every saved search keyword of the current user."
     )
     public ResponseEntity<ResponseObject> clearSearchHistory(
-            @Parameter(hidden = true) @CurrentUserUUID(required = false) UUID userId
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
         searchService.clearSearchHistory(userId);
 

@@ -1,6 +1,7 @@
-package com.brotherhood.scipubtts.detailpaper.service;
+package com.brotherhood.scipubtts.detail.works.service;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
+import com.brotherhood.scipubtts.detail.works.dto.response.WorkReferenceSummaryResponse;
 import com.brotherhood.scipubtts.search.service.OpenAlexMapReader;
 import org.springframework.stereotype.Service;
 
@@ -48,11 +49,11 @@ public class PaperDetailServiceImpl implements PaperDetailService {
             String targetKey
     ) {
         Object rawWorkIds = workDetail.get(sourceKey);
-        List<Map<String, Object>> summaries = buildWorkReferenceSummaries(rawWorkIds);
+        List<WorkReferenceSummaryResponse> summaries = buildWorkReferenceSummaries(rawWorkIds);
         workDetail.put(targetKey, summaries);
     }
 
-    private List<Map<String, Object>> buildWorkReferenceSummaries(Object rawWorkIds) {
+    private List<WorkReferenceSummaryResponse> buildWorkReferenceSummaries(Object rawWorkIds) {
         // Keep the original order so references appear in a stable order on the frontend.
         List<String> orderedWorkIds = normalizeWorkIds(rawWorkIds);
         if (orderedWorkIds.isEmpty()) {
@@ -60,13 +61,13 @@ public class PaperDetailServiceImpl implements PaperDetailService {
         }
 
         Map<String, String> titlesByWorkId = fetchTitlesByWorkId(orderedWorkIds);
-        List<Map<String, Object>> summaries = new ArrayList<>();
+        List<WorkReferenceSummaryResponse> summaries = new ArrayList<>();
 
         for (String workId : orderedWorkIds) {
-            Map<String, Object> summary = new LinkedHashMap<>();
-            summary.put("id", workId);
-            summary.put("title", titlesByWorkId.getOrDefault(workId, workId));
-            summaries.add(summary);
+            summaries.add(new WorkReferenceSummaryResponse(
+                    workId,
+                    titlesByWorkId.getOrDefault(workId, workId)
+            ));
         }
 
         return summaries;

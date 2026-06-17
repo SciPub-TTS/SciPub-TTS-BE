@@ -1,12 +1,15 @@
 package com.brotherhood.scipubtts.search.service;
 
-import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
-import com.brotherhood.scipubtts.search.dto.SearchFilterOptionListResponse;
-import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
-import com.brotherhood.scipubtts.search.dto.SearchHistorySaveRequest;
-import com.brotherhood.scipubtts.search.dto.SearchSummaryResponse;
-import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
-import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchEntitiesResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchEntityQueryRequest;
+import com.brotherhood.scipubtts.search.dto.SearchEntityType;
+import com.brotherhood.scipubtts.search.dto.response.SearchHistoryItemResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchHistorySaveRequest;
+import com.brotherhood.scipubtts.search.dto.response.SearchSummaryResponse;
+import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
+import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,23 +22,26 @@ public class SearchServiceImpl implements SearchService {
     private final SearchSummaryService searchSummaryService;
     private final SearchOptionsService searchOptionsService;
     private final SearchWorksLookupService searchWorksLookupService;
+    private final SearchEntityLookupService searchEntityLookupService;
     private final SearchHistoryService searchHistoryService;
 
     public SearchServiceImpl(
             SearchSummaryService searchSummaryService,
             SearchOptionsService searchOptionsService,
             SearchWorksLookupService searchWorksLookupService,
+            SearchEntityLookupService searchEntityLookupService,
             SearchHistoryService searchHistoryService
     ) {
         this.searchSummaryService = searchSummaryService;
         this.searchOptionsService = searchOptionsService;
         this.searchWorksLookupService = searchWorksLookupService;
+        this.searchEntityLookupService = searchEntityLookupService;
         this.searchHistoryService = searchHistoryService;
     }
 
     @Override
-    public SearchSummaryResponse getSummary() {
-        return searchSummaryService.getSummary();
+    public SearchSummaryResponse getSummary(SearchEntityType entityType) {
+        return searchSummaryService.getSummary(entityType);
     }
 
     @Override
@@ -51,6 +57,14 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public SearchWorksResponse searchWorks(SearchWorksQueryRequest request) {
         return searchWorksLookupService.searchWorks(request);
+    }
+
+    @Override
+    public SearchEntitiesResponse searchEntities(
+            SearchEntityType entityType,
+            SearchEntityQueryRequest request
+    ) {
+        return searchEntityLookupService.searchEntities(entityType, request);
     }
 
     @Override

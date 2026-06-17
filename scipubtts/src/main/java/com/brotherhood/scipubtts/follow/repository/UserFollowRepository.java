@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.follow.repository;
 
+import com.brotherhood.scipubtts.feed.model.FollowTargetGroupView;
 import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
 import com.brotherhood.scipubtts.follow.entity.UserFollow;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -61,4 +63,16 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, UUID> {
             @Param("id") UUID id,
             @Param("userId") UUID userId
     );
+
+    @Query(value = """
+            SELECT
+                target_type AS targetType,
+                target_openalex_id AS targetOpenalexId,
+                MAX(display_name_snapshot) AS displayNameSnapshot,
+                STRING_AGG(user_id::text, ',') AS userIds
+            FROM user_follow
+            WHERE target_type IN ('TOPIC', 'AUTHOR')
+            GROUP BY target_type, target_openalex_id
+            """, nativeQuery = true)
+    List<FollowTargetGroupView> findFeedTargetGroups();
 }

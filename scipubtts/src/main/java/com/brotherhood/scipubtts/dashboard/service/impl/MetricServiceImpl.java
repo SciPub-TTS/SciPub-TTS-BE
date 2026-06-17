@@ -21,7 +21,7 @@ public class MetricServiceImpl implements MetricService {
   private final OpenAlexServiceImpl openAlexService;
   private final MetricRepository metricRepository;
 
-  private static final long PERIOD_DAYS = 14;
+  private static final long PERIOD_DAYS = 7;
 
   // METHOD
 

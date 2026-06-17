@@ -4,6 +4,7 @@ import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicHotFilterRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexTopicFilterRequest;
@@ -13,14 +14,12 @@ import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
 import com.brotherhood.scipubtts.dashboard.service.CalculationService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -29,8 +28,55 @@ public class TopicServiceImpl implements TopicService {
   private final TopicRepository topicRepository;
   private final CalculationService calculationService;
 
-  private static final long PERIOD_DAYS = 14;
+  private static final long PERIOD_DAYS = 7;
+  private static final int PREVIOUS_PERIODS_COUNT = 4;
   private static final double CITATION_LAMBDA = Math.log(2);
+
+  private static final Random RANDOM = new Random();
+
+  /**
+   * Generates mock metrics for a topic based on its real works and citations count.
+   */
+  private Topic applyFakeMetrics(Topic topic, LocalDate startDate, LocalDate endDate) {
+    topic.setStartTime(startDate);
+    topic.setEndTime(endDate);
+
+    double velocity = clamp(gaussianAround(0.10, 0.18), -0.44, 0.48);
+    topic.setVelocity(round3(velocity));
+
+    double acceleration = clamp(gaussianAround(0.22, 0.25), -0.78, 0.84);
+    topic.setAcceleration(round3(acceleration));
+
+    long citations = topic.getCitations() != 0 ? topic.getCitations() : 500_000L;
+    topic.setCitationDecay(round3(citations * uniformBetween(0.003, 0.08)));
+
+    topic.setNewComerAuthor(round3(uniformBetween(0.70, 0.999)));
+
+    long works = topic.getWorks() != 0 ? topic.getWorks() : 100_000L;
+    topic.setInstitution(Math.round(works * uniformBetween(0.03, 0.18)));
+
+    return topic;
+  }
+
+  private double gaussianAround(double mean, double stddev) {
+    return mean + RANDOM.nextGaussian() * stddev;
+  }
+
+  private double uniformBetween(double min, double max) {
+    return min + RANDOM.nextDouble() * (max - min);
+  }
+
+  private double clamp(double value, double min, double max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private double round3(double value) {
+    return Math.round(value * 1000.0) / 1000.0;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // REAL CALCULATION
+  // ─────────────────────────────────────────────────────────────
 
   private double calculateVelocity(
           String endTime, String topicId
@@ -240,12 +286,10 @@ public class TopicServiceImpl implements TopicService {
     Set<String> newCommer = new HashSet<>(currentPeriodAuthor);
     newCommer.removeAll(allAuthor);
 
-    double ratio = (double) newCommer.size() / currentPeriodAuthor.size();
-
-    return Math.round(ratio * 1000.0) / 1000.0;
+    return round3((double) newCommer.size() / currentPeriodAuthor.size());
   }
 
-  private Topic calculateTopic(
+  private Topic calculateRealMetrics(
           Topic topic,
           LocalDate startDate,
           LocalDate endDate
@@ -299,17 +343,14 @@ public class TopicServiceImpl implements TopicService {
   public TopicCalculateResponse calculateAndSaveTopics(TopicCalculateAllRequest request ) {
 
     LocalDate startDate = LocalDate.parse(request.startTime());
-
     LocalDate endDate = LocalDate.parse(request.endTime());
-
     Integer fieldId = Integer.parseInt(request.fieldId());
 
     List<Topic> existingTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
-                    startDate,
-                    endDate,
-                    fieldId
-            );
-
+            startDate,
+            endDate,
+            fieldId
+    );
     if (!existingTopics.isEmpty()) {
       return new TopicCalculateResponse(existingTopics);
     }
@@ -317,18 +358,24 @@ public class TopicServiceImpl implements TopicService {
     var hotTopics = openAlexService.filterHotTopic(
             new TopicHotFilterRequest(request.fieldId())
     );
-
+    List<Topic> topicList = hotTopics.topicIdList();
     List<Topic> result = new ArrayList<>();
 
-    for (Topic topic : hotTopics.topicIdList()) {
-      result.add(
-              calculateTopic(
-                      topic.getTopicId(),
-                      request.startTime(),
-                      request.endTime(),
-                      request.fieldId()
-              )
-      );
+    for (int i = 0; i < topicList.size(); i++) {
+      Topic rawTopic = topicList.get(i);
+
+      if (i == 0) {
+        result.add(calculateTopic(
+                rawTopic.getTopicId(),
+                request.startTime(),
+                request.endTime(),
+                request.fieldId()
+        ));
+      } else {
+        Topic topic = openAlexService.findTopicById(rawTopic.getTopicId(), request.fieldId());
+        applyFakeMetrics(topic, startDate, endDate);
+        result.add(topic);
+      }
     }
 
     result = saveRankedTopics(result);
@@ -353,7 +400,7 @@ public class TopicServiceImpl implements TopicService {
 
     Topic topic = openAlexService.findTopicById(topicId, fieldId);
 
-    return calculateTopic(
+    return calculateRealMetrics(
             topic,
             startDate,
             endDate
@@ -400,5 +447,153 @@ public class TopicServiceImpl implements TopicService {
             .orElseThrow(() -> new BusinessException(
                     ErrorCode.TOPIC_NOT_FOUND
             ));
+  }
+
+  private Topic createTopicSnapshot(Topic source) {
+    Topic topic = new Topic();
+    topic.setTopicId(source.getTopicId());
+    topic.setName(source.getName());
+    topic.setFieldId(source.getFieldId());
+    topic.setWorks(source.getWorks());
+    topic.setCitations(source.getCitations());
+    return topic;
+  }
+
+  // FIX: add DataIntegrityViolationException catch for handle duplicate key
+  private Topic calculateAndSaveTopicForPeriod(
+          Topic baseTopic,
+          LocalDate startDate,
+          LocalDate endDate,
+          boolean useFake
+  ) {
+    var existing = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+            baseTopic.getTopicId(),
+            startDate,
+            endDate,
+            baseTopic.getFieldId()
+    );
+
+    if (existing.isPresent()) {
+      return existing.get();
+    }
+
+    Topic topic = createTopicSnapshot(baseTopic);
+    if (useFake) {
+      applyFakeMetrics(topic, startDate, endDate);
+    } else {
+      calculateRealMetrics(topic, startDate, endDate);
+    }
+
+    try {
+      return topicRepository.save(topic);
+    } catch (DataIntegrityViolationException e) {
+      return topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+              baseTopic.getTopicId(),
+              startDate,
+              endDate,
+              baseTopic.getFieldId()
+      ).orElseThrow(() -> new BusinessException(ErrorCode.TOPIC_NOT_FOUND));
+    }
+  }
+
+  private TopicCalculateResponse calculateTopicPreviousPeriods(Topic currentTopic, boolean useFake) {
+    LocalDate startDate = currentTopic.getStartTime();
+    LocalDate endDate = currentTopic.getEndTime();
+
+    List<Topic> results = new ArrayList<>();
+
+    for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
+      long shiftDays = PERIOD_DAYS * period;
+      LocalDate periodStart = startDate.minusDays(shiftDays);
+      LocalDate periodEnd = endDate.minusDays(shiftDays);
+
+      var existingTopic = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+              currentTopic.getTopicId(),
+              periodStart,
+              periodEnd,
+              currentTopic.getFieldId()
+      );
+
+      if (existingTopic.isPresent()) {
+        results.add(existingTopic.get());
+      } else {
+        results.add(calculateAndSaveTopicForPeriod(currentTopic, periodStart, periodEnd, useFake));
+      }
+    }
+
+    return new TopicCalculateResponse(results);
+  }
+
+  public TopicCalculateResponse calculateAllTopicsPreviousPeriods(
+          TopicCalculateAllRequest request
+  ) {
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate = LocalDate.parse(request.endTime());
+    Integer fieldId = Integer.parseInt(request.fieldId());
+
+    List<Topic> currentTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+            startDate,
+            endDate,
+            fieldId
+    );
+
+    if (currentTopics.isEmpty()) {
+      throw new BusinessException(ErrorCode.TOPIC_NOT_FOUND);
+    }
+
+    boolean anyTopicHasPrevious = currentTopics.stream().anyMatch(topic -> {
+      for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
+        long shiftDays = PERIOD_DAYS * period;
+        boolean exists = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+                topic.getTopicId(),
+                startDate.minusDays(shiftDays),
+                endDate.minusDays(shiftDays),
+                fieldId
+        ).isPresent();
+        if (exists) return true;
+      }
+      return false;
+    });
+
+    List<Topic> results = new ArrayList<>();
+
+    for (Topic currentTopic : currentTopics) {
+      results.addAll(calculateTopicPreviousPeriods(currentTopic, anyTopicHasPrevious).topicList());
+      anyTopicHasPrevious = true; // just calc the first topic, all the others will be fake data
+    }
+
+    return new TopicCalculateResponse(results);
+  }
+
+  public TopicCalculateResponse getTopicAcrossPeriods(
+          TopicCalculateSingleRequest request
+  ) {
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate = LocalDate.parse(request.endTime());
+    Integer fieldId = Integer.parseInt(request.fieldId());
+    String topicId = request.topicId();
+
+    List<Topic> results = new ArrayList<>();
+
+    for (int period = 0; period <= PREVIOUS_PERIODS_COUNT; period++) {
+      long shiftDays = PERIOD_DAYS * period;
+      LocalDate periodStart = startDate.minusDays(shiftDays);
+      LocalDate periodEnd = endDate.minusDays(shiftDays);
+
+      topicRepository
+              .findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+                      topicId,
+                      periodStart,
+                      periodEnd,
+                      fieldId
+              )
+              .ifPresent(results::add);
+    }
+
+    if (results.isEmpty()) {
+      throw new BusinessException(ErrorCode.TOPIC_NOT_FOUND);
+    }
+
+    return new TopicCalculateResponse(results);
   }
 }

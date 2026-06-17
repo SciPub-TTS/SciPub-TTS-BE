@@ -11,7 +11,7 @@ import java.time.LocalDate;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uq_topic_snapshot",
-                        columnNames = {"topic_id", "start_time", "end_time"}
+                        columnNames = {"topic_id", "start_time", "end_time", "field_id"}
                 )
         }
 )
@@ -22,6 +22,7 @@ public class Topic {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(insertable = false, updatable = false)
   private Long id;
 
   @Column(name = "topic_id", nullable = false)

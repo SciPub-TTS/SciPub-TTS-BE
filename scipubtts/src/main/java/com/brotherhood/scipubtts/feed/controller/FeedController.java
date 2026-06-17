@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FeedController {
 
+    private final ResearchFeedSyncService researchFeedSyncService;
     private final FeedService feedService;
 
     @GetMapping
@@ -44,4 +45,12 @@ public class FeedController {
         return feedService.getSuggestedTopics();
     }
 
+    @GetMapping("/sync")
+    public ResponseEntity<ResponseObject> sync() {
+        researchFeedSyncService.syncDailyFeed();
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                new ResponseObject(200, "Daily feed sync completed successfully", true)
+        );
+    }
 }
