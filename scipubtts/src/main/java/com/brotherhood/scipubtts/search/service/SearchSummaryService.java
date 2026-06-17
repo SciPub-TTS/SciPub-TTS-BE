@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.search.service;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
+import com.brotherhood.scipubtts.common.openalex.OpenAlexCursorSupport;
 import com.brotherhood.scipubtts.search.dto.SearchSummaryResponse;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +46,7 @@ public class SearchSummaryService {
     private long fetchTotalWorksCount() {
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
+        queryParams.put("cursor", OpenAlexCursorSupport.INITIAL_CURSOR);
         queryParams.put("per_page", "1");
         queryParams.put("select", "id");
 

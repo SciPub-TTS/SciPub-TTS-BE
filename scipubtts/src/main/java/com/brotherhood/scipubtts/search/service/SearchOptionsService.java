@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.search.service;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
+import com.brotherhood.scipubtts.common.openalex.OpenAlexCursorSupport;
 import com.brotherhood.scipubtts.search.dto.SearchFilterOptionListResponse;
 import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
@@ -16,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 @Service
 public class SearchOptionsService {
@@ -212,7 +214,7 @@ public class SearchOptionsService {
                 keyword,
                 limit,
                 page,
-                sourcePage -> loadGroupedWorkOptionPage(groupBy, limit, sourcePage),
+                cursor -> fetchGroupedWorkPage(groupBy, limit, cursor),
                 SearchFilterOptionsResponse.FacetOption::label
         );
     }
@@ -266,7 +268,7 @@ public class SearchOptionsService {
                 keyword,
                 limit,
                 page,
-                sourcePage -> loadScopedFacetOptionPage(groupBy, limit, sourcePage),
+                cursor -> fetchScopedFacetPage(groupBy, limit, cursor),
                 SearchFilterOptionsResponse.FacetOption::label
         );
     }
@@ -285,7 +287,7 @@ public class SearchOptionsService {
                 keyword,
                 limit,
                 page,
-                sourcePage -> loadScopedEntityOptionPage(groupBy, limit, sourcePage),
+                cursor -> fetchScopedEntityPage(groupBy, limit, cursor),
                 SearchFilterOptionsResponse.EntityOption::label
         );
     }
@@ -295,7 +297,30 @@ public class SearchOptionsService {
             int limit,
             int page
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        String cursor = OpenAlexCursorSupport.resolveCursorForPage(
+                page,
+                currentCursor -> fetchGroupedWorkPageMeta(groupBy, limit, currentCursor)
+        );
+
+        if (cursor == null) {
+            return new OptionPage<>(List.of(), null);
+        }
+
+        return fetchGroupedWorkPage(groupBy, limit, cursor);
+    }
+
+    private String fetchGroupedWorkPageMeta(String groupBy, int limit, String cursor) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, cursor);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        return openAlexMapReader.getNextCursor(response);
+    }
+
+    private OptionPage<SearchFilterOptionsResponse.FacetOption> fetchGroupedWorkPage(
+            String groupBy,
+            int limit,
+            String cursor
+    ) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, cursor);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
@@ -318,7 +343,7 @@ public class SearchOptionsService {
             ));
         }
 
-        return new OptionPage<>(options, groups.size() >= limit);
+        return new OptionPage<>(options, openAlexMapReader.getNextCursor(response));
     }
 
     private OptionPage<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptionPage(
@@ -326,7 +351,30 @@ public class SearchOptionsService {
             int limit,
             int page
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        String cursor = OpenAlexCursorSupport.resolveCursorForPage(
+                page,
+                currentCursor -> fetchScopedFacetPageMeta(groupBy, limit, currentCursor)
+        );
+
+        if (cursor == null) {
+            return new OptionPage<>(List.of(), null);
+        }
+
+        return fetchScopedFacetPage(groupBy, limit, cursor);
+    }
+
+    private String fetchScopedFacetPageMeta(String groupBy, int limit, String cursor) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, cursor);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        return openAlexMapReader.getNextCursor(response);
+    }
+
+    private OptionPage<SearchFilterOptionsResponse.FacetOption> fetchScopedFacetPage(
+            String groupBy,
+            int limit,
+            String cursor
+    ) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, cursor);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
@@ -349,7 +397,7 @@ public class SearchOptionsService {
             ));
         }
 
-        return new OptionPage<>(options, groups.size() >= limit);
+        return new OptionPage<>(options, openAlexMapReader.getNextCursor(response));
     }
 
     private OptionPage<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptionPage(
@@ -357,7 +405,30 @@ public class SearchOptionsService {
             int limit,
             int page
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        String cursor = OpenAlexCursorSupport.resolveCursorForPage(
+                page,
+                currentCursor -> fetchScopedEntityPageMeta(groupBy, limit, currentCursor)
+        );
+
+        if (cursor == null) {
+            return new OptionPage<>(List.of(), null);
+        }
+
+        return fetchScopedEntityPage(groupBy, limit, cursor);
+    }
+
+    private String fetchScopedEntityPageMeta(String groupBy, int limit, String cursor) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, cursor);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        return openAlexMapReader.getNextCursor(response);
+    }
+
+    private OptionPage<SearchFilterOptionsResponse.EntityOption> fetchScopedEntityPage(
+            String groupBy,
+            int limit,
+            String cursor
+    ) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, cursor);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<SearchFilterOptionsResponse.EntityOption> options = new ArrayList<>();
@@ -378,7 +449,7 @@ public class SearchOptionsService {
             options.add(new SearchFilterOptionsResponse.EntityOption(value, label, count));
         }
 
-        return new OptionPage<>(options, groups.size() >= limit);
+        return new OptionPage<>(options, openAlexMapReader.getNextCursor(response));
     }
 
     private List<SearchFilterOptionListResponse.OptionItem> mapFacetOptions(
@@ -417,15 +488,18 @@ public class SearchOptionsService {
             String keyword,
             int limit,
             int page,
-            java.util.function.IntFunction<OptionPage<T>> pageLoader,
-            java.util.function.Function<T, String> labelExtractor
+            Function<String, OptionPage<T>> cursorPageLoader,
+            Function<T, String> labelExtractor
     ) {
         int offset = Math.max(page - 1, 0) * limit;
         int targetMatchCount = offset + limit;
         List<T> matchedOptions = new ArrayList<>();
 
-        for (int sourcePage = 1; sourcePage <= KEYWORD_OPTION_SCAN_PAGE_LIMIT; sourcePage++) {
-            OptionPage<T> loadedPage = pageLoader.apply(sourcePage);
+        String cursor = OpenAlexCursorSupport.INITIAL_CURSOR;
+        int scanCount = 0;
+        while (cursor != null && scanCount < KEYWORD_OPTION_SCAN_PAGE_LIMIT) {
+            OptionPage<T> loadedPage = cursorPageLoader.apply(cursor);
+            scanCount++;
 
             for (T option : loadedPage.options()) {
                 if (matchesKeyword(labelExtractor.apply(option), keyword)) {
@@ -436,6 +510,8 @@ public class SearchOptionsService {
             if (matchedOptions.size() >= targetMatchCount || !loadedPage.hasMorePages()) {
                 break;
             }
+
+            cursor = loadedPage.nextCursor();
         }
 
         if (offset >= matchedOptions.size()) {
@@ -449,6 +525,7 @@ public class SearchOptionsService {
     private int fetchMaximumCitationCount() {
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
+        queryParams.put("cursor", OpenAlexCursorSupport.INITIAL_CURSOR);
         queryParams.put("per_page", "1");
         queryParams.put("sort", "cited_by_count:desc");
         queryParams.put("select", "cited_by_count");
@@ -463,15 +540,15 @@ public class SearchOptionsService {
         return Math.max(openAlexMapReader.getInt(results.getFirst(), "cited_by_count", 0), 0);
     }
 
-    private Map<String, String> createPagedQueryParams(int limit, int page) {
+    private Map<String, String> createCursorQueryParams(String cursor, int limit) {
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("per_page", String.valueOf(limit));
-        queryParams.put("page", String.valueOf(page));
+        queryParams.put("cursor", cursor);
         return queryParams;
     }
 
-    private Map<String, String> createScopedGroupedQueryParams(String groupBy, int limit, int page) {
-        Map<String, String> queryParams = createPagedQueryParams(limit, page);
+    private Map<String, String> createScopedGroupedQueryParams(String groupBy, int limit, String cursor) {
+        Map<String, String> queryParams = createCursorQueryParams(cursor, limit);
         queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
         queryParams.put("group_by", groupBy);
         queryParams.put("sort", "count:desc");
@@ -508,6 +585,9 @@ public class SearchOptionsService {
         }
     }
 
-    private record OptionPage<T>(List<T> options, boolean hasMorePages) {
+    private record OptionPage<T>(List<T> options, String nextCursor) {
+        private boolean hasMorePages() {
+            return OpenAlexCursorSupport.hasNextCursor(nextCursor);
+        }
     }
 }

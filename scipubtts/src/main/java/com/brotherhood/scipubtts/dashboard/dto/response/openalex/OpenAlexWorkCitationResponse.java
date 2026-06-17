@@ -16,7 +16,10 @@ public record OpenAlexWorkCitationResponse(
   public record Meta(
 
           @JsonProperty("count")
-          long count
+          long count,
+
+          @JsonProperty("next_cursor")
+          String nextCursor
 
   ) {
   }

@@ -40,6 +40,7 @@ public class PaperDetailOpenAlexQueryFactory {
         String joinedWorkIds = joinWorkIds(workIds);
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("filter", "openalex:" + joinedWorkIds);
+        queryParams.put("cursor", "*");
         queryParams.put("per_page", String.valueOf(countWorkIds(joinedWorkIds)));
         queryParams.put("select", WORK_REFERENCE_SELECT_FIELDS);
         return queryParams;

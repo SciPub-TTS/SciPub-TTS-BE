@@ -55,7 +55,24 @@ public class TopicServiceImpl implements TopicService {
     topic.setNewComerAuthor(round3(uniformBetween(0.70, 0.999)));
 
     long works = topic.getWorks() != 0 ? topic.getWorks() : 100_000L;
-    topic.setInstitution(Math.round(works * uniformBetween(0.03, 0.18)));
+
+    int length = String.valueOf(works).length();
+
+    double minRate;
+    double maxRate;
+
+    if (length >= 8) {
+      minRate = 0.01;
+      maxRate = 0.10;
+    } else if (length == 7) {
+      minRate = 0.30;
+      maxRate = 0.50;
+    } else {
+      minRate = 0.70;
+      maxRate = 0.99;
+    }
+
+    topic.setInstitution(Math.round(works * uniformBetween(minRate, maxRate)));
 
     return topic;
   }

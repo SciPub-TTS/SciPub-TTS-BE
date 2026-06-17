@@ -13,7 +13,8 @@ public record SearchWorksResponse(
             long dbResponseTimeMs,
             double costUsd,
             String appliedFilter,
-            String appliedSort
+            String appliedSort,
+            String nextCursor
     ) {
     }
 
