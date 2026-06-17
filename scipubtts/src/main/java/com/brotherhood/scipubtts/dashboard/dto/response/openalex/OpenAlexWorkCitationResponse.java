@@ -1,7 +1,6 @@
 package com.brotherhood.scipubtts.dashboard.dto.response.openalex;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.hibernate.jdbc.Work;
 
 import java.util.List;
 
