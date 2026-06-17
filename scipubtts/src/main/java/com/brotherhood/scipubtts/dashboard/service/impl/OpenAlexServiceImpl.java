@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.dashboard.service.impl;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.common.openalex.OpenAlexCursorSupport;
 import com.brotherhood.scipubtts.dashboard.dto.request.*;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsInPeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsToPeriodRequest;
@@ -71,8 +72,8 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     queryPeriod
                             )
                             .queryParam(
-                                    "page",
-                                    1
+                                    "cursor",
+                                    OpenAlexCursorSupport.INITIAL_CURSOR
                             ).queryParam(
                                     "per_page",
                                     1
@@ -94,8 +95,8 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                     uriBuilder
                             .path(path)
                             .queryParam(
-                                    "page",
-                                    1
+                                    "cursor",
+                                    OpenAlexCursorSupport.INITIAL_CURSOR
                             ).queryParam(
                                     "per_page",
                                     1
@@ -147,8 +148,8 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     queryPeriod
                             )
                             .queryParam(
-                                    "page",
-                                    1
+                                    "cursor",
+                                    OpenAlexCursorSupport.INITIAL_CURSOR
                             ).queryParam(
                                     "per_page",
                                     TOP_TOPICS
@@ -172,8 +173,8 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     queryPeriod
                             )
                             .queryParam(
-                                    "page",
-                                    1
+                                    "cursor",
+                                    OpenAlexCursorSupport.INITIAL_CURSOR
                             ).queryParam(
                                     "per_page",
                                     TOP_TOPICS
@@ -238,6 +239,10 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     "id:" + topicId
                             )
                             .queryParam(
+                                    "cursor",
+                                    OpenAlexCursorSupport.INITIAL_CURSOR
+                            )
+                            .queryParam(
                                     "per_page",
                                     1
                             )
@@ -283,11 +288,11 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     filter
                             )
                             .queryParam(
-                                    "page",
-                                    1
+                                    "cursor",
+                                    OpenAlexCursorSupport.INITIAL_CURSOR
                             )
                             .queryParam(
-                                    "per-page",
+                                    "per_page",
                                     1
                             )
                             .queryParam(
@@ -341,10 +346,10 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                       citationThreshold
               );
 
-      int page = 1;
+      String cursor = OpenAlexCursorSupport.INITIAL_CURSOR;
 
-      while (true) {
-        var currentPage = page;
+      while (cursor != null) {
+        final String currentCursor = cursor;
 
         apiCallCount++;
         var response =
@@ -361,8 +366,11 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                                 "sort",
                                                 "cited_by_count:desc"
                                         )
-                                        .queryParam("per_page", 200)
-                                        .queryParam("page", currentPage)
+                                        .queryParam(
+                                                "per_page",
+                                                OpenAlexCursorSupport.MAX_PER_PAGE
+                                        )
+                                        .queryParam("cursor", currentCursor)
                                         .build()
                         )
                         .retrieve()
@@ -376,13 +384,10 @@ public class OpenAlexServiceImpl implements OpenAlexService {
 
         result.addAll(response.workCitationList());
 
-        long totalCount = response.meta().count();
-
-        if (page * 200 >= totalCount) {
-          break;
-        }
-
-        page++;
+        cursor = response.meta() != null
+                && OpenAlexCursorSupport.hasNextCursor(response.meta().nextCursor())
+                ? response.meta().nextCursor()
+                : null;
       }
     }
 
@@ -405,7 +410,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
             );
 
     long total = 0;
-    String cursor = "*";
+    String cursor = OpenAlexCursorSupport.INITIAL_CURSOR;
 
     while (cursor != null) {
       final String currentCursor = cursor;
@@ -415,7 +420,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                       .path("/works")
                       .queryParam("filter", filter)
                       .queryParam("group_by", "authorships.institutions.id")
-                      .queryParam("per_page", 200)
+                      .queryParam("per_page", OpenAlexCursorSupport.MAX_PER_PAGE)
                       .queryParam("cursor", currentCursor)
                       .build()
               )
@@ -424,12 +429,12 @@ public class OpenAlexServiceImpl implements OpenAlexService {
 
       if (response == null || response.groupBy() == null) break;
 
-      int pageCount = response.groupBy().size();
-      total += pageCount;
+      total += response.groupBy().size();
 
-      if (pageCount < 200) break; // page cuối
-
-      cursor = response.meta().nextCursor(); // null nếu hết
+      cursor = response.meta() != null
+              && OpenAlexCursorSupport.hasNextCursor(response.meta().nextCursor())
+              ? response.meta().nextCursor()
+              : null;
     }
 
     return total;
@@ -447,7 +452,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
     );
 
     Set<String> authorIds = new HashSet<>();
-    String cursor = "*";
+    String cursor = OpenAlexCursorSupport.INITIAL_CURSOR;
 
     while (cursor != null) {
       var currentCursor = cursor;
@@ -457,7 +462,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                       .path("/works")
                       .queryParam("filter", filter)
                       .queryParam("group_by", "author.id")
-                      .queryParam("per_page", 200)
+                      .queryParam("per_page", OpenAlexCursorSupport.MAX_PER_PAGE)
                       .queryParam("cursor", currentCursor)
                       .build()
               )
@@ -471,10 +476,10 @@ public class OpenAlexServiceImpl implements OpenAlexService {
               .filter(key -> key != null && !key.isBlank())
               .forEach(authorIds::add);
 
-      int pageSize = response.groupBy().size();
-      if (pageSize < 200) break;
-
-      cursor = response.meta() != null ? response.meta().nextCursor() : null;
+      cursor = response.meta() != null
+              && OpenAlexCursorSupport.hasNextCursor(response.meta().nextCursor())
+              ? response.meta().nextCursor()
+              : null;
     }
 
     return authorIds;
@@ -507,7 +512,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
             .uri(uriBuilder ->
                     uriBuilder
                             .path("/keywords")
-                            .queryParam("page", 1)
+                            .queryParam("cursor", OpenAlexCursorSupport.INITIAL_CURSOR)
                             .queryParam("per_page", TOP_KEYWORDS)
                             .queryParam("select", "id,display_name,works_count,cited_by_count")
                             .queryParam("sort", "cited_by_count:desc")
@@ -519,7 +524,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
             .uri(uriBuilder ->
                     uriBuilder
                             .path("/keywords")
-                            .queryParam("page", 1)
+                            .queryParam("cursor", OpenAlexCursorSupport.INITIAL_CURSOR)
                             .queryParam("per_page", TOP_KEYWORDS)
                             .queryParam("select", "id,display_name,works_count,cited_by_count")
                             .queryParam("sort", "works_count:desc")
@@ -567,22 +572,37 @@ public class OpenAlexServiceImpl implements OpenAlexService {
     System.out.println("end       = " + end);
     System.out.println("filter    = " + filter);
 
-    var response = restClient.get()
-            .uri(uriBuilder -> uriBuilder
-                    .path("/works")
-                    .queryParam("filter", filter)
-                    .queryParam("group_by", "publication_year")
-                    .queryParam("per_page", 200)
-                    .build()
-            )
-            .retrieve()
-            .body(OpenAlexGroupByResponse.class);
+    long total = 0L;
+    String cursor = OpenAlexCursorSupport.INITIAL_CURSOR;
 
-    if (response == null || response.groupBy() == null) return 0L;
+    while (cursor != null) {
+      final String currentCursor = cursor;
 
-    long result = response.groupBy().stream()
-            .mapToLong(OpenAlexGroupByResponse.GroupByItem::count)
-            .sum();
+      var response = restClient.get()
+              .uri(uriBuilder -> uriBuilder
+                      .path("/works")
+                      .queryParam("filter", filter)
+                      .queryParam("group_by", "publication_year")
+                      .queryParam("per_page", OpenAlexCursorSupport.MAX_PER_PAGE)
+                      .queryParam("cursor", currentCursor)
+                      .build()
+              )
+              .retrieve()
+              .body(OpenAlexGroupByResponse.class);
+
+      if (response == null || response.groupBy() == null) break;
+
+      total += response.groupBy().stream()
+              .mapToLong(OpenAlexGroupByResponse.GroupByItem::count)
+              .sum();
+
+      cursor = response.meta() != null
+              && OpenAlexCursorSupport.hasNextCursor(response.meta().nextCursor())
+              ? response.meta().nextCursor()
+              : null;
+    }
+
+    long result = total;
 
     System.out.println("result = " + result);
     System.out.println("===================================");
@@ -604,7 +624,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
             .uri(uriBuilder -> uriBuilder
                     .path("/works")
                     .queryParam("filter", filter)
-                    .queryParam("page", 1)
+                    .queryParam("cursor", OpenAlexCursorSupport.INITIAL_CURSOR)
                     .queryParam("per_page", 1)
                     .queryParam("select", "id")
                     .build()

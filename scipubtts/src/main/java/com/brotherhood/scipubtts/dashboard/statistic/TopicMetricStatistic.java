@@ -16,4 +16,7 @@ public record TopicMetricStatistic(
         double institutionMin,
         double institutionMax
 ) {
+  public static TopicMetricStatistic empty() {
+    return new TopicMetricStatistic(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  }
 }
