@@ -112,7 +112,13 @@ public enum ErrorCode {
     BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),
     BOOKMARK_REQUIRED(HttpStatus.BAD_REQUEST, "Bookmark id is required."),
     BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
-    BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark.");
+    BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark."),
+
+    // ===== FEED =====
+    INSIGHT_POST_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "Insight post not found."),
+    INSIGHT_POST_EXCEEDS_REFERENCE_LIMIT(HttpStatus.BAD_REQUEST,
+            "An insight post can reference a maximum of 3 papers.");
 
     private final HttpStatus status;
     private final String message;
