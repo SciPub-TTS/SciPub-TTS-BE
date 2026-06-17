@@ -38,10 +38,10 @@ public class SearchWorksLookupService {
 
     public SearchWorksResponse searchWorks(SearchWorksQueryRequest request) {
         SearchWorksQueryRequest safeRequest = getSafeRequest(request);
-        int page = searchQuerySupport.normalizeWorksPage(safeRequest.getPage());
-        int perPage = searchQuerySupport.normalizePerPage(safeRequest.getPerPage());
+        int page = searchQuerySupport.normalizeWorksPage(safeRequest.page());
+        int perPage = searchQuerySupport.normalizePerPage(safeRequest.perPage());
         String appliedFilter = combineFilters(
-                buildKeywordFilter(safeRequest.getQuery()),
+                buildKeywordFilter(safeRequest.query()),
                 searchFilterBuilder.build(safeRequest)
         );
         String appliedSort = resolveSort(safeRequest);
@@ -73,15 +73,15 @@ public class SearchWorksLookupService {
     private void validateExclusiveRangeFilters(SearchWorksQueryRequest request) {
         validateExactVsRange(
                 "Year exact cannot be combined with Year from/to.",
-                request.getYearExact(),
-                request.getYearFrom(),
-                request.getYearTo()
+                request.yearExact(),
+                request.yearFrom(),
+                request.yearTo()
         );
         validateExactVsRange(
                 "Citation exact cannot be combined with Citation min/max.",
-                request.getCitationExact(),
-                request.getCitationMin(),
-                request.getCitationMax()
+                request.citationExact(),
+                request.citationMin(),
+                request.citationMax()
         );
     }
 
@@ -103,11 +103,11 @@ public class SearchWorksLookupService {
     }
 
     private String resolveSort(SearchWorksQueryRequest request) {
-        boolean hasSearchQuery = StringUtils.hasText(request.getQuery());
+        boolean hasSearchQuery = StringUtils.hasText(request.query());
 
         return searchQuerySupport.resolveSort(
-                request.getSortBy(),
-                request.getSortDirection(),
+                request.sortBy(),
+                request.sortDirection(),
                 hasSearchQuery
         );
     }

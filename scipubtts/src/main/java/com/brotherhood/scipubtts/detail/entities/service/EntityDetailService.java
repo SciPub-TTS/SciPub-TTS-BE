@@ -136,7 +136,7 @@ public class EntityDetailService {
             ));
         }
 
-        items.sort(Comparator.comparingInt(EntityDetailResponse.CountByYearItem::getYear));
+        items.sort(Comparator.comparingInt(EntityDetailResponse.CountByYearItem::year));
         return items;
     }
 
@@ -164,7 +164,7 @@ public class EntityDetailService {
             ));
         }
 
-        items.sort(Comparator.comparingInt(EntityDetailResponse.CountByYearItem::getYear));
+        items.sort(Comparator.comparingInt(EntityDetailResponse.CountByYearItem::year));
         return items;
     }
 

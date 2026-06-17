@@ -53,20 +53,20 @@ public class SearchHistoryService {
 
     @Transactional
     public void saveSearchHistory(SearchHistorySaveRequest request) {
-        if (request == null || !StringUtils.hasText(request.getQuery())) {
+        if (request == null || !StringUtils.hasText(request.query())) {
             return;
         }
 
-        if (request.getUserId() == null) {
+        if (request.userId() == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
-        String normalizedQuery = request.getQuery().trim();
-        searchHistoryRepository.deleteByUserIdAndContentIgnoreCase(request.getUserId(), normalizedQuery);
+        String normalizedQuery = request.query().trim();
+        searchHistoryRepository.deleteByUserIdAndContentIgnoreCase(request.userId(), normalizedQuery);
 
         SearchHistory searchHistory = new SearchHistory();
         searchHistory.setContent(normalizedQuery);
-        searchHistory.setUserId(request.getUserId());
+        searchHistory.setUserId(request.userId());
 
         searchHistoryRepository.save(searchHistory);
     }

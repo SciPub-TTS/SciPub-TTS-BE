@@ -41,13 +41,13 @@ public class SearchEntityLookupService {
         SearchEntityType safeEntityType =
                 entityType == null ? SearchEntityType.WORKS : entityType;
         int page = searchQuerySupport.normalizeWorksPage(
-                request == null ? null : request.getPage()
+                request == null ? null : request.page()
         );
         int perPage = searchQuerySupport.normalizePerPage(
-                request == null ? null : request.getPerPage()
+                request == null ? null : request.perPage()
         );
         String query = searchQuerySupport.normalizeKeyword(
-                request == null ? null : request.getQuery()
+                request == null ? null : request.query()
         );
 
         if (!StringUtils.hasText(query) || SearchEntityType.WORKS.equals(safeEntityType)) {
