@@ -36,7 +36,6 @@ public class SearchWorksMapper {
         int perPage = openAlexMapReader.getInt(meta, "per_page", fallbackPerPage);
         long dbResponseTimeMs = openAlexMapReader.getLong(meta, "db_response_time_ms", 0L);
         double costUsd = openAlexMapReader.getDouble(meta, "cost_usd", 0.0);
-        String nextCursor = openAlexMapReader.getNextCursor(response);
 
         List<SearchWorksResponse.WorkItem> items = new ArrayList<>();
         List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
@@ -52,8 +51,7 @@ public class SearchWorksMapper {
                 dbResponseTimeMs,
                 costUsd,
                 appliedFilter,
-                appliedSort,
-                nextCursor
+                appliedSort
         );
 
         return new SearchWorksResponse(responseMeta, items);

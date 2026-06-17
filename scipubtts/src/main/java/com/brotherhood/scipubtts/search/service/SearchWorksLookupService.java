@@ -3,14 +3,12 @@ package com.brotherhood.scipubtts.search.service;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
-import com.brotherhood.scipubtts.common.openalex.OpenAlexCursorSupport;
 import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -25,20 +23,17 @@ public class SearchWorksLookupService {
     private final SearchQuerySupport searchQuerySupport;
     private final SearchFilterBuilder searchFilterBuilder;
     private final SearchWorksMapper searchWorksMapper;
-    private final OpenAlexMapReader openAlexMapReader;
 
     public SearchWorksLookupService(
             OpenAlexClient openAlexClient,
             SearchQuerySupport searchQuerySupport,
             SearchFilterBuilder searchFilterBuilder,
-            SearchWorksMapper searchWorksMapper,
-            OpenAlexMapReader openAlexMapReader
+            SearchWorksMapper searchWorksMapper
     ) {
         this.openAlexClient = openAlexClient;
         this.searchQuerySupport = searchQuerySupport;
         this.searchFilterBuilder = searchFilterBuilder;
         this.searchWorksMapper = searchWorksMapper;
-        this.openAlexMapReader = openAlexMapReader;
     }
 
     public SearchWorksResponse searchWorks(SearchWorksQueryRequest request) {
@@ -47,71 +42,20 @@ public class SearchWorksLookupService {
         int perPage = searchQuerySupport.normalizePerPage(safeRequest.getPerPage());
         String appliedFilter = searchFilterBuilder.build(safeRequest);
         String appliedSort = resolveSort(safeRequest);
-
-        String cursor = OpenAlexCursorSupport.resolveCursorForPage(
-                page,
-                currentCursor -> fetchNextCursor(
-                        safeRequest,
-                        perPage,
-                        appliedFilter,
-                        appliedSort,
-                        currentCursor
-                )
-        );
-
-        if (cursor == null) {
-            return emptyResponse(page, perPage, appliedFilter, appliedSort);
-        }
-
         Map<String, String> queryParams = buildOpenAlexQueryParams(
                 safeRequest,
-                cursor,
+                page,
                 perPage,
                 appliedFilter,
                 appliedSort
         );
 
         Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
+//        String normalizedTrendingMode = searchQuerySupport.normalizeTrendingMode(safeRequest.getTrendingMode());
+//        if (!"none".equals(normalizedTrendingMode)) {
+//            openAlexResponse = applyTrendingRanking(openAlexResponse, normalizedTrendingMode);
+//        }
         return searchWorksMapper.map(openAlexResponse, appliedFilter, appliedSort, page, perPage);
-    }
-
-    private String fetchNextCursor(
-            SearchWorksQueryRequest request,
-            int perPage,
-            String appliedFilter,
-            String appliedSort,
-            String cursor
-    ) {
-        Map<String, String> queryParams = buildOpenAlexQueryParams(
-                request,
-                cursor,
-                perPage,
-                appliedFilter,
-                appliedSort
-        );
-        Map<String, Object> response = openAlexClient.get("/works", queryParams);
-        return openAlexMapReader.getNextCursor(response);
-    }
-
-    private SearchWorksResponse emptyResponse(
-            int page,
-            int perPage,
-            String appliedFilter,
-            String appliedSort
-    ) {
-        return new SearchWorksResponse(
-                new SearchWorksResponse.Meta(
-                        0L,
-                        page,
-                        perPage,
-                        0L,
-                        0.0,
-                        appliedFilter,
-                        appliedSort,
-                        null
-                ),
-                List.of()
-        );
     }
 
     private SearchWorksQueryRequest getSafeRequest(SearchWorksQueryRequest request) {
@@ -167,7 +111,7 @@ public class SearchWorksLookupService {
 
     private Map<String, String> buildOpenAlexQueryParams(
             SearchWorksQueryRequest request,
-            String cursor,
+            int page,
             int perPage,
             String appliedFilter,
             String appliedSort
@@ -184,8 +128,9 @@ public class SearchWorksLookupService {
             queryParams.put("filter", appliedFilter);
         }
 
+        // These values are always sent so the OpenAlex response is predictable.
         queryParams.put("sort", appliedSort);
-        queryParams.put("cursor", cursor);
+        queryParams.put("page", String.valueOf(page));
         queryParams.put("per_page", String.valueOf(perPage));
         queryParams.put("select", SearchConstants.WORKS_SELECT_FIELDS);
 

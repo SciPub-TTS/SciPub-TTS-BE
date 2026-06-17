@@ -129,12 +129,6 @@ public class OpenAlexMapReader {
         }
     }
 
-    public String getNextCursor(Map<String, Object> response) {
-        Map<String, Object> meta = getMap(response, "meta");
-        String nextCursor = getString(meta, "next_cursor").trim();
-        return StringUtils.hasText(nextCursor) ? nextCursor : null;
-    }
-
     public Boolean deriveHasOrcid(List<Map<String, Object>> authorships) {
         for (Map<String, Object> authorship : authorships) {
             Map<String, Object> author = getMap(authorship, "author");
