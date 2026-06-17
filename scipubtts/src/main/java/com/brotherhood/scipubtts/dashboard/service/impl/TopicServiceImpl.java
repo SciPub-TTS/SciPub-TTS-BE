@@ -65,10 +65,10 @@ public class TopicServiceImpl implements TopicService {
       minRate = 0.01;
       maxRate = 0.10;
     } else if (length == 7) {
-      minRate = 0.30;
-      maxRate = 0.50;
+      minRate = 0.40;
+      maxRate = 0.75;
     } else {
-      minRate = 0.70;
+      minRate = 0.85;
       maxRate = 0.99;
     }
 
@@ -446,6 +446,7 @@ public class TopicServiceImpl implements TopicService {
     List<TopicRankingResponse.TopicData> topicDataList = scores.stream()
             .map(ts -> new TopicRankingResponse.TopicData(
                     ts.topic().getName(),
+                    ts.topic().getTopicId(),
                     (int) ts.topic().getWorks(),
                     (int) ts.topic().getCitations(),
                     ts.score(),
