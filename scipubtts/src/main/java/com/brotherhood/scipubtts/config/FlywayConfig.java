@@ -13,8 +13,14 @@ public class FlywayConfig {
     @Value("${spring.flyway.locations:classpath:db/migration}")
     private String migrationLocations;
 
-    @Value("${spring.flyway.baseline-on-migrate:true}")
+    @Value("${spring.flyway.baseline-on-migrate:false}")
     private boolean baselineOnMigrate;
+
+    @Value("${spring.flyway.baseline-version:0}")
+    private String baselineVersion;
+
+    @Value("${spring.flyway.baseline-description:init_schema}")
+    private String baselineDescription;
 
     @Value("${spring.flyway.out-of-order:true}")
     private boolean outOfOrder;
@@ -32,8 +38,8 @@ public class FlywayConfig {
                 .dataSource(dataSource)
                 .locations(migrationLocations)
                 .baselineOnMigrate(baselineOnMigrate)
-                .baselineVersion("1")
-                .baselineDescription("init_schema")
+                .baselineVersion(baselineVersion)
+                .baselineDescription(baselineDescription)
                 .outOfOrder(outOfOrder)
                 .validateMigrationNaming(validateMigrationNaming)
                 .ignoreMigrationPatterns("*:missing", "*:future")
