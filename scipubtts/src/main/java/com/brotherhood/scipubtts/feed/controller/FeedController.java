@@ -2,15 +2,19 @@ package com.brotherhood.scipubtts.feed.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.feed.dto.response.FeedResponse;
 import com.brotherhood.scipubtts.feed.dto.response.FollowSummaryResponse;
 import com.brotherhood.scipubtts.feed.dto.response.SuggestedTopicResponse;
 import com.brotherhood.scipubtts.feed.service.FeedService;
+import com.brotherhood.scipubtts.feed.service.ResearchFeedSyncService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -50,7 +54,6 @@ public class FeedController {
         researchFeedSyncService.syncDailyFeed();
 
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Daily feed sync completed successfully", true)
-        );
+                new ResponseObject(200, "Daily feed sync completed successfully", true));
     }
 }
