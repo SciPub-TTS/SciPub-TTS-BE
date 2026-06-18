@@ -15,23 +15,17 @@ public interface SocialService {
     /** Tạo bài viết mới. Enforce max 3 references trong service. */
     SocialPostDetailResponse createPost(UUID authorId, CreateSocialPostRequest request);
 
-    /** Chi tiết bài viết. viewerId = null nếu khách vãng lai. */
-    SocialPostDetailResponse getPost(UUID postId, UUID viewerId);
-
     /** Danh sách feed mới nhất. Hybrid-view: viewerId nullable. */
     Page<SocialPostSummaryResponse> getNewest(Pageable pageable, UUID viewerId);
 
     /** Danh sách feed hot nhất (like cao). */
     Page<SocialPostSummaryResponse> getTop(Pageable pageable, UUID viewerId);
 
-    /** Bài viết của một tác giả cụ thể. */
-    Page<SocialPostSummaryResponse> getByAuthor(UUID authorId, Pageable pageable, UUID viewerId);
-
     /** Cập nhật tiêu đề / nội dung / tag (chỉ tác giả). */
     SocialPostDetailResponse updatePost(UUID postId, UUID editorId, UpdateSocialPostRequest request);
 
     /** Soft-delete (chỉ tác giả hoặc ADMIN). */
-    void deletePost(UUID postId, UUID requesterId, String requesterRole);
+    void deletePost(UUID postId, UUID requesterId);
 
     /**
      * Toggle like/unlike trong một transaction.

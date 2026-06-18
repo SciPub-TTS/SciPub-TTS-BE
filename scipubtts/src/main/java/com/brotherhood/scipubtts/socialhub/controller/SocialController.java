@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.socialhub.controller;
 
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.socialhub.dto.request.CreateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.request.UpdateSocialPostRequest;
@@ -8,6 +9,7 @@ import com.brotherhood.scipubtts.socialhub.dto.response.LikeToggleResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostDetailResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostSummaryResponse;
 import com.brotherhood.scipubtts.socialhub.service.SocialService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -67,37 +69,6 @@ public class SocialController {
         return ResponseEntity.ok(new ResponseObject(200, "Success", result));
     }
 
-    /**
-     * GET /api/Socials/{postId}
-     * Public. Trả về chi tiết bao gồm references.
-     */
-    @GetMapping("/{postId}")
-    public ResponseEntity<ResponseObject> getPost(
-            @PathVariable UUID postId,
-            @AuthenticationPrincipal UserPrincipal principal
-    ) {
-        UUID viewerId = principal != null ? principal.getId() : null;
-        SocialPostDetailResponse data = socialService.getPost(postId, viewerId);
-        return ResponseEntity.ok(new ResponseObject(200, "Success", data));
-    }
-
-    /**
-     * GET /api/Socials/author/{authorId}?page=0&size=10
-     * Public. Lấy bài viết của một tác giả.
-     */
-    @GetMapping("/author/{authorId}")
-    public ResponseEntity<ResponseObject> getByAuthor(
-            @PathVariable UUID authorId,
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal UserPrincipal principal
-    ) {
-        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
-        UUID viewerId = principal != null ? principal.getId() : null;
-        Page<SocialPostSummaryResponse> result = socialService.getByAuthor(authorId, pageable, viewerId);
-        return ResponseEntity.ok(new ResponseObject(200, "Success", result));
-    }
-
     // ─────────────────────────────────────────────────────────
     // AUTHENTICATED — yêu cầu đăng nhập
     // ─────────────────────────────────────────────────────────
@@ -110,9 +81,9 @@ public class SocialController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> createPost(
             @Valid @RequestBody CreateSocialPostRequest request,
-            @AuthenticationPrincipal UserPrincipal principal
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
-        SocialPostDetailResponse data = socialService.createPost(principal.getId(), request);
+        SocialPostDetailResponse data = socialService.createPost(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ResponseObject(201, "Post created", data));
     }
@@ -126,9 +97,9 @@ public class SocialController {
     public ResponseEntity<ResponseObject> updatePost(
             @PathVariable UUID postId,
             @Valid @RequestBody UpdateSocialPostRequest request,
-            @AuthenticationPrincipal UserPrincipal principal
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
-        SocialPostDetailResponse data = socialService.updatePost(postId, principal.getId(), request);
+        SocialPostDetailResponse data = socialService.updatePost(postId, userId, request);
         return ResponseEntity.ok(new ResponseObject(200, "Post updated", data));
     }
 
@@ -140,10 +111,9 @@ public class SocialController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> deletePost(
             @PathVariable UUID postId,
-            @AuthenticationPrincipal UserPrincipal principal
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
-        String role = principal.getAuthorities().iterator().next().getAuthority();
-        socialService.deletePost(postId, principal.getId(), role);
+        socialService.deletePost(postId, userId);
         return ResponseEntity.ok(new ResponseObject(200, "Post deleted", null));
     }
 
@@ -155,9 +125,9 @@ public class SocialController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> toggleLike(
             @PathVariable UUID postId,
-            @AuthenticationPrincipal UserPrincipal principal
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
-        LikeToggleResponse data = socialService.toggleLike(postId, principal.getId());
+        LikeToggleResponse data = socialService.toggleLike(postId, userId);
         return ResponseEntity.ok(new ResponseObject(200, "Success", data));
     }
 

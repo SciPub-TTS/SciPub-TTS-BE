@@ -40,16 +40,10 @@ public class SocialServiceImpl implements SocialService {
     private final SocialPostLikeRepository likeRepository;
     private final UserRepository userRepository;
 
-    // ─────────────────────────────────────────────────────────
-    // CREATE
-    // ─────────────────────────────────────────────────────────
-
     @Override
     @Transactional
     public SocialPostDetailResponse createPost(UUID authorId, CreateSocialPostRequest request) {
 
-        // Rule 1: enforce max 3 references (double-check — annotation @Size đã check,
-        //         nhưng ta luôn enforce tại Service như đã thiết kế)
         if (request.references() != null && request.references().size() > MAX_REFERENCES) {
             throw new BusinessException(ErrorCode.SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT);
         }
@@ -57,13 +51,13 @@ public class SocialServiceImpl implements SocialService {
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        SocialPost post = new SocialPost();
-        post.setAuthor(author);
-        post.setTitle(request.title().trim());
-        post.setBody(request.body().trim());
-        post.setTopicTag(request.topicTag() != null ? request.topicTag().trim() : null);
+        SocialPost post = SocialPost.builder()
+                .author(author)
+                .title(request.title().trim())
+                .body(request.body().trim())
+                .topicTag(request.topicTag() != null ? request.topicTag().trim() : null)
+                .build();
 
-        // Build references
         if (request.references() != null) {
             List<SocialPostReference> refs = request.references().stream()
                     .map(r -> buildReference(post, r))
@@ -73,18 +67,6 @@ public class SocialServiceImpl implements SocialService {
 
         SocialPost saved = postRepository.save(post);
         return toDetailResponse(saved, false);
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // READ
-    // ─────────────────────────────────────────────────────────
-
-    @Override
-    @Transactional(readOnly = true)
-    public SocialPostDetailResponse getPost(UUID postId, UUID viewerId) {
-        SocialPost post = findActivePost(postId);
-        boolean liked = viewerId != null && likeRepository.existsByPostIdAndUserId(postId, viewerId);
-        return toDetailResponse(post, liked);
     }
 
     @Override
@@ -102,17 +84,6 @@ public class SocialServiceImpl implements SocialService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<SocialPostSummaryResponse> getByAuthor(UUID authorId, Pageable pageable, UUID viewerId) {
-        Page<SocialPost> page = postRepository.findByAuthorIdOrderByCreatedAtDesc(authorId, pageable);
-        return toSummaryPage(page, viewerId);
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // UPDATE
-    // ─────────────────────────────────────────────────────────
-
-    @Override
     @Transactional
     public SocialPostDetailResponse updatePost(UUID postId, UUID editorId, UpdateSocialPostRequest request) {
         SocialPost post = findActivePost(postId);
@@ -127,31 +98,20 @@ public class SocialServiceImpl implements SocialService {
         return toDetailResponse(updated, liked);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // DELETE (soft)
-    // ─────────────────────────────────────────────────────────
-
     @Override
     @Transactional
-    public void deletePost(UUID postId, UUID requesterId, String requesterRole) {
+    public void deletePost(UUID postId, UUID requesterId) {
         SocialPost post = findActivePost(postId);
 
-        boolean isAdmin  = "ROLE_ADMIN".equals(requesterRole);
         boolean isAuthor = post.getAuthor().getId().equals(requesterId);
 
-        if (!isAdmin && !isAuthor) {
+        if (!isAuthor) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
         post.softDelete();
         postRepository.save(post);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // LIKE TOGGLE — đây là điểm quan trọng nhất:
-    // INSERT like + INCREMENT like_count nằm chung 1 @Transactional
-    // dùng UPDATE ... SET like_count = like_count + 1 tránh race condition
-    // ─────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -161,22 +121,22 @@ public class SocialServiceImpl implements SocialService {
         Optional<SocialPostLike> existing = likeRepository.findByPostIdAndUserId(postId, userId);
 
         if (existing.isPresent()) {
-            // UNLIKE
             likeRepository.delete(existing.get());
             postRepository.decrementLikeCount(postId);
 
-            // Đọc lại số like mới nhất (sau decrement)
             int newCount = findActivePost(postId).getLikeCount();
             return new LikeToggleResponse(false, newCount);
 
         } else {
-            // LIKE
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-            SocialPostLike like = new SocialPostLike();
-            like.setPost(post);
-            like.setUser(user);
+            // CHUYỂN ĐỔI SANG BUILDER
+            SocialPostLike like = SocialPostLike.builder()
+                    .post(post)
+                    .user(user)
+                    .build();
+
             likeRepository.save(like);
 
             postRepository.incrementLikeCount(postId);
@@ -186,12 +146,7 @@ public class SocialServiceImpl implements SocialService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // PRIVATE HELPERS
-    // ─────────────────────────────────────────────────────────
-
     private SocialPost findActivePost(UUID postId) {
-        // @SQLRestriction tự filter deleted_at IS NULL
         return postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_POST_NOT_FOUND));
     }
@@ -202,15 +157,9 @@ public class SocialServiceImpl implements SocialService {
         }
     }
 
-    /**
-     * Chuẩn hóa OpenAlex ID — đồng bộ với module Bookmark.
-     * Input:  "https://openalex.org/W123456789" hoặc "W123456789" hoặc "w123456789"
-     * Output: "W123456789"
-     */
     private String normalizeOpenAlexId(String raw) {
         if (raw == null) return null;
         String trimmed = raw.trim();
-        // Bóc tách URL nếu có
         if (trimmed.contains("/")) {
             trimmed = trimmed.substring(trimmed.lastIndexOf('/') + 1);
         }
@@ -218,15 +167,16 @@ public class SocialServiceImpl implements SocialService {
     }
 
     private SocialPostReference buildReference(SocialPost post, PostReferenceRequest req) {
-        SocialPostReference ref = new SocialPostReference();
-        ref.setPost(post);
-        ref.setOpenalexId(normalizeOpenAlexId(req.openalexId()));
-        ref.setTitleSnapshot(req.titleSnapshot());
-        ref.setAuthorsSnapshot(req.authorsSnapshot());
-        ref.setSourceSnapshot(req.sourceSnapshot());
-        ref.setYearSnapshot(req.yearSnapshot() != null ? req.yearSnapshot().shortValue() : null);
-        ref.setDoiSnapshot(req.doiSnapshot());
-        return ref;
+        // CHUYỂN ĐỔI SANG BUILDER
+        return SocialPostReference.builder()
+                .post(post)
+                .openalexId(normalizeOpenAlexId(req.openalexId()))
+                .titleSnapshot(req.titleSnapshot())
+                .authorsSnapshot(req.authorsSnapshot())
+                .sourceSnapshot(req.sourceSnapshot())
+                .yearSnapshot(req.yearSnapshot() != null ? req.yearSnapshot().shortValue() : null)
+                .doiSnapshot(req.doiSnapshot())
+                .build();
     }
 
     /**
