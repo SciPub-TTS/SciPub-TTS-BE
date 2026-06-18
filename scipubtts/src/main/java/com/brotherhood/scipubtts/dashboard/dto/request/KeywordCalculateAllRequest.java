@@ -4,9 +4,10 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 public record KeywordCalculateAllRequest(
-        String fieldId,
         LocalDate recentStart,
-        LocalDate recentEnd
+        LocalDate recentEnd,
+        String fieldId,
+        String formula
 ) {
   public LocalDate pastEnd() {
     return recentStart.minusDays(1);
