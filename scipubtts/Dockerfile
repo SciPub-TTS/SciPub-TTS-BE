@@ -1,8 +1,6 @@
-FROM public.ecr.aws/docker/library/eclipse-temurin:25-jdk-alpine AS build
+FROM public.ecr.aws/docker/library/maven:3.9.11-eclipse-temurin-25-alpine AS build
 
 WORKDIR /app
-
-RUN apk add --no-cache maven
 
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
@@ -25,4 +23,4 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar"]
