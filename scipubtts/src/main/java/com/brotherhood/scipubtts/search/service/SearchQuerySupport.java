@@ -91,6 +91,25 @@ public class SearchQuerySupport {
         };
     }
 
+    public String resolveEntitySort(String sortBy, String sortDirection, boolean hasSearchQuery) {
+        String defaultSort = hasSearchQuery ? "relevance_score:desc" : "works_count:desc";
+
+        if (!StringUtils.hasText(sortBy)) {
+            return defaultSort;
+        }
+
+        String normalizedSortBy = sortBy.trim().toLowerCase(Locale.ROOT);
+        String normalizedSortDirection =
+                "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
+
+        return switch (normalizedSortBy) {
+            case "works" -> "works_count:" + normalizedSortDirection;
+            case "alphabetical" -> "display_name:" + normalizedSortDirection;
+            case "relevance" -> defaultSort;
+            default -> defaultSort;
+        };
+    }
+
     public List<String> normalizeTypeValues(List<String> values) {
         List<String> normalizedValues = normalizeStringList(values);
         List<String> result = new ArrayList<>();
@@ -152,7 +171,10 @@ public class SearchQuerySupport {
             return extractLastSegment(rawKey).toUpperCase(Locale.ROOT);
         }
 
-        if ("primary_topic.subfield.id".equals(groupBy)) {
+        if (
+                "primary_topic.subfield.id".equals(groupBy)
+                        || "primary_topic.field.id".equals(groupBy)
+        ) {
             return extractLastSegment(rawKey);
         }
 

@@ -96,7 +96,7 @@ public class SearchController {
     @GetMapping("/filters/{filterKey}/options")
     @Operation(
             summary = "Get one filter option list",
-            description = "Loads options for one filter only. Valid filterKey values are: type, subField, country, author, institution, source, award."
+            description = "Loads options for one filter only. Valid filter keys depend on the entity type."
     )
     public ResponseEntity<ResponseObject> getFilterOptionPage(
             @Parameter(
@@ -105,14 +105,26 @@ public class SearchController {
                     schema = @Schema(allowableValues = {
                             "type",
                             "subField",
+                            "field",
                             "country",
                             "author",
                             "institution",
+                            "primaryTopic",
                             "source",
                             "award"
                     })
             )
             @PathVariable String filterKey,
+            @Parameter(
+                    description = "Entity type that owns the requested filter list.",
+                    example = "works",
+                    schema = @Schema(allowableValues = {
+                            "works",
+                            "authors",
+                            "topics"
+                    })
+            )
+            @RequestParam(defaultValue = "works") String entityType,
             @Parameter(
                     description = "Optional keyword used to match option labels, for example author or source names.",
                     example = "machine learning"
@@ -123,7 +135,13 @@ public class SearchController {
             @Parameter(description = "Page number for the selected filter option list.", example = "1")
             @RequestParam(defaultValue = "1") int page
     ) {
-        SearchFilterOptionListResponse data = searchService.getFilterOptionPage(filterKey, keyword, limit, page);
+        SearchFilterOptionListResponse data = searchService.getFilterOptionPage(
+                filterKey,
+                SearchEntityType.fromParameter(entityType),
+                keyword,
+                limit,
+                page
+        );
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded search filter option page", data)
@@ -149,7 +167,7 @@ public class SearchController {
     @GetMapping("/entities")
     @Operation(
             summary = "Search non-work entities",
-            description = "Searches authors or topics by name."
+            description = "Searches authors or topics with optional filters and sort values."
     )
     public ResponseEntity<ResponseObject> searchEntities(
             @Parameter(
