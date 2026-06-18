@@ -115,9 +115,9 @@ public enum ErrorCode {
     BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark."),
 
     // ===== FEED =====
-    INSIGHT_POST_NOT_FOUND(HttpStatus.NOT_FOUND,
+    SOCIAL_POST_NOT_FOUND(HttpStatus.NOT_FOUND,
             "Insight post not found."),
-    INSIGHT_POST_EXCEEDS_REFERENCE_LIMIT(HttpStatus.BAD_REQUEST,
+    SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT(HttpStatus.BAD_REQUEST,
             "An insight post can reference a maximum of 3 papers.");
 
     private final HttpStatus status;
