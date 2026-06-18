@@ -51,7 +51,7 @@ public class SocialServiceImpl implements SocialService {
         // Rule 1: enforce max 3 references (double-check — annotation @Size đã check,
         //         nhưng ta luôn enforce tại Service như đã thiết kế)
         if (request.references() != null && request.references().size() > MAX_REFERENCES) {
-            throw new BusinessException(ErrorCode.Social_POST_TOO_MANY_REFERENCES);
+            throw new BusinessException(ErrorCode.SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT);
         }
 
         User author = userRepository.findById(authorId)
@@ -193,7 +193,7 @@ public class SocialServiceImpl implements SocialService {
     private SocialPost findActivePost(UUID postId) {
         // @SQLRestriction tự filter deleted_at IS NULL
         return postRepository.findById(postId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.Social_POST_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_POST_NOT_FOUND));
     }
 
     private void assertIsAuthor(SocialPost post, UUID userId) {
