@@ -18,51 +18,52 @@ import java.util.UUID;
 @Repository
 public interface UserFollowRepository extends JpaRepository<UserFollow, UUID> {
 
-    Optional<UserFollow> findByUserIdAndTargetTypeAndTargetOpenAlexId(UUID userId, FollowTargetType targetType, String targetOpenAlexId);
+    Optional<UserFollow> findByUserIdAndTargetTypeAndTargetOpenAlexId(UUID userId, FollowTargetType targetType,
+            String targetOpenAlexId);
 
-    boolean existsByUserIdAndTargetTypeAndTargetOpenAlexId(UUID userId, FollowTargetType targetType, String targetOpenAlexId);
+    List<UserFollow> findByUserIdAndTargetType(UUID userId, FollowTargetType targetType);
+
+    boolean existsByUserIdAndTargetTypeAndTargetOpenAlexId(UUID userId, FollowTargetType targetType,
+            String targetOpenAlexId);
 
     @Query("""
-            SELECT f
-            FROM UserFollow f
-            WHERE f.userId = :userId
-              AND (:targetType IS NULL OR f.targetType = :targetType)
-              AND (
-                  :keyword IS NULL OR :keyword = ''
-                  OR LOWER(f.displayNameSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                  OR LOWER(f.targetOpenAlexId) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              )
-    """)
+                    SELECT f
+                    FROM UserFollow f
+                    WHERE f.userId = :userId
+                      AND (:targetType IS NULL OR f.targetType = :targetType)
+                      AND (
+                          :keyword IS NULL OR :keyword = ''
+                          OR LOWER(f.displayNameSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                          OR LOWER(f.targetOpenAlexId) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                      )
+            """)
     Page<UserFollow> searchMyFollows(
             @Param("userId") UUID userId,
             @Param("keyword") String keyword,
             @Param("targetType") FollowTargetType targetType,
-            Pageable pageable
-    );
+            Pageable pageable);
 
     @Modifying
     @Query("""
-        DELETE FROM UserFollow f
-        WHERE f.userId = :userId
-          AND f.targetType = :targetType
-          AND f.targetOpenAlexId = :targetOpenAlexId
-    """)
+                DELETE FROM UserFollow f
+                WHERE f.userId = :userId
+                  AND f.targetType = :targetType
+                  AND f.targetOpenAlexId = :targetOpenAlexId
+            """)
     int deleteByUserIdAndTargetTypeAndTargetOpenAlexId(
             @Param("userId") UUID userId,
             @Param("targetType") FollowTargetType targetType,
-            @Param("targetOpenAlexId") String targetOpenAlexId
-    );
+            @Param("targetOpenAlexId") String targetOpenAlexId);
 
     @Modifying
     @Query("""
-        DELETE FROM UserFollow f
-        WHERE f.id = :id
-          AND f.userId = :userId
-    """)
+                DELETE FROM UserFollow f
+                WHERE f.id = :id
+                  AND f.userId = :userId
+            """)
     int deleteByIdAndUserId(
             @Param("id") UUID id,
-            @Param("userId") UUID userId
-    );
+            @Param("userId") UUID userId);
 
     @Query(value = """
             SELECT
