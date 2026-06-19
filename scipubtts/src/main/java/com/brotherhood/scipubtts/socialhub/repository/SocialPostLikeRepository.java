@@ -18,4 +18,7 @@ public interface SocialPostLikeRepository extends JpaRepository<SocialPostLike, 
     // Lấy tập postId mà user đã like — dùng cho hybrid-view batch check
     @Query("SELECT l.post.id FROM SocialPostLike l WHERE l.user.id = :userId AND l.post.id IN :postIds")
     Set<UUID> findLikedPostIds(@Param("userId") UUID userId, @Param("postIds") List<UUID> postIds);
+
+    // Reset like
+    void deleteAllByPostId(UUID postId);
 }

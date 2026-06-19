@@ -1,6 +1,9 @@
 package com.brotherhood.scipubtts.socialhub.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
+
+import java.util.List;
 
 public record UpdateSocialPostRequest(
         @Size(min = 10, max = 100, message = "Title must be between 10 and 100 characters")
@@ -9,7 +12,8 @@ public record UpdateSocialPostRequest(
         @Size(min = 20, message = "Body must be at least 20 characters")
         String body,
 
-        @Size(max = 1000, message = "Topic tag cannot exceed 1000 characters")
-        String topicTag
+        @Size(max = 3, message = "Maximum 3 references per post")
+        @Valid
+        List<PostReferenceRequest> references
 ) {
 }
