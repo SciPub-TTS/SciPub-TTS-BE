@@ -15,9 +15,6 @@ String title,
 @Size(min = 20, message = "Body must be at least 20 characters")
 String body,
 
-@Size(max = 100, message = "Topic tag cannot exceed 100 characters")
-String topicTag,
-
 // Tối đa 3 — validate ở đây + kiểm tra lại trong Service
 @Size(max = 3, message = "Maximum 3 references per post")
 @Valid

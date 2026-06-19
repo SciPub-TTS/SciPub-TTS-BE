@@ -17,9 +17,6 @@ public interface SocialPostRepository extends JpaRepository<SocialPost, UUID> {
     // Feed hot nhất (like nhiều → mới nhất)
     Page<SocialPost> findAllByOrderByLikeCountDescCreatedAtDesc(Pageable pageable);
 
-    // Bài viết của một tác giả
-    Page<SocialPost> findByAuthorIdOrderByCreatedAtDesc(UUID authorId, Pageable pageable);
-
     // Cộng like trực tiếp tại DB — tránh race condition
     @Modifying
     @Query("UPDATE SocialPost p SET p.likeCount = p.likeCount + 1 WHERE p.id = :postId")
