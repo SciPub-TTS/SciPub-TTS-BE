@@ -4,7 +4,5 @@ import lombok.Builder;
 
 @Builder
 public record SuggestedTopicResponse(
-                                Long id,
-                                String topicName,
-                                Double trendScore) {
+                                                                String name) {
 }
