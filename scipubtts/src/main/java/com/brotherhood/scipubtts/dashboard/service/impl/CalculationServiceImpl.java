@@ -177,51 +177,94 @@ public class CalculationServiceImpl implements CalculationService {
   }
 
   @Override
-  public KeywordCalculateResponse calculateKeywordsFinalScore(String formula, List<Keyword> keywordList) {
-    keywordList = keywordList.stream()
-            .filter(k ->
-                    k.getPgr() != null
-                            && k.getCagr() != null
-                            && k.getPs() != null)
-            .toList();
+  public KeywordCalculateResponse calculateKeywordsFinalScore(
+          String formula,
+          List<Keyword> keywordList
+  ) {
 
-    if (keywordList.isEmpty()) {
+    if (keywordList == null || keywordList.isEmpty()) {
       return new KeywordCalculateResponse(List.of());
     }
 
-    FormulaType formulaType = FormulaType.from(formula);
-    KeywordWeight weight = resolveKeywordWeight(formulaType);
-    KeywordMetricStatistic stat = buildKeywordStatistic(keywordList);
+    FormulaType formulaType =
+            FormulaType.from(formula);
 
-    Map<String, Double> scoreMap = new HashMap<>();
-    for (Keyword keyword : keywordList) {
-      scoreMap.put(keyword.getKeywordId(), calculateKeywordScore(keyword, weight, stat));
-    }
+    KeywordWeight weight =
+            resolveKeywordWeight(formulaType);
 
-    Map<String, Keyword> keywordById = keywordList.stream()
-            .collect(Collectors.toMap(Keyword::getKeywordId, k -> k));
+    KeywordMetricStatistic stat =
+            buildKeywordStatistic(keywordList);
 
-    List<Keyword> top10 = scoreMap.entrySet().stream()
-            .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-            .limit(10)
-            .map(e -> keywordById.get(e.getKey()))
-            .toList();
+    List<KeywordCalculateResponse.KeywordMetric> topKeywords =
+            keywordList.stream()
+                    .map(keyword ->
+                            toMetric(
+                                    keyword,
+                                    calculateKeywordScore(
+                                            keyword,
+                                            weight,
+                                            stat
+                                    )
+                            )
+                    )
+                    .sorted(
+                            Comparator.comparing(
+                                    KeywordCalculateResponse.KeywordMetric::score
+                            ).reversed()
+                    )
+                    .limit(10)
+                    .toList();
 
-    return new KeywordCalculateResponse(top10);
+    return new KeywordCalculateResponse(topKeywords);
   }
 
   @Override
-  public double calculateKeywordFinalScore(String formula, String keywordId, List<Keyword> keywordList) {
-    FormulaType formulaType = FormulaType.from(formula);
-    KeywordWeight weight = resolveKeywordWeight(formulaType);
-    KeywordMetricStatistic stat = buildKeywordStatistic(keywordList);
+  public double calculateKeywordFinalScore(
+          String formula,
+          String keywordId,
+          List<Keyword> keywordList
+  ) {
 
-    Keyword keyword = keywordList.stream()
-            .filter(k -> k.getKeywordId().equals(keywordId))
+    if (keywordList == null || keywordList.isEmpty()) {
+      return 0D;
+    }
+
+    FormulaType formulaType =
+            FormulaType.from(formula);
+
+    KeywordWeight weight =
+            resolveKeywordWeight(formulaType);
+
+    KeywordMetricStatistic stat =
+            buildKeywordStatistic(keywordList);
+
+    return keywordList.stream()
+            .filter(keyword -> keywordId.equals(keyword.getKeywordId()))
             .findFirst()
-            .orElse(null);
-    if (keyword == null) return 0D;
+            .map(keyword ->
+                    calculateKeywordScore(
+                            keyword,
+                            weight,
+                            stat
+                    )
+            )
+            .orElse(0D);
+  }
 
-    return calculateKeywordScore(keyword, weight, stat);
+  private KeywordCalculateResponse.KeywordMetric toMetric(
+          Keyword keyword,
+          Double score
+  ) {
+    return new KeywordCalculateResponse.KeywordMetric(
+            keyword.getId(),
+            keyword.getKeywordId(),
+            keyword.getKeyword(),
+            keyword.getFieldId(),
+            score,
+            keyword.getCagr(),
+            keyword.getPs(),
+            keyword.getWorksCount(),
+            keyword.getCitedByCount()
+    );
   }
 }
