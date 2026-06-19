@@ -6,9 +6,8 @@ services:
     plan: free
     region: singapore
     branch: prod
-    rootDir: scipubtts
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./scipubtts/Dockerfile
+    dockerContext: ./scipubtts
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
