@@ -9,12 +9,6 @@ public record PostReferenceRequest(
                 regexp = "^(https://openalex\\.org/)?[Ww]\\d+$",
                 message = "Invalid OpenAlex Work ID format (e.g. W123456789)"
         )
-        String openalexId,
-
-        String titleSnapshot,
-        String authorsSnapshot,
-        String sourceSnapshot,
-        Integer yearSnapshot,
-        String doiSnapshot
+        String openalexId
 ) {
 }
