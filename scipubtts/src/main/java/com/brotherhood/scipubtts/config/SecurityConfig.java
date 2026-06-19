@@ -131,6 +131,7 @@ public class SecurityConfig {
                                 "/api/health"
                         )
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/insights/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
