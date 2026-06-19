@@ -7,7 +7,6 @@ public record SocialPostSummaryResponse(
         UUID id,
         String title,
         String bodyPreview,     // 200 ký tự đầu
-        String topicTag,
         int likeCount,
         boolean liked,          // hybrid-view: true nếu user đã like
         AuthorInfo author,

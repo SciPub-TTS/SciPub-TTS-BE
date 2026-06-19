@@ -114,11 +114,15 @@ public enum ErrorCode {
     BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
     BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark."),
 
-    // ===== FEED =====
+    // ===== SOCIAL =====
     SOCIAL_POST_NOT_FOUND(HttpStatus.NOT_FOUND,
-            "Insight post not found."),
+            "Social post not found."),
     SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT(HttpStatus.BAD_REQUEST,
-            "An insight post can reference a maximum of 3 papers.");
+            "An Social post can reference a maximum of 3 papers."),
+    SOCIAL_POST_REFERENCE_INVALID_FORMAT(HttpStatus.BAD_REQUEST,
+        "One or more referenced paper IDs have an invalid format."),
+    SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK(HttpStatus.BAD_REQUEST,
+        "One or more referenced papers could not be found in your bookmarks.");
 
     private final HttpStatus status;
     private final String message;

@@ -72,4 +72,8 @@ public class SocialPost {
     public void softDelete() {
         this.deletedAt = OffsetDateTime.now();
     }
+
+    public void resetLikeCount() {
+        this.likeCount = 0;
+    }
 }

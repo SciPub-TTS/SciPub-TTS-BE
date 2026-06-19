@@ -142,4 +142,7 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     int deleteByIdAndUserId(UUID id, UUID userId);
 
     int deleteByUserIdAndOpenAlexId(UUID userId, String openAlexId);
+
+
+    List<UserBookmark> findByUserIdAndOpenAlexIdIn(UUID userId, List<String> openAlexIds);
 }
