@@ -130,6 +130,7 @@ public class SecurityConfig {
                                 "/api/data/**"
                         )
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/insights/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
