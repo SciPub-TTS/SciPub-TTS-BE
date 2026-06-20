@@ -86,6 +86,8 @@ public class SecurityConfig {
                                 "/", "/error", "/favicon.ico",
                                 "/register",
                                 "/api/auth/**",
+                                "/api/search/hot-topics",
+                                "/api/search/hot-keywords",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/api/auth/oauth2/**",

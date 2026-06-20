@@ -4,12 +4,16 @@ import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
+import com.brotherhood.scipubtts.search.dto.HotKeywordResponse;
 import com.brotherhood.scipubtts.search.dto.SearchFilterOptionsResponse;
+import com.brotherhood.scipubtts.search.dto.HotTopicResponse;
 import com.brotherhood.scipubtts.search.dto.SearchHistoryItemResponse;
 import com.brotherhood.scipubtts.search.dto.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.service.KeywordTrendService;
 import com.brotherhood.scipubtts.search.service.SearchService;
+import com.brotherhood.scipubtts.search.service.TopicTrendService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,9 +39,17 @@ import java.util.UUID;
 public class SearchController {
 
     private final SearchService searchService;
+    private final TopicTrendService topicTrendService;
+    private final KeywordTrendService keywordTrendService;
 
-    public SearchController(SearchService searchService) {
+    public SearchController(
+            SearchService searchService,
+            TopicTrendService topicTrendService,
+            KeywordTrendService keywordTrendService
+    ) {
         this.searchService = searchService;
+        this.topicTrendService = topicTrendService;
+        this.keywordTrendService = keywordTrendService;
     }
 
     @GetMapping("/filters/options")
@@ -61,6 +74,32 @@ public class SearchController {
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject(200, "Search works successfully", data)
+        );
+    }
+
+    @GetMapping("/hot-topics")
+    @Operation(summary = "Load weekly hot topics from the internal topic trend table")
+    public ResponseEntity<ResponseObject> getHotTopics(
+            @RequestParam(required = false) LocalDate snapshotDate,
+            @RequestParam(defaultValue = "8") int limit
+    ) {
+        HotTopicResponse data = topicTrendService.getWeeklyHotTopics(snapshotDate, limit);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                new ResponseObject(200, "Loaded weekly hot topics", data)
+        );
+    }
+
+    @GetMapping("/hot-keywords")
+    @Operation(summary = "Load weekly hot keywords from the internal keyword trend table")
+    public ResponseEntity<ResponseObject> getHotKeywords(
+            @RequestParam(required = false) LocalDate snapshotDate,
+            @RequestParam(defaultValue = "8") int limit
+    ) {
+        HotKeywordResponse data = keywordTrendService.getWeeklyHotKeywords(snapshotDate, limit);
+
+        return ResponseEntity.status(HttpStatus.OK).body(
+                new ResponseObject(200, "Loaded weekly hot keywords", data)
         );
     }
 
