@@ -1,43 +1,59 @@
-package com.brotherhood.scipubtts.config;
+/*
+ Archived on 2026-06-19.
 
-import org.flywaydb.core.Flyway;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+ This custom Flyway configuration is intentionally disabled because it causes
+ the application's Hikari DataSource to initialize too early under Spring
+ Boot 4, which then seals the pool before Spring finishes binding
+ spring.datasource.hikari.* properties.
 
-import javax.sql.DataSource;
+ The application now relies on Spring Boot's built-in Flyway auto-configuration.
 
-@Configuration
-public class FlywayConfig {
+ package com.brotherhood.scipubtts.config;
 
-    @Value("${spring.flyway.locations:classpath:db/migration}")
-    private String migrationLocations;
+ import org.flywaydb.core.Flyway;
+ import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
 
-    @Value("${spring.flyway.baseline-on-migrate:true}")
-    private boolean baselineOnMigrate;
+ import javax.sql.DataSource;
 
-    @Value("${spring.flyway.out-of-order:true}")
-    private boolean outOfOrder;
+ @Configuration
+ public class FlywayConfig {
 
-    @Value("${spring.flyway.validate-migration-naming:false}")
-    private boolean validateMigrationNaming;
+     @Value("${spring.flyway.locations:classpath:db/migration}")
+     private String migrationLocations;
 
-    // 1. Thêm biến này để đọc cấu hình bỏ qua lỗi từ properties
-    @Value("${spring.flyway.ignore-migration-patterns:*:missing,*:future}")
-    private String[] ignoreMigrationPatterns;
+     @Value("${spring.flyway.baseline-on-migrate:false}")
+     private boolean baselineOnMigrate;
 
-    @Bean(initMethod = "migrate")
-    public Flyway flyway(DataSource dataSource) {
-        return Flyway.configure()
-                .dataSource(dataSource)
-                .locations(migrationLocations)
-                .baselineOnMigrate(baselineOnMigrate)
-                .baselineVersion("1")
-                .baselineDescription("init_schema")
-                .outOfOrder(outOfOrder)
-                .validateMigrationNaming(validateMigrationNaming)
-                .ignoreMigrationPatterns("*:missing", "*:future")
-                .cleanDisabled(true)
-                .load();
-    }
-}
+     @Value("${spring.flyway.baseline-version:0}")
+     private String baselineVersion;
+
+     @Value("${spring.flyway.baseline-description:init_schema}")
+     private String baselineDescription;
+
+     @Value("${spring.flyway.out-of-order:true}")
+     private boolean outOfOrder;
+
+     @Value("${spring.flyway.validate-migration-naming:false}")
+     private boolean validateMigrationNaming;
+
+     @Value("${spring.flyway.ignore-migration-patterns:*:missing,*:future}")
+     private String[] ignoreMigrationPatterns;
+
+     @Bean(initMethod = "migrate")
+     public Flyway flyway(DataSource dataSource) {
+         return Flyway.configure()
+                 .dataSource(dataSource)
+                 .locations(migrationLocations)
+                 .baselineOnMigrate(baselineOnMigrate)
+                 .baselineVersion(baselineVersion)
+                 .baselineDescription(baselineDescription)
+                 .outOfOrder(outOfOrder)
+                 .validateMigrationNaming(validateMigrationNaming)
+                 .ignoreMigrationPatterns("*:missing", "*:future")
+                 .cleanDisabled(true)
+                 .load();
+     }
+ }
+*/

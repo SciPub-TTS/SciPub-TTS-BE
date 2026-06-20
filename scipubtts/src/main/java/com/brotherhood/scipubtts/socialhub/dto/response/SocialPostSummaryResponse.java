@@ -1,14 +1,16 @@
 package com.brotherhood.scipubtts.socialhub.dto.response;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record SocialPostSummaryResponse(
         UUID id,
         String title,
-        String bodyPreview,     // 200 ký tự đầu
+        String bodyPreview,
+        List<String> topicTag,
         int likeCount,
-        boolean liked,          // hybrid-view: true nếu user đã like
+        boolean liked,
         AuthorInfo author,
         OffsetDateTime createdAt
 ) {
