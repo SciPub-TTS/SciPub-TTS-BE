@@ -284,7 +284,6 @@ public class SocialServiceImpl implements SocialService {
                 .authorsSnapshot(bookmark.getAuthorsSnapshot())
                 .yearSnapshot(bookmark.getPublicationYear() != null
                         ? bookmark.getPublicationYear().shortValue() : null)
-                .doiSnapshot(null) // user_bookmark hiện không lưu DOI riêng; map nếu sau này có cột
                 .build();
     }
 
@@ -331,9 +330,7 @@ public class SocialServiceImpl implements SocialService {
                         r.getOpenalexId(),
                         r.getTitleSnapshot(),
                         r.getAuthorsSnapshot(),
-                        r.getSourceSnapshot(),
-                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null,
-                        r.getDoiSnapshot()
+                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null
                 ))
                 .toList();
 

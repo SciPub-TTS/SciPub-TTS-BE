@@ -26,8 +26,6 @@ public record SocialPostDetailResponse(
             String openalexId,
             String titleSnapshot,
             String authorsSnapshot,
-            String sourceSnapshot,
-            Integer yearSnapshot,
-            String doiSnapshot
+            Integer yearSnapshot
     ) {}
 }
