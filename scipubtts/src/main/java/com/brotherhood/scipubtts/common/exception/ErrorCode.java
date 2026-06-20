@@ -19,6 +19,8 @@ public enum ErrorCode {
             "This account has been banned."),
     EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN,
             "Please verify your email address before logging in."),
+    EMAIL_EXISTS(HttpStatus.FORBIDDEN,
+            "The email has been exist."),
     LOCAL_PASSWORD_NOT_AVAILABLE(HttpStatus.BAD_REQUEST,
             "This account does not support local password authentication."),
 
@@ -37,8 +39,6 @@ public enum ErrorCode {
             "Password confirmation does not match."),
     PASSWORD_REUSE_NOT_ALLOWED(HttpStatus.BAD_REQUEST,
             "The new password cannot be the same as your current password."),
-    PASSWORD_TOO_WEAK(HttpStatus.BAD_REQUEST,
-            "The password does not meet the minimum security requirements."),
 
     PASSWORD_RESET_CODE_INVALID(HttpStatus.BAD_REQUEST,
             "Invalid verification code."),
@@ -51,6 +51,10 @@ public enum ErrorCode {
     PASSWORD_RESET_GRANT_EXPIRED(HttpStatus.BAD_REQUEST,
             "Password reset grant token has expired."),
 
+    REQUEST_BODY_REQUIRED(HttpStatus.BAD_REQUEST,
+            "Request body is required."),
+    INVALID_SEARCH_FILTER_COMBINATION(HttpStatus.BAD_REQUEST,
+            "%s"),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS,
             "Too many requests. Please try again later."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -58,21 +62,69 @@ public enum ErrorCode {
     INVALID_USER_INFO(HttpStatus.BAD_REQUEST, "Email not found from Google provider."),
     OAUTH2_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No account is associated with this social email address."),
 
+    INVALID_GOOGLE_SIGNUP_TOKEN(HttpStatus.BAD_REQUEST,
+            "The registration token is invalid."),
+    GOOGLE_SIGNUP_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST,
+            "This registration token has already been used."),
+    GOOGLE_SIGNUP_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST,
+            "This registration token has expired."),
+    // ===== ADMIN =====
+    ADMIN_SELF_ACTION_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+            "Admin cannot perform this action on their own account."),
+    ADMIN_TARGET_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+            "Admin accounts cannot be banned or unbanned."),
+    ADMIN_ACCOUNT_ALREADY_BANNED(HttpStatus.CONFLICT,
+            "This account has already been banned."),
+    ADMIN_ACCOUNT_NOT_BANNED(HttpStatus.CONFLICT,
+            "This account is not banned."),
+
     // ===== EMAIL =====
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "The provided email address format is invalid."),
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Invalid email verification token."),
     EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
 
-    // ===== SEARCH / OPENALEX =====
+    // ===== OPENALEX =====
+    OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "OpenAlex entity not found."),
+    OPENALEX_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE,
+            "OpenAlex service returned empty or invalid data."),
     OPENALEX_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Không thể phân tích phản hồi từ OpenAlex"),
+            "Could not parse response from OpenAlex."),
+    OPENALEX_REQUIRED(HttpStatus.BAD_REQUEST,
+            "OpenAlex id is required."),
     OPENALEX_REQUEST_FAILED(HttpStatus.SERVICE_UNAVAILABLE,
-            "Yêu cầu tới OpenAlex thất bại sau nhiều lần thử"),
+            "OpenAlex request failed after multiple attempts."),
     RETRY_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR,
-            "Quá trình thử lại bị gián đoạn");
+            "The retry process was interrupted."),
+    OPENALEX_GATEWAY_ERROR(HttpStatus.BAD_GATEWAY,
+            "Failed to retrieve publication data from OpenAlex."),
+    JSON_SERIALIZATION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "An error occurred while processing system data."),
+
+    // ===== STATISTIC =====
+    TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,
+            "Request start time and end time must not be null."),
+    TOPIC_NOT_FOUND(HttpStatus.BAD_REQUEST,
+            "Can not find topic with this id."),
+
+    // ===== BOOKMARK =====
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),
+    BOOKMARK_REQUIRED(HttpStatus.BAD_REQUEST, "Bookmark id is required."),
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
+    BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark."),
+
+    // ===== SOCIAL =====
+    SOCIAL_POST_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "Social post not found."),
+    SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT(HttpStatus.BAD_REQUEST,
+            "An Social post can reference a maximum of 3 papers."),
+    SOCIAL_POST_REFERENCE_INVALID_FORMAT(HttpStatus.BAD_REQUEST,
+        "One or more referenced paper IDs have an invalid format."),
+    SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK(HttpStatus.BAD_REQUEST,
+        "One or more referenced papers could not be found in your bookmarks.");
+
     private final HttpStatus status;
     private final String message;
-
 
 }

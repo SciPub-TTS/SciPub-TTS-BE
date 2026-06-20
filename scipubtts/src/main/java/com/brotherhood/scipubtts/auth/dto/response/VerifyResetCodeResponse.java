@@ -4,7 +4,6 @@ public record VerifyResetCodeResponse(
         String resetGrantToken,
         long expiresInSeconds
 ) {
-
     @Override
     public String toString()
     {

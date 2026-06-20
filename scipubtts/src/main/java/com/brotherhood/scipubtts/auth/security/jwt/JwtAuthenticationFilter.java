@@ -10,19 +10,48 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    private static final List<String> PUBLIC_PATH_PATTERNS = List.of(
+            "/api/auth/register",
+            "/api/auth/register/google/**",
+            "/api/auth/login",
+            "/api/auth/oauth2/exchange",
+            "/api/auth/refresh",
+            "/api/auth/logout",
+            "/api/auth/oauth2/google",
+            "/api/auth/verify-email",
+            "/api/auth/forgot-password/**",
+            "/api/search/summary",
+            "/api/search/filters/**",
+            "/api/search/works",
+            "/api/search/entities",
+            "/api/papers/**",
+            "/api/authors/**",
+            "/api/topics/**",
+            "/api/statistic/**",
+            "/oauth2/**",
+            "/login/oauth2/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "/error"
+    );
 
     private final JwtTokenService jwtTokenService;
     private final CustomUserDetailsService customUserDetailsService;
@@ -34,10 +63,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
+
+        String path = request.getServletPath();
+        for (String pattern : PUBLIC_PATH_PATTERNS) {
+            if (PATH_MATCHER.match(pattern, path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
@@ -63,11 +107,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (ExpiredJwtException ex) {
-                request.setAttribute("auth_error", "Access token đã hết hạn");
+                request.setAttribute("auth_error", "Access token expired");
             } catch (BusinessException ex) {
                 request.setAttribute("auth_error", ex.getMessage());
             } catch (JwtException | IllegalArgumentException | UsernameNotFoundException ex) {
-                request.setAttribute("auth_error", "Access token không hợp lệ");
+                request.setAttribute("auth_error", "Invalid Access token ");
             }
         }
 

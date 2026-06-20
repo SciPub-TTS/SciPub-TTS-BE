@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  scipubtts:
+    build:
+      context: ./scipubtts
+      dockerfile: Dockerfile
+    container_name: scipub-backend-prod
+    ports:
+      - "127.0.0.1:8088:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - PORT=${PORT}
+      - PROD_DB_URL=${PROD_DB_URL}
+      - PROD_DB_USERNAME=${PROD_DB_USERNAME}
+      - PROD_DB_PASSWORD=${PROD_DB_PASSWORD}
+      - PROD_BACKEND_BASE_URL=${PROD_BACKEND_BASE_URL}
+      - PROD_CORS_ALLOWED_ORIGINS=${PROD_CORS_ALLOWED_ORIGINS}
+      - PROD_JWT_SECRET=${PROD_JWT_SECRET}
+      - PROD_MAIL_USERNAME=${PROD_MAIL_USERNAME}
+      - PROD_MAIL_PASSWORD=${PROD_MAIL_PASSWORD}
+      - PROD_GOOGLE_CLIENT_ID=${PROD_GOOGLE_CLIENT_ID}
+      - PROD_GOOGLE_CLIENT_SECRET=${PROD_GOOGLE_CLIENT_SECRET}
+      - PROD_FRONTEND_SUCCESS_URL=${PROD_FRONTEND_SUCCESS_URL}
+    depends_on:
+      - scipub-postgres
+    networks:
+      - scipub-net
+    restart: always
+
+  # ==========================================
+  # 2. DATABASE SERVICE (POSTGRESQL)
+  # ==========================================
+  scipub-postgres:
+    image: public.ecr.aws/docker/library/postgres:16-alpine
+    container_name: scipub-postgres-prod
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=SciHub_db
+      - POSTGRES_USER=${PROD_DB_USERNAME}
+      - POSTGRES_PASSWORD=${PROD_DB_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - scipub-net
+    restart: always
+
+volumes:
+  postgres_prod_data:
+
+networks:
+  scipub-net:
+    driver: bridge

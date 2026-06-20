@@ -29,12 +29,15 @@ public record SearchWorksResponse(
             String pdfUrl,
             Boolean hasOrcid,
             String type,
-            String topicName,
+            String topic,
             String subFieldName,
             String sourceId,
             String sourceName,
-            List<String> authors
+            List<String> authors,
+            List<String> keywords,
+            Boolean matchesTrendingKeyword,
+            Boolean matchesTrendingTopic,
+            Double trendingScore
     ) {
     }
 }
-
