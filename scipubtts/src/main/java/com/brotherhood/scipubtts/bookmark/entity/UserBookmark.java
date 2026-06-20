@@ -39,9 +39,6 @@ public class UserBookmark {
     @Column(name = "authors_snapshot", columnDefinition = "TEXT")
     private String authorsSnapshot;
 
-//    @Column(name = "source_snapshot", columnDefinition = "TEXT")
-//    private String sourceSnapshot;
-
     @Column(name = "topic_snapshot", columnDefinition = "TEXT")
     private String topicSnapshot;
 
@@ -53,13 +50,6 @@ public class UserBookmark {
 
     @Column(columnDefinition = "TEXT")
     private String note;
-
-//    @Column(name = "share_token", length = 255)
-//    private String shareToken;
-//
-//    @Column(name = "is_public", nullable = false)
-//    @Builder.Default
-//    private boolean isPublic = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
