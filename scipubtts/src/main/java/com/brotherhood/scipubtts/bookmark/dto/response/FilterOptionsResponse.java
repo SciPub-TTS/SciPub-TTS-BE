@@ -16,8 +16,6 @@ public class FilterOptionsResponse {
 
     private List<Integer> years;
 
-    private List<String> sources;
-
     private List<String> authors;
 
     public List<String> topics() {
@@ -26,10 +24,6 @@ public class FilterOptionsResponse {
 
     public List<Integer> years() {
         return years;
-    }
-
-    public List<String> sources() {
-        return sources;
     }
 
     public List<String> authors() {
