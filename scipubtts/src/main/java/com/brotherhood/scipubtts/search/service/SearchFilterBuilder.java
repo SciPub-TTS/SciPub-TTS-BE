@@ -22,33 +22,33 @@ public class SearchFilterBuilder {
         filterParts.add(SearchConstants.WORKS_SCOPE_FILTER);
 
         addYearFilter(request, filterParts);
-        addListFilter(filterParts, "type", searchQuerySupport.normalizeTypeValues(request.getType()));
-        addBooleanFilter(filterParts, "is_oa", request.getOpenAccess());
+        addListFilter(filterParts, "type", searchQuerySupport.normalizeTypeValues(request.type()));
+        addBooleanFilter(filterParts, "is_oa", request.openAccess());
         addListFilter(
                 filterParts,
                 "primary_topic.subfield.id",
-                searchQuerySupport.normalizeSubFieldValues(request.getSubField())
+                searchQuerySupport.normalizeSubFieldValues(request.subField())
         );
-        addListFilter(filterParts, "authorships.author.id", searchQuerySupport.normalizeEntityIds(request.getAuthor()));
+        addListFilter(filterParts, "authorships.author.id", searchQuerySupport.normalizeEntityIds(request.author()));
         addListFilter(
                 filterParts,
                 "authorships.institutions.id",
-                searchQuerySupport.normalizeEntityIds(request.getInstitution())
+                searchQuerySupport.normalizeEntityIds(request.institution())
         );
-        addBooleanFilter(filterParts, "has_content.pdf", request.getPdf());
+        addBooleanFilter(filterParts, "has_content.pdf", request.pdf());
         addListFilter(
                 filterParts,
                 "institutions.country_code",
-                searchQuerySupport.normalizeCountryValues(request.getCountry())
+                searchQuerySupport.normalizeCountryValues(request.country())
         );
         addCitationFilter(request, filterParts);
         addListFilter(
                 filterParts,
                 "primary_location.source.id",
-                searchQuerySupport.normalizeEntityIds(request.getSource())
+                searchQuerySupport.normalizeEntityIds(request.source())
         );
-        addListFilter(filterParts, "awards.id", searchQuerySupport.normalizeEntityIds(request.getAward()));
-        addOrcidFilter(filterParts, request.getIndexedByOrcid());
+        addListFilter(filterParts, "awards.id", searchQuerySupport.normalizeEntityIds(request.award()));
+        addOrcidFilter(filterParts, request.indexedByOrcid());
 
         return String.join(",", filterParts);
     }
@@ -57,9 +57,9 @@ public class SearchFilterBuilder {
         addRangeFilter(
                 filterParts,
                 "publication_year",
-                request.getYearExact(),
-                request.getYearFrom(),
-                request.getYearTo()
+                request.yearExact(),
+                request.yearFrom(),
+                request.yearTo()
         );
     }
 
@@ -67,9 +67,9 @@ public class SearchFilterBuilder {
         addRangeFilter(
                 filterParts,
                 "cited_by_count",
-                request.getCitationExact(),
-                request.getCitationMin(),
-                request.getCitationMax()
+                request.citationExact(),
+                request.citationMin(),
+                request.citationMax()
         );
     }
 

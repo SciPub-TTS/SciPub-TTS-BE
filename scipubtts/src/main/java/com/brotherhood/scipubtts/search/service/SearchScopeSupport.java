@@ -32,6 +32,8 @@ public class SearchScopeSupport {
     }
 
     public boolean matchesScopedTopicProfile(Map<String, Object> rawEntity) {
+        // Scoped authors are filtered by their topic profile: keep the author
+        // when at least one associated topic is inside the configured scope.
         List<Map<String, Object>> topics = openAlexMapReader.getMapList(rawEntity, "topics");
 
         for (Map<String, Object> topic : topics) {

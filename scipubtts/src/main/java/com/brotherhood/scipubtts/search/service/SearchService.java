@@ -19,7 +19,13 @@ public interface SearchService {
 
     SearchFilterOptionsResponse getFilterOptions(String keyword, int limit, int page);
 
-    SearchFilterOptionListResponse getFilterOptionPage(String filterKey, String keyword, int limit, int page);
+    SearchFilterOptionListResponse getFilterOptionPage(
+            String filterKey,
+            SearchEntityType entityType,
+            String keyword,
+            int limit,
+            int page
+    );
 
     SearchWorksResponse searchWorks(SearchWorksQueryRequest request);
 

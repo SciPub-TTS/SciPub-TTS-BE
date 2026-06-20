@@ -1,6 +1,4 @@
-package com.brotherhood.scipubtts.follow.service;
-
-import com.brotherhood.scipubtts.follow.dto.request.CreateFollowRequest;
+package com.brotherhood.scipubtts.follow.service; import com.brotherhood.scipubtts.follow.dto.request.CreateFollowRequest;
 import com.brotherhood.scipubtts.follow.dto.response.FollowPageResponse;
 import com.brotherhood.scipubtts.follow.dto.response.FollowResponse;
 import com.brotherhood.scipubtts.follow.dto.response.FollowStatusResponse;

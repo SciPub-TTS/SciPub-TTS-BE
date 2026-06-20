@@ -4,7 +4,7 @@ import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.constant.weight.KeywordWeight;
 import com.brotherhood.scipubtts.dashboard.constant.weight.TopicWeight;
 import com.brotherhood.scipubtts.dashboard.dto.response.KeywordCalculateResponse;
-import com.brotherhood.scipubtts.dashboard.dto.response.TopicCalculateResponse;
+import com.brotherhood.scipubtts.dashboard.dto.response.TopicScore;
 import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.service.CalculationService;
@@ -65,7 +65,17 @@ public class CalculationServiceImpl implements CalculationService {
     return (value - min) / (max - min);
   }
 
+  @Override
+  public double toNormalizedPercent(double value, double min, double max) {
+    return Math.round(normalize(value, min, max) * 10000.0) / 100.0;
+  }
+
   // ── statistic builders ───────────────────────────────────────────────────────
+
+  @Override
+  public TopicMetricStatistic buildTopicMetricStatistic(List<Topic> topics) {
+    return buildTopicStatistic(topics);
+  }
 
   private TopicMetricStatistic buildTopicStatistic(List<Topic> topics) {
     double velocityMin = Double.MAX_VALUE,    velocityMax = -Double.MAX_VALUE;
@@ -115,7 +125,7 @@ public class CalculationServiceImpl implements CalculationService {
 
   // ── score calculators (stateless, take pre-built stat) ──────────────────────
 
-  private double calculateTopicScore(
+    double calculateTopicScore(
           Topic topic, TopicWeight weight, TopicMetricStatistic stat) {
     return normalize(topic.getVelocity(),      stat.velocityMin(),     stat.velocityMax())     * weight.velocity()
             + normalize(topic.getAcceleration(),  stat.accelerationMin(), stat.accelerationMax()) * weight.acceleration()
@@ -134,7 +144,7 @@ public class CalculationServiceImpl implements CalculationService {
   // ── public API ───────────────────────────────────────────────────────────────
 
   @Override
-  public TopicCalculateResponse calculateTopicsFinalScore(String formula, List<Topic> topicList) {
+  public List<TopicScore> calculateTopicsFinalScore(String formula, List<Topic> topicList) {
     FormulaType formulaType = FormulaType.from(formula);
     TopicWeight weight = resolveTopicWeight(formulaType);
     TopicMetricStatistic stat = buildTopicStatistic(topicList);
@@ -144,16 +154,11 @@ public class CalculationServiceImpl implements CalculationService {
       scoreMap.put(topic.getTopicId(), calculateTopicScore(topic, weight, stat));
     }
 
-    Map<String, Topic> topicById = topicList.stream()
-            .collect(Collectors.toMap(Topic::getTopicId, t -> t));
-
-    List<Topic> top10 = scoreMap.entrySet().stream()
-            .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+    return topicList.stream()
+            .map(topic -> new TopicScore(topic, calculateTopicScore(topic, weight, stat)))
+            .sorted(Comparator.comparing(TopicScore::score).reversed())
             .limit(10)
-            .map(e -> topicById.get(e.getKey()))
             .toList();
-
-    return new TopicCalculateResponse(top10);
   }
 
   @Override
@@ -172,51 +177,94 @@ public class CalculationServiceImpl implements CalculationService {
   }
 
   @Override
-  public KeywordCalculateResponse calculateKeywordsFinalScore(String formula, List<Keyword> keywordList) {
-    keywordList = keywordList.stream()
-            .filter(k ->
-                    k.getPgr() != null
-                            && k.getCagr() != null
-                            && k.getPs() != null)
-            .toList();
+  public KeywordCalculateResponse calculateKeywordsFinalScore(
+          String formula,
+          List<Keyword> keywordList
+  ) {
 
-    if (keywordList.isEmpty()) {
+    if (keywordList == null || keywordList.isEmpty()) {
       return new KeywordCalculateResponse(List.of());
     }
 
-    FormulaType formulaType = FormulaType.from(formula);
-    KeywordWeight weight = resolveKeywordWeight(formulaType);
-    KeywordMetricStatistic stat = buildKeywordStatistic(keywordList);
+    FormulaType formulaType =
+            FormulaType.from(formula);
 
-    Map<String, Double> scoreMap = new HashMap<>();
-    for (Keyword keyword : keywordList) {
-      scoreMap.put(keyword.getKeywordId(), calculateKeywordScore(keyword, weight, stat));
-    }
+    KeywordWeight weight =
+            resolveKeywordWeight(formulaType);
 
-    Map<String, Keyword> keywordById = keywordList.stream()
-            .collect(Collectors.toMap(Keyword::getKeywordId, k -> k));
+    KeywordMetricStatistic stat =
+            buildKeywordStatistic(keywordList);
 
-    List<Keyword> top10 = scoreMap.entrySet().stream()
-            .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-            .limit(10)
-            .map(e -> keywordById.get(e.getKey()))
-            .toList();
+    List<KeywordCalculateResponse.KeywordMetric> topKeywords =
+            keywordList.stream()
+                    .map(keyword ->
+                            toMetric(
+                                    keyword,
+                                    calculateKeywordScore(
+                                            keyword,
+                                            weight,
+                                            stat
+                                    )
+                            )
+                    )
+                    .sorted(
+                            Comparator.comparing(
+                                    KeywordCalculateResponse.KeywordMetric::score
+                            ).reversed()
+                    )
+                    .limit(10)
+                    .toList();
 
-    return new KeywordCalculateResponse(top10);
+    return new KeywordCalculateResponse(topKeywords);
   }
 
   @Override
-  public double calculateKeywordFinalScore(String formula, String keywordId, List<Keyword> keywordList) {
-    FormulaType formulaType = FormulaType.from(formula);
-    KeywordWeight weight = resolveKeywordWeight(formulaType);
-    KeywordMetricStatistic stat = buildKeywordStatistic(keywordList);
+  public double calculateKeywordFinalScore(
+          String formula,
+          String keywordId,
+          List<Keyword> keywordList
+  ) {
 
-    Keyword keyword = keywordList.stream()
-            .filter(k -> k.getKeywordId().equals(keywordId))
+    if (keywordList == null || keywordList.isEmpty()) {
+      return 0D;
+    }
+
+    FormulaType formulaType =
+            FormulaType.from(formula);
+
+    KeywordWeight weight =
+            resolveKeywordWeight(formulaType);
+
+    KeywordMetricStatistic stat =
+            buildKeywordStatistic(keywordList);
+
+    return keywordList.stream()
+            .filter(keyword -> keywordId.equals(keyword.getKeywordId()))
             .findFirst()
-            .orElse(null);
-    if (keyword == null) return 0D;
+            .map(keyword ->
+                    calculateKeywordScore(
+                            keyword,
+                            weight,
+                            stat
+                    )
+            )
+            .orElse(0D);
+  }
 
-    return calculateKeywordScore(keyword, weight, stat);
+  private KeywordCalculateResponse.KeywordMetric toMetric(
+          Keyword keyword,
+          Double score
+  ) {
+    return new KeywordCalculateResponse.KeywordMetric(
+            keyword.getId(),
+            keyword.getKeywordId(),
+            keyword.getKeyword(),
+            keyword.getFieldId(),
+            score,
+            keyword.getCagr(),
+            keyword.getPs(),
+            keyword.getWorksCount(),
+            keyword.getCitedByCount()
+    );
   }
 }

@@ -50,8 +50,20 @@ public class SearchServiceImpl implements SearchService {
     }
 
     @Override
-    public SearchFilterOptionListResponse getFilterOptionPage(String filterKey, String keyword, int limit, int page) {
-        return searchOptionsService.getFilterOptionPage(filterKey, keyword, limit, page);
+    public SearchFilterOptionListResponse getFilterOptionPage(
+            String filterKey,
+            SearchEntityType entityType,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return searchOptionsService.getFilterOptionPage(
+                filterKey,
+                entityType,
+                keyword,
+                limit,
+                page
+        );
     }
 
     @Override

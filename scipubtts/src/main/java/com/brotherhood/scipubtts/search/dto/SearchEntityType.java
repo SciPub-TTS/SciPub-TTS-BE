@@ -11,12 +11,12 @@ public enum SearchEntityType {
     AUTHORS(
             "authors",
             "/authors",
-            "id,display_name,last_known_institutions,topics,works_count"
+            "id,display_name,last_known_institutions,topics,works_count,cited_by_count"
     ),
     TOPICS(
             "topics",
             "/topics",
-            "id,display_name,subfield,field,domain,works_count"
+            "id,display_name,subfield,field,domain,works_count,cited_by_count"
     );
 
     private final String parameterValue;

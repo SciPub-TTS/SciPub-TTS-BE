@@ -4,7 +4,6 @@ spring.datasource.url=jdbc:postgresql://localhost:5432/owlreka_local
 spring.datasource.username=postgres
 spring.datasource.password=Dien_Mat_Khau_Local_Cua_Ban_Vao_Day
 spring.datasource.hikari.pool-name=owlreka-local-hikari
-spring.datasource.hikari.data-source-properties.ApplicationName=owlreka-local-be
 spring.datasource.hikari.maximum-pool-size=5
 spring.datasource.hikari.minimum-idle=0
 spring.datasource.hikari.idle-timeout=30000

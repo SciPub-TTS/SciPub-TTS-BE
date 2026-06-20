@@ -1,22 +1,22 @@
 package com.brotherhood.scipubtts.dashboard.dto.response;
 
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import com.brotherhood.scipubtts.dashboard.entity.Keyword;
 
+import java.time.LocalDate;
 import java.util.List;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class KeywordCalculateResponse {
-    private List<Keyword> keywordList;
-
-    public List<Keyword> keywordList() {
-        return keywordList;
-    }
+public record KeywordCalculateResponse(
+        List<KeywordMetric> keywordList
+) {
+  public record KeywordMetric(
+          Long id,
+          String keywordId,
+          String name,
+          String fieldId,
+          Double score,
+          Double cagr,
+          Double ps,
+          Long worksCount,
+          Long citedByCount
+  ){}
 }

@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
     defaults:
       run:
         working-directory: scipubtts
@@ -24,9 +24,9 @@ jobs:
       - name: Set up Java version
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'maven'
+          java-version: "25"
+          distribution: "temurin"
+          cache: "maven"
 
       - name: Build with Maven
         run: ./mvnw -B clean package -DskipTests
@@ -35,22 +35,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: '${{ github.workspace }}/scipubtts/target/*.jar'
+          path: "${{ github.workspace }}/scipubtts/target/*.jar"
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-  
+      id-token: write
+      contents: read
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: java-app
-          path: '${{ github.workspace }}/deploy'
-      
+          path: "${{ github.workspace }}/deploy"
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -62,7 +62,6 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'Owlreka'
-          slot-name: 'Production'
-          package: '${{ github.workspace }}/deploy/*.jar'
-          
+          app-name: "Owlreka"
+          slot-name: "Production"
+          package: "${{ github.workspace }}/deploy/*.jar"

@@ -127,7 +127,8 @@ public class SecurityConfig {
                                 "/api/authors/**",
                                 "/api/topics/**",
                                 "/api/statistic/**",
-                                "/api/data/**"
+                                "/api/data/**",
+                                "/api/health"
                         )
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/insights/**").permitAll()

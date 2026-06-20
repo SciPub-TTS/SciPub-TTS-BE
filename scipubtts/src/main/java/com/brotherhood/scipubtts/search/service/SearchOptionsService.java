@@ -56,6 +56,7 @@ public class SearchOptionsService {
 
     public SearchFilterOptionListResponse getFilterOptionPage(
             String filterKey,
+            SearchEntityType entityType,
             String keyword,
             int limit,
             int page
@@ -64,61 +65,28 @@ public class SearchOptionsService {
         int normalizedPage = searchQuerySupport.normalizeOptionPage(page);
         String normalizedKeyword = searchQuerySupport.normalizeKeyword(keyword);
         String normalizedFilterKey = filterKey == null ? "" : filterKey.trim();
+        SearchEntityType safeEntityType =
+                entityType == null ? SearchEntityType.WORKS : entityType;
 
-        return switch (normalizedFilterKey) {
-            case "type" -> buildFacetFilterOptionPage(
+        return switch (safeEntityType) {
+            case AUTHORS -> buildAuthorFilterOptionPage(
                     normalizedFilterKey,
-                    "type",
-                    normalizedKeyword,
-                    normalizedLimit,
-                    normalizedPage,
-                    false
-            );
-            case "subField" -> buildFacetFilterOptionPage(
-                    normalizedFilterKey,
-                    "primary_topic.subfield.id",
-                    normalizedKeyword,
-                    normalizedLimit,
-                    normalizedPage,
-                    false
-            );
-            case "country" -> buildFacetFilterOptionPage(
-                    normalizedFilterKey,
-                    "institutions.country_code",
-                    normalizedKeyword,
-                    normalizedLimit,
-                    normalizedPage,
-                    true
-            );
-            case "author" -> buildEntityFilterOptionPage(
-                    normalizedFilterKey,
-                    "authorships.author.id",
                     normalizedKeyword,
                     normalizedLimit,
                     normalizedPage
             );
-            case "institution" -> buildEntityFilterOptionPage(
+            case TOPICS -> buildTopicFilterOptionPage(
                     normalizedFilterKey,
-                    "authorships.institutions.id",
                     normalizedKeyword,
                     normalizedLimit,
                     normalizedPage
             );
-            case "source" -> buildEntityFilterOptionPage(
+            case WORKS -> buildWorkFilterOptionPage(
                     normalizedFilterKey,
-                    "primary_location.source.id",
                     normalizedKeyword,
                     normalizedLimit,
                     normalizedPage
             );
-            case "award" -> buildEntityFilterOptionPage(
-                    normalizedFilterKey,
-                    "awards.id",
-                    normalizedKeyword,
-                    normalizedLimit,
-                    normalizedPage
-            );
-            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
         };
     }
 
@@ -251,6 +219,129 @@ public class SearchOptionsService {
                 filterKey,
                 mapEntityOptions(options)
         );
+    }
+
+    private SearchFilterOptionListResponse buildWorkFilterOptionPage(
+            String filterKey,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return switch (filterKey) {
+            case "type" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "type",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            case "subField" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "primary_topic.subfield.id",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            case "country" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "institutions.country_code",
+                    keyword,
+                    limit,
+                    page,
+                    true
+            );
+            case "author" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "authorships.author.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "institution" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "authorships.institutions.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "source" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "primary_location.source.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "award" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "awards.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+        };
+    }
+
+    private SearchFilterOptionListResponse buildAuthorFilterOptionPage(
+            String filterKey,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return switch (filterKey) {
+            case "institution" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "authorships.institutions.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "country" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "institutions.country_code",
+                    keyword,
+                    limit,
+                    page,
+                    true
+            );
+            case "primaryTopic" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "primary_topic.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+        };
+    }
+
+    private SearchFilterOptionListResponse buildTopicFilterOptionPage(
+            String filterKey,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return switch (filterKey) {
+            case "subField" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "primary_topic.subfield.id",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            case "field" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "primary_topic.field.id",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+        };
     }
 
     private List<SearchFilterOptionsResponse.FacetOption> fetchScopedFacetOptions(

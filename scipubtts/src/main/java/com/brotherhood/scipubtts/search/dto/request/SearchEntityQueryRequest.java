@@ -1,31 +1,42 @@
 package com.brotherhood.scipubtts.search.dto.request;
 
-public class SearchEntityQueryRequest {
-    private String query;
-    private Integer page;
-    private Integer perPage;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-    public String getQuery() {
-        return query;
-    }
+import java.util.List;
 
-    public void setQuery(String query) {
-        this.query = query;
-    }
+@Schema(
+        name = "SearchEntityQueryRequest",
+        description = "Search parameters for author/topic entity lookups."
+)
+public record SearchEntityQueryRequest(
+        @Schema(nullable = true, example = "john")
+        String query,
 
-    public Integer getPage() {
-        return page;
-    }
+        @Schema(nullable = true, example = "[\"I201448701\"]", description = "Institution ids for author search.")
+        List<String> institution,
 
-    public void setPage(Integer page) {
-        this.page = page;
-    }
+        @Schema(nullable = true, example = "[\"VN\"]", description = "Institution country codes for author search.")
+        List<String> country,
 
-    public Integer getPerPage() {
-        return perPage;
-    }
+        @Schema(nullable = true, example = "[\"T10017\"]", description = "Primary topic ids for author search.")
+        List<String> primaryTopic,
 
-    public void setPerPage(Integer perPage) {
-        this.perPage = perPage;
-    }
+        @Schema(nullable = true, example = "[\"2202\"]", description = "Subfield ids for topic search.")
+        List<String> subField,
+
+        @Schema(nullable = true, example = "[\"17\"]", description = "Field ids for topic search.")
+        List<String> field,
+
+        @Schema(nullable = true, allowableValues = {"relevance", "works", "alphabetical"}, description = "Primary sort field.")
+        String sortBy,
+
+        @Schema(nullable = true, allowableValues = {"asc", "desc"}, description = "Sort direction.")
+        String sortDirection,
+
+        @Schema(nullable = true, example = "1", defaultValue = "1")
+        Integer page,
+
+        @Schema(nullable = true, example = "20", defaultValue = "20")
+        Integer perPage
+) {
 }
