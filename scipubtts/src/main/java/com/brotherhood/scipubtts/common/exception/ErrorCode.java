@@ -121,6 +121,8 @@ public enum ErrorCode {
             "An Social post can reference a maximum of 3 papers."),
     SOCIAL_POST_REFERENCE_INVALID_FORMAT(HttpStatus.BAD_REQUEST,
         "One or more referenced paper IDs have an invalid format."),
+    SOCIAL_POST_TITLE_OR_BODY_BLANK(HttpStatus.BAD_REQUEST,
+            "The post title and body cannot be blank."),
     SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK(HttpStatus.BAD_REQUEST,
         "One or more referenced papers could not be found in your bookmarks.");
 

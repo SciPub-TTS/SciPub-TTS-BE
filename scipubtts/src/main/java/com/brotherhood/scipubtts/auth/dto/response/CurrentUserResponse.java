@@ -9,6 +9,7 @@ public record CurrentUserResponse(
         String lastName,
         String role,
         boolean googleLinked,
-        boolean hasPassword
-) {
-}
+        String institution,
+        String department,
+        String country
+) {}
