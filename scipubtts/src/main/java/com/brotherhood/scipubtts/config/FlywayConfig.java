@@ -1,12 +1,12 @@
-/*
- Archived on 2026-06-19.
 
- This custom Flyway configuration is intentionally disabled because it causes
- the application's Hikari DataSource to initialize too early under Spring
- Boot 4, which then seals the pool before Spring finishes binding
- spring.datasource.hikari.* properties.
-
- The application now relies on Spring Boot's built-in Flyway auto-configuration.
+// Archived on 2026-06-19.
+//
+// This custom Flyway configuration is intentionally disabled because it causes
+// the application's Hikari DataSource to initialize too early under Spring
+// Boot 4, which then seals the pool before Spring finishes binding
+// spring.datasource.hikari.* properties.
+//
+// The application now relies on Spring Boot's built-in Flyway auto-configuration.
 
  package com.brotherhood.scipubtts.config;
 
@@ -56,4 +56,4 @@
                  .load();
      }
  }
-*/
+
