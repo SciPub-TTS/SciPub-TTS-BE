@@ -17,23 +17,25 @@ public class TopicTrendServiceImpl implements TopicTrendService {
     private static final int DEFAULT_LIMIT = 8;
     private static final int MAX_LIMIT = 20;
 
-    private static final String HOT_TOPICS_SQL = """
+    private static final String TRENDING_TOPICS_SQL = """
             WITH latest_weekly_topics AS (
                 SELECT
+                    id,
                     topic_id,
                     name,
-                field_id,
-                works,
-                citations,
-                velocity,
-                acceleration,
-                created_at,
-                ROW_NUMBER() OVER (
+                    field_id,
+                    works,
+                    citations,
+                    velocity,
+                    acceleration,
+                    start_time,
+                    end_time,
+                    ROW_NUMBER() OVER (
                         PARTITION BY LOWER(name)
-                        ORDER BY acceleration DESC, velocity DESC, citations DESC, works DESC, created_at DESC, id DESC
+                        ORDER BY acceleration DESC, velocity DESC, citations DESC, works DESC, end_time DESC, start_time DESC, id DESC
                     ) AS row_rank
-                FROM topic
-                WHERE DATE(end_time) = ?
+                FROM topics
+                WHERE end_time = ?
             )
             SELECT topic_id, name, field_id, works, citations
             FROM latest_weekly_topics
@@ -54,7 +56,7 @@ public class TopicTrendServiceImpl implements TopicTrendService {
         int resolvedLimit = normalizeLimit(limit);
 
         List<HotTopicItemResponse> hotTopics = jdbcTemplate.query(
-                HOT_TOPICS_SQL,
+                TRENDING_TOPICS_SQL,
                 (resultSet, rowNum) -> new HotTopicItemResponse(
                         resultSet.getString("topic_id"),
                         resultSet.getString("name"),

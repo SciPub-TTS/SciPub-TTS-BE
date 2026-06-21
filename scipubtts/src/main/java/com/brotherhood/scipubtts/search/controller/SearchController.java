@@ -208,29 +208,29 @@ public class SearchController {
         );
     }
 
-    @GetMapping("/hot-topics")
-    @Operation(summary = "Load weekly hot topics from the internal topic trend table")
-    public ResponseEntity<ResponseObject> getHotTopics(
+    @GetMapping({"/trending-topics", "/hot-topics"})
+    @Operation(summary = "Load weekly trending topics from the internal topic trend table")
+    public ResponseEntity<ResponseObject> getTrendingTopics(
             @RequestParam(required = false) LocalDate snapshotDate,
             @RequestParam(defaultValue = "8") int limit
     ) {
         HotTopicResponse data = topicTrendService.getWeeklyHotTopics(snapshotDate, limit);
 
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Loaded weekly hot topics", data)
+                new ResponseObject(200, "Loaded weekly trending topics", data)
         );
     }
 
-    @GetMapping("/hot-keywords")
-    @Operation(summary = "Load weekly hot keywords from the internal keyword trend table")
-    public ResponseEntity<ResponseObject> getHotKeywords(
+    @GetMapping({"/trending-keywords", "/hot-keywords"})
+    @Operation(summary = "Load weekly trending keywords from the internal keyword trend table")
+    public ResponseEntity<ResponseObject> getTrendingKeywords(
             @RequestParam(required = false) LocalDate snapshotDate,
             @RequestParam(defaultValue = "8") int limit
     ) {
         HotKeywordResponse data = keywordTrendService.getWeeklyHotKeywords(snapshotDate, limit);
 
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject(200, "Loaded weekly hot keywords", data)
+                new ResponseObject(200, "Loaded weekly trending keywords", data)
         );
     }
 

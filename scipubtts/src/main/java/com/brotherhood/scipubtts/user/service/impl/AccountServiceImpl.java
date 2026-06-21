@@ -8,6 +8,7 @@ import com.brotherhood.scipubtts.user.dto.request.ChangePasswordRequest;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.user.service.AccountService;
+import com.brotherhood.scipubtts.user.service.AvatarService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +25,7 @@ public class AccountServiceImpl implements AccountService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final AvatarService avatarService;
 
     @Override
     @Transactional
@@ -76,11 +78,17 @@ public class AccountServiceImpl implements AccountService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        if (!StringUtils.hasText(user.getAvatarUrl())) {
+            user.setAvatarUrl(avatarService.buildDefaultAvatarUrl(user));
+            userRepository.save(user);
+        }
+
         return new CurrentUserResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
+                user.getAvatarUrl(),
                 user.getRole().name(),
                 user.isGoogleLinked(),
                 StringUtils.hasText(user.getPasswordHash())

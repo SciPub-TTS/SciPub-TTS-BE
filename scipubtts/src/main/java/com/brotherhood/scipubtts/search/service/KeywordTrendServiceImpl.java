@@ -17,9 +17,10 @@ public class KeywordTrendServiceImpl implements KeywordTrendService {
     private static final int DEFAULT_LIMIT = 8;
     private static final int MAX_LIMIT = 20;
 
-    private static final String HOT_KEYWORDS_SQL = """
+    private static final String TRENDING_KEYWORDS_SQL = """
             WITH latest_weekly_keywords AS (
                 SELECT
+                    id,
                     keyword_id,
                     keyword,
                     field_id,
@@ -28,13 +29,15 @@ public class KeywordTrendServiceImpl implements KeywordTrendService {
                     pgr,
                     cagr,
                     ps,
+                    start_time,
+                    end_time,
                     created_at,
                     ROW_NUMBER() OVER (
                         PARTITION BY LOWER(keyword)
-                        ORDER BY cagr DESC, pgr DESC, ps DESC, cited_by_count DESC, works_count DESC, created_at DESC, id DESC
+                        ORDER BY cagr DESC, pgr DESC, ps DESC, cited_by_count DESC, works_count DESC, end_time DESC, start_time DESC, created_at DESC, id DESC
                     ) AS row_rank
-                FROM keyword
-                WHERE DATE(end_time) = ?
+                FROM keywords
+                WHERE end_time = ?
             )
             SELECT keyword_id, keyword, field_id, works_count, cited_by_count
             FROM latest_weekly_keywords
@@ -55,11 +58,11 @@ public class KeywordTrendServiceImpl implements KeywordTrendService {
         int resolvedLimit = normalizeLimit(limit);
 
         List<HotKeywordItemResponse> hotKeywords = jdbcTemplate.query(
-                HOT_KEYWORDS_SQL,
+                TRENDING_KEYWORDS_SQL,
                 (resultSet, rowNum) -> new HotKeywordItemResponse(
                         resultSet.getString("keyword_id"),
                         resultSet.getString("keyword"),
-                        resultSet.getObject("field_id", Integer.class),
+                        parseFieldId(resultSet.getString("field_id")),
                         resultSet.getObject("works_count", Long.class),
                         resultSet.getObject("cited_by_count", Long.class)
                 ),
@@ -85,5 +88,17 @@ public class KeywordTrendServiceImpl implements KeywordTrendService {
         }
 
         return Math.min(limit, MAX_LIMIT);
+    }
+
+    private Integer parseFieldId(String fieldId) {
+        if (fieldId == null || fieldId.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Integer.valueOf(fieldId.trim());
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 }

@@ -124,6 +124,8 @@ public class SecurityConfig {
                                 "/api/search/filters/**",
                                 "/api/search/works",
                                 "/api/search/entities",
+                                "/api/search/trending-topics",
+                                "/api/search/trending-keywords",
                                 "/api/search/hot-topics",
                                 "/api/search/hot-keywords",
                                 "/api/papers/**",
