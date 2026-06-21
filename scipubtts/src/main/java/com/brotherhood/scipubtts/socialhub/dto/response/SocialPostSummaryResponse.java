@@ -9,11 +9,21 @@ public record SocialPostSummaryResponse(
         String title,
         String bodyPreview,
         List<String> topicTag,
+        List<ReferenceInfo> references,
         int likeCount,
         boolean liked,
         AuthorInfo author,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt
 ) {
 
     public record AuthorInfo(UUID id, String fullName) {}
+
+    public record ReferenceInfo(
+            UUID id,
+            String openalexId,
+            String titleSnapshot,
+            String authorsSnapshot,
+            Integer yearSnapshot
+    ) {}
 }

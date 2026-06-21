@@ -12,7 +12,7 @@ public record UpdateSocialPostRequest(
         @Size(min = 20, message = "Body must be at least 20 characters")
         String body,
 
-        @Size(max = 100, message = "Topic tag cannot exceed 100 characters")
+        @Size(max = 500, message = "Topic tag cannot exceed 500 characters")
         String topicTag,
 
         @Size(max = 3, message = "Maximum 3 references per post")

@@ -138,6 +138,14 @@ public class SocialServiceImpl implements SocialService {
         return toSummaryPage(page, viewerId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SocialPostDetailResponse getPostDetail(UUID postId, UUID viewerId) {
+        SocialPost post = findActivePost(postId);
+        boolean liked = viewerId != null && likeRepository.existsByPostIdAndUserId(postId, viewerId);
+        return toDetailResponse(post, liked, false);
+    }
+
     // ─────────────────────────────────────────────────────────
     // FLOW 3 — updatePost (kèm phạt Like khi đổi reference)
     // ─────────────────────────────────────────────────────────
@@ -311,16 +319,27 @@ public class SocialServiceImpl implements SocialService {
 
         User author = post.getAuthor();
         String fullName = (author.getFirstName() + " " + author.getLastName()).trim();
+        List<SocialPostSummaryResponse.ReferenceInfo> refs = post.getReferences().stream()
+                .map(r -> new SocialPostSummaryResponse.ReferenceInfo(
+                        r.getId(),
+                        r.getOpenalexId(),
+                        r.getTitleSnapshot(),
+                        r.getAuthorsSnapshot(),
+                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null
+                ))
+                .toList();
 
         return new SocialPostSummaryResponse(
                 post.getId(),
                 post.getTitle(),
                 preview,
-                List.of(post.getTopicTag().split(",")),
+                extractTopicTags(post.getTopicTag()),
+                refs,
                 post.getLikeCount(),
                 liked,
                 new SocialPostSummaryResponse.AuthorInfo(author.getId(), fullName),
-                post.getCreatedAt()
+                post.getCreatedAt(),
+                post.getUpdatedAt()
         );
     }
 
@@ -347,7 +366,7 @@ public class SocialServiceImpl implements SocialService {
                 post.getId(),
                 post.getTitle(),
                 post.getBody(),
-                List.of(post.getTopicTag().split(",")),
+                extractTopicTags(post.getTopicTag()),
                 post.getLikeCount(),
                 liked,
                 new SocialPostDetailResponse.AuthorInfo(author.getId(), fullName),
@@ -356,5 +375,16 @@ public class SocialServiceImpl implements SocialService {
                 post.getUpdatedAt(),
                 likesReset
         );
+    }
+
+    private List<String> extractTopicTags(String rawTopicTag) {
+        if (!StringUtils.hasText(rawTopicTag)) {
+            return List.of();
+        }
+
+        return Arrays.stream(rawTopicTag.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
     }
 }
