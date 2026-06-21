@@ -6,9 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Date;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 @Service
@@ -16,6 +14,7 @@ public class TopicTrendServiceImpl implements TopicTrendService {
 
     private static final int DEFAULT_LIMIT = 8;
     private static final int MAX_LIMIT = 20;
+    private static final String LATEST_TOPIC_SNAPSHOT_SQL = "SELECT MAX(end_time) FROM topics";
 
     private static final String TRENDING_TOPICS_SQL = """
             WITH latest_weekly_topics AS (
@@ -76,8 +75,12 @@ public class TopicTrendServiceImpl implements TopicTrendService {
             return snapshotDate;
         }
 
-        return LocalDate.now()
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        Date latestSnapshot = jdbcTemplate.queryForObject(LATEST_TOPIC_SNAPSHOT_SQL, Date.class);
+        if (latestSnapshot != null) {
+            return latestSnapshot.toLocalDate();
+        }
+
+        return LocalDate.now();
     }
 
     private int normalizeLimit(int limit) {

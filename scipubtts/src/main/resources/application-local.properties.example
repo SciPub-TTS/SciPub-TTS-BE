@@ -18,6 +18,11 @@ spring.mail.password=dien_mat_khau_ung_dung_smtp
 spring.security.oauth2.client.registration.google.client-id=dien_google_client_id
 spring.security.oauth2.client.registration.google.client-secret=dien_google_client_secret
 
+# OpenAlex API
+openalex.base-url=https://api.openalex.org
+openalex.api-key=dien_openalex_api_key
+openalex.mailto=dien_email_openalex@example.com
+
 # Security Secrets
 app.jwt.secret=chuoi_key_ngau_nhien_co_do_dai_tren_32_ky_tu_cho_local
 app.backend-base-url=your_local_backend_base_url
