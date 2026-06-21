@@ -5,7 +5,10 @@ import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.user.dto.request.ChangePasswordRequest;
+import com.brotherhood.scipubtts.user.dto.request.UpdateUserProfileRequest;
 import com.brotherhood.scipubtts.user.entity.User;
+import com.brotherhood.scipubtts.user.entity.UserProfile;
+import com.brotherhood.scipubtts.user.repository.UserProfileRepository;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.user.service.AccountService;
 import com.brotherhood.scipubtts.user.service.AvatarService;
@@ -23,6 +26,7 @@ import java.util.UUID;
 public class AccountServiceImpl implements AccountService {
 
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final AvatarService avatarService;
@@ -74,6 +78,47 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
+    public CurrentUserResponse updateProfile(UUID userId, UpdateUserProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (request.firstName() != null) {
+            user.setFirstName(request.firstName().trim());
+        }
+
+        if (request.lastName() != null) {
+            user.setLastName(request.lastName().trim());
+        }
+
+        user = userRepository.save(user);
+
+        User finalUser = user;
+        UserProfile profile = userProfileRepository.findById(userId)
+                .orElseGet(() -> UserProfile.builder()
+                        .userId(userId)
+                        .user(finalUser)
+                        .build());
+
+        if (request.institution() != null) {
+            profile.setInstitution(request.institution().trim());
+        }
+
+        if (request.department() != null) {
+            profile.setDepartment(request.department().trim());
+        }
+
+        if (request.country() != null) {
+            profile.setCountry(request.country().trim());
+        }
+
+        profile = userProfileRepository.save(profile);
+
+        return toCurrentUserResponse(user, profile);
+    }
+
+    @Override
+    @Transactional
     public CurrentUserResponse getCurrentUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -83,6 +128,12 @@ public class AccountServiceImpl implements AccountService {
             userRepository.save(user);
         }
 
+        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
+
+        return toCurrentUserResponse(user, profile);
+    }
+
+    private CurrentUserResponse toCurrentUserResponse(User user, UserProfile profile) {
         return new CurrentUserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -91,8 +142,9 @@ public class AccountServiceImpl implements AccountService {
                 user.getAvatarUrl(),
                 user.getRole().name(),
                 user.isGoogleLinked(),
-                StringUtils.hasText(user.getPasswordHash())
+                profile != null ? profile.getInstitution() : null,
+                profile != null ? profile.getDepartment() : null,
+                profile != null ? profile.getCountry() : "Vietnam"
         );
     }
-
 }

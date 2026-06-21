@@ -28,14 +28,12 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
             FROM UserBookmark b
             WHERE b.userId = :userId
               AND (:topic IS NULL OR :topic = '' OR b.topicSnapshot = :topic)
-              AND (:source IS NULL OR :source = '' OR b.sourceSnapshot = :source)
               AND (:author IS NULL OR :author = '' OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :author, '%')))
               AND (:year IS NULL OR b.publicationYear = :year)
               AND (
                   :keyword IS NULL OR :keyword = ''
                   OR LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                  OR LOWER(b.sourceSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.topicSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
           )
     """)
@@ -66,14 +64,14 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     long countDistinctTopicsByUserId(@Param("userId") UUID userId);
 
     // 4.3. Total unique sources
-    @Query("""
-        SELECT COUNT(DISTINCT b.sourceSnapshot)
-        FROM UserBookmark b
-        WHERE b.userId = :userId
-          AND b.sourceSnapshot IS NOT NULL
-          AND b.sourceSnapshot <> ''
-    """)
-    long countDistinctSourcesByUserId(@Param("userId") UUID userId);
+//    @Query("""
+//        SELECT COUNT(DISTINCT b.sourceSnapshot)
+//        FROM UserBookmark b
+//        WHERE b.userId = :userId
+//          AND b.sourceSnapshot IS NOT NULL
+//          AND b.sourceSnapshot <> ''
+//    """)
+//    long countDistinctSourcesByUserId(@Param("userId") UUID userId);
 
     @Query("""
         SELECT COUNT(DISTINCT b.authorsSnapshot)
@@ -100,15 +98,15 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     List<String> findDistinctTopicsByUserId(@Param("userId") UUID userId);
 
     // 5.2. Danh sách Sources (sắp xếp A-Z)
-    @Query("""
-        SELECT DISTINCT b.sourceSnapshot
-        FROM UserBookmark b
-        WHERE b.userId = :userId
-          AND b.sourceSnapshot IS NOT NULL
-          AND b.sourceSnapshot <> ''
-        ORDER BY b.sourceSnapshot ASC
-    """)
-    List<String> findDistinctSourcesByUserId(@Param("userId") UUID userId);
+//    @Query("""
+//        SELECT DISTINCT b.sourceSnapshot
+//        FROM UserBookmark b
+//        WHERE b.userId = :userId
+//          AND b.sourceSnapshot IS NOT NULL
+//          AND b.sourceSnapshot <> ''
+//        ORDER BY b.sourceSnapshot ASC
+//    """)
+//    List<String> findDistinctSourcesByUserId(@Param("userId") UUID userId);
 
     // 5.3. Danh sách Years (sắp xếp mới nhất -> cũ nhất)
     @Query("""

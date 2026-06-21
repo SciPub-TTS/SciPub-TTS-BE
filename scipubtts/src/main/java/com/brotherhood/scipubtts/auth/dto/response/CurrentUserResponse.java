@@ -10,6 +10,7 @@ public record CurrentUserResponse(
         String avatarUrl,
         String role,
         boolean googleLinked,
-        boolean hasPassword
-) {
-}
+        String institution,
+        String department,
+        String country
+) {}
