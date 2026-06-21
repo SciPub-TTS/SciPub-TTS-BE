@@ -11,6 +11,7 @@ import com.brotherhood.scipubtts.user.entity.UserProfile;
 import com.brotherhood.scipubtts.user.repository.UserProfileRepository;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import com.brotherhood.scipubtts.user.service.AccountService;
+import com.brotherhood.scipubtts.user.service.AvatarService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,7 @@ public class AccountServiceImpl implements AccountService {
     private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final AvatarService avatarService;
 
     @Override
     @Transactional
@@ -78,15 +80,19 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public CurrentUserResponse updateProfile(UUID userId, UpdateUserProfileRequest request) {
-        // 1. Cập nhật bảng Users
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (request.firstName() != null) user.setFirstName(request.firstName().trim());
-        if (request.lastName() != null)  user.setLastName(request.lastName().trim());
+        if (request.firstName() != null) {
+            user.setFirstName(request.firstName().trim());
+        }
+
+        if (request.lastName() != null) {
+            user.setLastName(request.lastName().trim());
+        }
+
         user = userRepository.save(user);
 
-        // 2. Cập nhật hoặc Khởi tạo bảng UserProfile
         User finalUser = user;
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> UserProfile.builder()
@@ -94,12 +100,20 @@ public class AccountServiceImpl implements AccountService {
                         .user(finalUser)
                         .build());
 
-        if (request.institution() != null) profile.setInstitution(request.institution().trim());
-        if (request.department() != null)  profile.setDepartment(request.department().trim());
-        if (request.country() != null)     profile.setCountry(request.country().trim());
+        if (request.institution() != null) {
+            profile.setInstitution(request.institution().trim());
+        }
+
+        if (request.department() != null) {
+            profile.setDepartment(request.department().trim());
+        }
+
+        if (request.country() != null) {
+            profile.setCountry(request.country().trim());
+        }
+
         profile = userProfileRepository.save(profile);
 
-        // 3. Đóng gói trả về Response rút gọn
         return toCurrentUserResponse(user, profile);
     }
 
@@ -109,18 +123,23 @@ public class AccountServiceImpl implements AccountService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        if (!StringUtils.hasText(user.getAvatarUrl())) {
+            user.setAvatarUrl(avatarService.buildDefaultAvatarUrl(user));
+            userRepository.save(user);
+        }
+
         UserProfile profile = userProfileRepository.findById(userId).orElse(null);
 
         return toCurrentUserResponse(user, profile);
     }
 
-    // Hàm Helper map chuẩn xác theo các field yêu cầu
     private CurrentUserResponse toCurrentUserResponse(User user, UserProfile profile) {
         return new CurrentUserResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
+                user.getAvatarUrl(),
                 user.getRole().name(),
                 user.isGoogleLinked(),
                 profile != null ? profile.getInstitution() : null,
