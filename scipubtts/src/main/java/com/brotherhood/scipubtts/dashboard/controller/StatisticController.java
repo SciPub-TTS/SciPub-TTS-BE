@@ -58,7 +58,7 @@ public class StatisticController {
           HttpServletRequest httpServletRequest){
     long startTime = System.currentTimeMillis();
 
-    var data = topicService.calculateAndSaveTopics(request);
+    var data = topicService.calculateAndSaveTopicsParallel(request);
 
     long duration = System.currentTimeMillis() - startTime;
 
@@ -109,7 +109,7 @@ public class StatisticController {
   public ResponseEntity<ResponseObject> calculateAllTopicsPreviousPeriods(
           @Valid @RequestBody TopicCalculateAllRequest request,
           HttpServletRequest httpServletRequest) {
-    var data = topicService.calculateAllTopicsPreviousPeriods(request);
+    var data = topicService.calculateAllTopicsPreviousPeriodsParallel(request);
 
     return ResponseEntity.ok(
             new ResponseObject(
