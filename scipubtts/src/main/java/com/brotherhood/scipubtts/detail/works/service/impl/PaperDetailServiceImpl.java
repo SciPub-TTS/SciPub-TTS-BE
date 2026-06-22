@@ -1,7 +1,9 @@
-package com.brotherhood.scipubtts.detail.works.service;
+package com.brotherhood.scipubtts.detail.works.service.impl;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
 import com.brotherhood.scipubtts.detail.works.dto.response.WorkReferenceSummaryResponse;
+import com.brotherhood.scipubtts.detail.works.service.PaperDetailOpenAlexQueryFactory;
+import com.brotherhood.scipubtts.detail.works.service.PaperDetailService;
 import com.brotherhood.scipubtts.search.service.OpenAlexMapReader;
 import org.springframework.stereotype.Service;
 

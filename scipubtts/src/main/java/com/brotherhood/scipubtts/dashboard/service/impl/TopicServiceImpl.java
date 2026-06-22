@@ -22,6 +22,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @RequiredArgsConstructor
 @Service
@@ -33,6 +36,7 @@ public class TopicServiceImpl implements TopicService {
   private static final long PERIOD_DAYS = 7;
   private static final int PREVIOUS_PERIODS_COUNT = 4;
   private static final double CITATION_LAMBDA = Math.log(2);
+  private static final long FAKE_TOPIC_CALCULATION_MS = 5_000 * 100;
 
   private static final Random RANDOM = new Random();
 
@@ -164,11 +168,6 @@ public class TopicServiceImpl implements TopicService {
   }
 
   private double calculateCitationDecay(Topic topic){
-
-    long totalStart = System.nanoTime();
-    System.out.println("[CitationDecay] START - topicId=" + topic.getTopicId());
-
-    long apiStart = System.nanoTime();
     var response =
             openAlexService.takeWorkCitationList(
                     new OpenAlexTopicFilterRequest(
@@ -177,48 +176,19 @@ public class TopicServiceImpl implements TopicService {
                             topic.getTopicId()
                     )
             );
-    long apiEnd = System.nanoTime();
-    System.out.println(
-            "[CitationDecay] API completed in "
-                    + ((apiEnd - apiStart) / 1_000_000.0)
-                    + " ms"
-    );
 
     if (response == null
             || response.workCitationList() == null
             || response.workCitationList().isEmpty()) {
 
-      System.out.println("[CitationDecay] Empty response");
-      System.out.println(
-              "[CitationDecay] TOTAL execution time = "
-                      + ((System.nanoTime() - totalStart) / 1_000_000.0)
-                      + " ms"
-      );
-
       return 0.0;
     }
 
-    // PREPARE
-    long prepareStart = System.nanoTime();
-
     LocalDate endDate = topic.getEndTime();
-
-    long prepareEnd = System.nanoTime();
-    System.out.println(
-            "[CitationDecay] Prepare phase took "
-                    + ((prepareEnd - prepareStart) / 1_000_000.0)
-                    + " ms"
-    );
-
-    // CALCULATE
-    long calcStart = System.nanoTime();
-    int workCount = 0;
 
     double citationScore = 0.0;
 
     for (var work : response.workCitationList()) {
-
-      workCount++;
 
       double citationCount = work.citedByCount();
 
@@ -240,14 +210,6 @@ public class TopicServiceImpl implements TopicService {
                       -CITATION_LAMBDA * age
               );
     }
-    long calcEnd = System.nanoTime();
-    System.out.println(
-            "[CitationDecay] Calculation completed for "
-                    + workCount
-                    + " works in "
-                    + ((calcEnd - calcStart) / 1_000_000.0)
-                    + " ms"
-    );
 
     return Math.round(citationScore * 1000.0) / 1000.0;
   }
@@ -294,6 +256,16 @@ public class TopicServiceImpl implements TopicService {
     newCommer.removeAll(allAuthor);
 
     return round3((double) newCommer.size() / currentPeriodAuthor.size());
+  }
+
+  private void simulateApiCalculation() {
+    try {
+      System.out.println("DELAY...");
+      Thread.sleep(FAKE_TOPIC_CALCULATION_MS);
+      System.out.println("OK");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   private Topic calculateRealMetrics(
@@ -349,6 +321,78 @@ public class TopicServiceImpl implements TopicService {
     return topicsToSave;
   }
 
+  public TopicCalculateResponse calculateAndSaveTopicsParallel(TopicCalculateAllRequest request) {
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate = LocalDate.parse(request.endTime());
+
+    var hotTopics = openAlexService.filterHotTopic(new TopicHotFilterRequest(request.fieldId()));
+    List<Topic> topicList = hotTopics.topicIdList();
+    int totalTopics = topicList.size();
+
+    long systemStart = System.currentTimeMillis();
+    int THREAD_COUNT = 15;
+    ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+
+    System.out.println("THREAD START");
+
+    try {
+      List<Future<Topic>> futures = new ArrayList<>();
+
+      for (int i = 0; i < totalTopics; i++) {
+        int index = i;
+
+        futures.add(executor.submit(() -> {
+          Topic rawTopic = topicList.get(index);
+          long start = System.currentTimeMillis();
+
+          simulateApiCalculation();
+
+          Topic topic;
+          if (index == 0) {
+            topic = calculateTopic(
+                    rawTopic.getTopicId(),
+                    request.startTime(),
+                    request.endTime(),
+                    request.fieldId()
+            );
+          } else {
+            topic = openAlexService.findTopicById(rawTopic.getTopicId(), request.fieldId());
+            applyFakeMetrics(topic, startDate, endDate);
+          }
+
+          double minutes = (System.currentTimeMillis() - start) / 60000.0;
+          System.out.printf("[TOPIC DONE] topic=%s index=%d duration=%.2f minutes%n",
+                  rawTopic.getTopicId(), index, minutes);
+
+          return topic;
+        }));
+      }
+
+      List<Topic> result = new ArrayList<>();
+      for (Future<Topic> f : futures) {
+        try {
+          result.add(f.get());
+        } catch (Exception e) {
+          throw new RuntimeException("Topic calculation failed", e);
+        }
+      }
+
+      double totalMinutes = (System.currentTimeMillis() - systemStart) / 60000.0;
+
+      System.out.println("==============================");
+      System.out.printf("Total Topics: %d%n", totalTopics);
+      System.out.printf("Total System Time: %.2f minutes%n", totalMinutes);
+      System.out.printf("Total System Time without parallel: %.2f minutes%n", totalTopics * FAKE_TOPIC_CALCULATION_MS / 60000.0);
+      System.out.println("==============================");
+
+      result = saveRankedTopics(result);
+      return new TopicCalculateResponse(result);
+
+    } finally {
+      executor.shutdown();
+    }
+  }
+
   public TopicCalculateResponse calculateAndSaveTopics(TopicCalculateAllRequest request ) {
 
     LocalDate startDate = LocalDate.parse(request.startTime());
@@ -373,6 +417,8 @@ public class TopicServiceImpl implements TopicService {
     for (int i = 0; i < topicList.size(); i++) {
       Topic rawTopic = topicList.get(i);
 
+      long start = System.currentTimeMillis();
+
       if (i == 0) {
         result.add(calculateTopic(
                 rawTopic.getTopicId(),
@@ -385,6 +431,16 @@ public class TopicServiceImpl implements TopicService {
         applyFakeMetrics(topic, startDate, endDate);
         result.add(topic);
       }
+
+      double durationMinutes =
+              (System.currentTimeMillis() - start) / 60000.0;
+
+      System.out.printf(
+              "[TOPIC_CALCULATION] topicId=%s, index=%d, duration=%.2f minutes%n",
+              rawTopic.getTopicId(),
+              i,
+              durationMinutes
+      );
     }
 
     result = saveRankedTopics(result);
@@ -474,7 +530,6 @@ public class TopicServiceImpl implements TopicService {
     return topic;
   }
 
-  // FIX: add DataIntegrityViolationException catch for handle duplicate key
   private Topic calculateAndSaveTopicForPeriod(
           Topic baseTopic,
           LocalDate startDate,
@@ -511,6 +566,81 @@ public class TopicServiceImpl implements TopicService {
     }
   }
 
+  private TopicCalculateResponse calculateTopicPreviousPeriodsParallel(
+          Topic currentTopic,
+          boolean useFake
+  ) {
+    LocalDate startDate = currentTopic.getStartTime();
+    LocalDate endDate = currentTopic.getEndTime();
+    long systemStart = System.currentTimeMillis();
+
+    int THREAD_COUNT = 4;
+    ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+
+    try {
+      List<Future<Topic>> futures = new ArrayList<>();
+
+      for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
+        final int currentPeriod = period;
+
+        futures.add(executor.submit(() -> {
+          long start = System.currentTimeMillis();
+          long shiftDays = PERIOD_DAYS * currentPeriod;
+
+          simulateApiCalculation();
+
+          LocalDate periodStart = startDate.minusDays(shiftDays);
+          LocalDate periodEnd = endDate.minusDays(shiftDays);
+
+          var existing = topicRepository.findByTopicIdAndStartTimeAndEndTimeAndFieldId(
+                  currentTopic.getTopicId(),
+                  periodStart,
+                  periodEnd,
+                  currentTopic.getFieldId()
+          );
+
+          Topic result;
+          if (existing.isPresent()) {
+            result = existing.get();
+          } else {
+            result = calculateAndSaveTopicForPeriod(
+                    currentTopic,
+                    periodStart,
+                    periodEnd,
+                    useFake
+            );
+          }
+
+          double duration = (System.currentTimeMillis() - start) / 60000.0;
+          System.out.printf("[PERIOD DONE] topic=%s period=%d duration=%.2f minutes%n",
+                  currentTopic.getTopicId(), currentPeriod, duration);
+
+          return result;
+        }));
+      }
+
+      List<Topic> results = new ArrayList<>();
+      for (Future<Topic> future : futures) {
+        try {
+          results.add(future.get());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      double total = (System.currentTimeMillis() - systemStart) / 60000.0;
+
+      System.out.println("================================");
+      System.out.printf("Topic=%s Total Period Time=%.2f minutes%n", currentTopic.getTopicId(), total);
+      System.out.println("================================");
+
+      return new TopicCalculateResponse(results);
+
+    } finally {
+      executor.shutdown();
+    }
+  }
+
   private TopicCalculateResponse calculateTopicPreviousPeriods(Topic currentTopic, boolean useFake) {
     LocalDate startDate = currentTopic.getStartTime();
     LocalDate endDate = currentTopic.getEndTime();
@@ -537,6 +667,62 @@ public class TopicServiceImpl implements TopicService {
     }
 
     return new TopicCalculateResponse(results);
+  }
+
+  public TopicCalculateResponse calculateAllTopicsPreviousPeriodsParallel(TopicCalculateAllRequest request) {
+    long systemStart = System.currentTimeMillis();
+
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate = LocalDate.parse(request.endTime());
+    Integer fieldId = Integer.parseInt(request.fieldId());
+
+    List<Topic> currentTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(startDate, endDate, fieldId);
+    if (currentTopics.isEmpty()) {
+      throw new BusinessException(ErrorCode.TOPIC_NOT_FOUND);
+    }
+
+    int THREAD_COUNT = Math.min(10, currentTopics.size());
+    ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+
+    try {
+      List<Future<List<Topic>>> futures = new ArrayList<>();
+
+      for (Topic currentTopic : currentTopics) {
+        futures.add(executor.submit(() -> {
+          long start = System.currentTimeMillis();
+
+          List<Topic> result = calculateTopicPreviousPeriodsParallel(currentTopic, true).topicList();
+
+          double duration = (System.currentTimeMillis() - start) / 60000.0;
+          System.out.printf("[TOPIC DONE] topic=%s periods=%d duration=%.2f minutes%n",
+                  currentTopic.getTopicId(), PREVIOUS_PERIODS_COUNT, duration);
+
+          return result;
+        }));
+      }
+
+      List<Topic> results = new ArrayList<>();
+      for (Future<List<Topic>> future : futures) {
+        try {
+          results.addAll(future.get());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      double total = (System.currentTimeMillis() - systemStart) / 60000.0;
+
+      System.out.println("==================================");
+      System.out.printf("Total Topics: %d%n", currentTopics.size());
+      System.out.printf("Total Previous Topics: %d%n", results.size());
+      System.out.printf("Total System Time: %.2f minutes%n", total);
+      System.out.println("==================================");
+
+      return new TopicCalculateResponse(results);
+
+    } finally {
+      executor.shutdown();
+    }
   }
 
   public TopicCalculateResponse calculateAllTopicsPreviousPeriods(
