@@ -28,6 +28,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class SocialServiceImpl implements SocialService {
@@ -42,23 +43,71 @@ public class SocialServiceImpl implements SocialService {
     private final UserBookmarkRepository bookmarkRepository;
 
     // ─────────────────────────────────────────────────────────
-    // CREATE
+    // FLOW 1 — Helper validate References (dùng chung Create & Update)
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * Bước 1: null/empty            → return List.of()
+     * Bước 2: size > 3              → throw SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT
+     * Bước 3: bóc tách ID duy nhất (distinct, đã chuẩn hóa)
+     * Bước 4: phải bắt đầu bằng "W" → throw nếu sai định dạng
+     * Bước 5: query bookmarkRepository.findByUserIdAndOpenalexIdIn(userId, ids)
+     * Bước 6: nếu kết quả ít hơn ids.size() → throw REFERENCE_NOT_IN_BOOKMARK
+     * Bước 7: trả về list UserBookmark hợp lệ
+     */
+    private List<UserBookmark> extractBookmarksForReferences(UUID userId, List<String> openalexIds) {
+        if (openalexIds == null || openalexIds.isEmpty()) {
+            return List.of();
+        }
+
+        if (openalexIds.size() > MAX_REFERENCES) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT);
+        }
+
+        // Chuẩn hóa + loại trùng
+        List<String> distinctIds = openalexIds.stream()
+                .map(this::normalizeOpenAlexId)
+                .distinct()
+                .toList();
+
+        // Chỉ cho phép tham chiếu WORK ("W...")
+        boolean hasInvalidFormat = distinctIds.stream()
+                .anyMatch(id -> id == null || !id.startsWith("W"));
+        if (hasInvalidFormat) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_INVALID_FORMAT);
+        }
+
+        List<UserBookmark> validBookmarks = bookmarkRepository.findByUserIdAndOpenAlexIdIn(userId, distinctIds);
+
+        if (validBookmarks.size() < distinctIds.size()) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK);
+        }
+
+        return validBookmarks;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // FLOW 2 — createPost
     // ─────────────────────────────────────────────────────────
 
     @Override
     @Transactional
     public SocialPostDetailResponse createPost(UUID authorId, CreateSocialPostRequest request) {
 
+        if (!StringUtils.hasText(request.title()) || !StringUtils.hasText(request.body())) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_TITLE_OR_BODY_BLANK);
+        }
+
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // FLOW 1: validate + lấy Bookmark hợp lệ
-        List<UserBookmark> validBookmarks = validateAndExtractBookmarks(authorId, request.references());
+        List<UserBookmark> validBookmarks = extractBookmarksForReferences(authorId, request.references());
 
         SocialPost post = SocialPost.builder()
                 .author(author)
                 .title(request.title().trim())
                 .body(request.body().trim())
+                .topicTag(StringUtils.hasText(request.topicTag()) ? request.topicTag().trim() : null)
                 .build();
 
         List<SocialPostReference> refs = validBookmarks.stream()
@@ -67,6 +116,7 @@ public class SocialServiceImpl implements SocialService {
         post.setReferences(refs);
 
         SocialPost saved = postRepository.save(post);
+
         return toDetailResponse(saved, false, false);
     }
 
@@ -88,57 +138,63 @@ public class SocialServiceImpl implements SocialService {
         return toSummaryPage(page, viewerId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SocialPostDetailResponse getPostDetail(UUID postId, UUID viewerId) {
+        SocialPost post = findActivePost(postId);
+        boolean liked = viewerId != null && likeRepository.existsByPostIdAndUserId(postId, viewerId);
+        return toDetailResponse(post, liked, false);
+    }
+
     // ─────────────────────────────────────────────────────────
-    // UPDATE  — FLOW 3
+    // FLOW 3 — updatePost (kèm phạt Like khi đổi reference)
     // ─────────────────────────────────────────────────────────
 
     @Override
     @Transactional
     public SocialPostDetailResponse updatePost(UUID postId, UUID editorId, UpdateSocialPostRequest request) {
+
         SocialPost post = findActivePost(postId);
         assertIsAuthor(post, editorId);
 
         if (StringUtils.hasText(request.title())) post.setTitle(request.title().trim());
         if (StringUtils.hasText(request.body()))  post.setBody(request.body().trim());
+        if (request.topicTag() != null)           post.setTopicTag(
+                StringUtils.hasText(request.topicTag()) ? request.topicTag().trim() : null);
 
-        boolean likesReset = false;
+        boolean isLikesReset = false;
 
-        // Chỉ xử lý reference nếu FE có gửi field này lên (null = giữ nguyên)
         if (request.references() != null) {
 
-            // Bước 4.1: so sánh openalexId cũ vs mới
             Set<String> oldOpenalexIds = new HashSet<>(referenceRepository.findOpenalexIdByPostId(postId));
+
             Set<String> newOpenalexIds = request.references().stream()
-                    .map(r -> normalizeOpenAlexId(r.openalexId()))
+                    .map(this::normalizeOpenAlexId)
                     .collect(Collectors.toSet());
 
             boolean referencesChanged = !oldOpenalexIds.equals(newOpenalexIds);
 
             if (referencesChanged) {
-                // Bước 4.2: reset toàn bộ like
+                List<UserBookmark> validBookmarks = extractBookmarksForReferences(editorId, request.references());
+
                 likeRepository.deleteAllByPostId(postId);
                 post.resetLikeCount();
-                likesReset = true;
+                isLikesReset = true;
 
-                // Validate + lấy bookmark hợp lệ cho danh sách mới
-                List<UserBookmark> validBookmarks = validateAndExtractBookmarks(editorId, request.references());
-
-                // Xóa reference cũ, thêm reference mới
                 post.getReferences().clear();
+
                 List<SocialPostReference> newRefs = validBookmarks.stream()
                         .map(bm -> buildReferenceFromBookmark(post, bm))
                         .toList();
                 post.getReferences().addAll(newRefs);
             }
-            // Bước 4.3: nếu giống nhau → không đổi gì về reference, likesReset = false
         }
 
         SocialPost updated = postRepository.save(post);
 
-        // Nếu vừa reset like thì chắc chắn editor (chính là author) chưa like bài của mình theo trạng thái mới
-        boolean liked = !likesReset && likeRepository.existsByPostIdAndUserId(postId, editorId);
+        boolean liked = !isLikesReset && likeRepository.existsByPostIdAndUserId(postId, editorId);
 
-        return toDetailResponse(updated, liked, likesReset);
+        return toDetailResponse(updated, liked, isLikesReset);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -195,59 +251,10 @@ public class SocialServiceImpl implements SocialService {
     }
 
     // ─────────────────────────────────────────────────────────
-    // FLOW 1 — Helper validate References (dùng chung Create & Update)
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Validate danh sách reference gửi lên và trả về Bookmark tương ứng
-     * (đã xác nhận thuộc sở hữu của userId) để map sang SocialPostReference.
-     * Quy tắc:
-     * 1. null/empty  → trả về list rỗng.
-     * 2. size > 3    → throw EXCEEDS_LIMIT.
-     * 3. Lọc duy nhất theo openalexId (chuẩn hóa) — không cho trùng trong cùng 1 bài.
-     * 4. openalexId không bắt đầu bằng "W" → throw INVALID_FORMAT.
-     * 5. openalexId phải nằm trong Bookmark của chính userId này
-     *    → nếu thiếu bất kỳ ID nào, throw REFERENCE_NOT_IN_BOOKMARK.
-     */
-    private List<UserBookmark> validateAndExtractBookmarks(UUID userId, List<PostReferenceRequest> refs) {
-
-        if (refs == null || refs.isEmpty()) {
-            return List.of();
-        }
-
-        if (refs.size() > MAX_REFERENCES) {
-            throw new BusinessException(ErrorCode.SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT);
-        }
-
-        // Chuẩn hóa + loại trùng
-        List<String> normalizedIds = refs.stream()
-                .map(r -> normalizeOpenAlexId(r.openalexId()))
-                .distinct()
-                .toList();
-
-        // Check định dạng "W..."
-        boolean hasInvalidFormat = normalizedIds.stream()
-                .anyMatch(id -> id == null || !id.startsWith("W"));
-        if (hasInvalidFormat) {
-            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_INVALID_FORMAT);
-        }
-
-        // Check nguồn gốc Bookmark
-        List<UserBookmark> validBookmarks = bookmarkRepository.findByUserIdAndOpenAlexIdIn(userId, normalizedIds);
-
-        if (validBookmarks.size() < normalizedIds.size()) {
-            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK);
-        }
-
-        return validBookmarks;
-    }
-
-    // ─────────────────────────────────────────────────────────
     // PRIVATE HELPERS
     // ─────────────────────────────────────────────────────────
 
     private SocialPost findActivePost(UUID postId) {
-        // @SQLRestriction tự filter deleted_at IS NULL
         return postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SOCIAL_POST_NOT_FOUND));
     }
@@ -275,6 +282,10 @@ public class SocialServiceImpl implements SocialService {
     /**
      * Lấy snapshot trực tiếp từ Bookmark đã xác thực — KHÔNG dùng dữ liệu
      * FE gửi lên, KHÔNG gọi lại OpenAlex API.
+     * ⚠️ ĐÃ SỬA theo entity chốt cuối:
+     *   - UserBookmark.getOpenAlexId()  (chữ A hoa, KHÔNG phải getOpenalexId())
+     *   - UserBookmark KHÔNG có sourceSnapshot → bỏ field này
+     *   - SocialPostReference KHÔNG có sourceSnapshot/doiSnapshot → bỏ luôn builder call
      */
     private SocialPostReference buildReferenceFromBookmark(SocialPost post, UserBookmark bookmark) {
         return SocialPostReference.builder()
@@ -282,10 +293,8 @@ public class SocialServiceImpl implements SocialService {
                 .openalexId(bookmark.getOpenAlexId())
                 .titleSnapshot(bookmark.getTitleSnapshot())
                 .authorsSnapshot(bookmark.getAuthorsSnapshot())
-                .sourceSnapshot(bookmark.getSourceSnapshot())
                 .yearSnapshot(bookmark.getPublicationYear() != null
                         ? bookmark.getPublicationYear().shortValue() : null)
-                .doiSnapshot(null) // user_bookmark hiện không lưu DOI riêng; map nếu sau này có cột
                 .build();
     }
 
@@ -310,18 +319,35 @@ public class SocialServiceImpl implements SocialService {
 
         User author = post.getAuthor();
         String fullName = (author.getFirstName() + " " + author.getLastName()).trim();
+        List<SocialPostSummaryResponse.ReferenceInfo> refs = post.getReferences().stream()
+                .map(r -> new SocialPostSummaryResponse.ReferenceInfo(
+                        r.getId(),
+                        r.getOpenalexId(),
+                        r.getTitleSnapshot(),
+                        r.getAuthorsSnapshot(),
+                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null
+                ))
+                .toList();
 
         return new SocialPostSummaryResponse(
                 post.getId(),
                 post.getTitle(),
                 preview,
+                extractTopicTags(post.getTopicTag()),
+                refs,
                 post.getLikeCount(),
                 liked,
                 new SocialPostSummaryResponse.AuthorInfo(author.getId(), fullName),
-                post.getCreatedAt()
+                post.getCreatedAt(),
+                post.getUpdatedAt()
         );
     }
 
+    /**
+     * ⚠️ ĐÃ SỬA: bỏ sourceSnapshot/doiSnapshot khỏi ReferenceInfo
+     * (SocialPostReference entity chốt cuối chỉ có 5 field: id, openalexId,
+     *  titleSnapshot, authorsSnapshot, yearSnapshot)
+     */
     private SocialPostDetailResponse toDetailResponse(SocialPost post, boolean liked, boolean likesReset) {
         User author = post.getAuthor();
         String fullName = (author.getFirstName() + " " + author.getLastName()).trim();
@@ -332,9 +358,7 @@ public class SocialServiceImpl implements SocialService {
                         r.getOpenalexId(),
                         r.getTitleSnapshot(),
                         r.getAuthorsSnapshot(),
-                        r.getSourceSnapshot(),
-                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null,
-                        r.getDoiSnapshot()
+                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null
                 ))
                 .toList();
 
@@ -342,6 +366,7 @@ public class SocialServiceImpl implements SocialService {
                 post.getId(),
                 post.getTitle(),
                 post.getBody(),
+                extractTopicTags(post.getTopicTag()),
                 post.getLikeCount(),
                 liked,
                 new SocialPostDetailResponse.AuthorInfo(author.getId(), fullName),
@@ -350,5 +375,16 @@ public class SocialServiceImpl implements SocialService {
                 post.getUpdatedAt(),
                 likesReset
         );
+    }
+
+    private List<String> extractTopicTags(String rawTopicTag) {
+        if (!StringUtils.hasText(rawTopicTag)) {
+            return List.of();
+        }
+
+        return Arrays.stream(rawTopicTag.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
     }
 }

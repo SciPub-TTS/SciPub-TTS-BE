@@ -14,7 +14,6 @@ public class BookmarkStatsResponse {
 
     private int totalTopics;
 
-    private int totalSources;
 
     private int totalAuthors;
 
@@ -24,10 +23,6 @@ public class BookmarkStatsResponse {
 
     public int totalTopics() {
         return totalTopics;
-    }
-
-    public int totalSources() {
-        return totalSources;
     }
 
     public int totalAuthors() {

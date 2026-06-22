@@ -35,13 +35,7 @@ public class SocialPostReference {
     @Column(name = "authors_snapshot", columnDefinition = "TEXT")
     private String authorsSnapshot;
 
-    @Column(name = "source_snapshot", length = 255)
-    private String sourceSnapshot;
-
     @Column(name = "year_snapshot")
     private Short yearSnapshot;
-
-    @Column(name = "doi_snapshot", length = 255)
-    private String doiSnapshot;
 
 }

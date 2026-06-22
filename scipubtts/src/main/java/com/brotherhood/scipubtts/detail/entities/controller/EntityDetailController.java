@@ -30,7 +30,7 @@ public class EntityDetailController {
     ) {
         EntityDetailResponse data = entityDetailService.getAuthorDetail(authorId);
 
-        return ResponseEntity.status(HttpStatus.OK).body(
+        return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded author detail", data)
         );
     }
@@ -43,7 +43,7 @@ public class EntityDetailController {
     ) {
         EntityDetailResponse data = entityDetailService.getTopicDetail(topicId);
 
-        return ResponseEntity.status(HttpStatus.OK).body(
+        return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded topic detail", data)
         );
     }

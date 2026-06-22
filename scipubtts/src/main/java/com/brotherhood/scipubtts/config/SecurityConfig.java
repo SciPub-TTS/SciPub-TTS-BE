@@ -105,7 +105,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
-                                "/", "/error",
+                                "/", "/error", "/favicon.ico",
+                                "/register",
                                 "/api/auth/register",
                                 "/api/auth/register/google/**",
                                 "/api/auth/oauth2/google",
@@ -123,6 +124,10 @@ public class SecurityConfig {
                                 "/api/search/filters/**",
                                 "/api/search/works",
                                 "/api/search/entities",
+                                "/api/search/trending-topics",
+                                "/api/search/trending-keywords",
+                                "/api/search/hot-topics",
+                                "/api/search/hot-keywords",
                                 "/api/papers/**",
                                 "/api/authors/**",
                                 "/api/topics/**",

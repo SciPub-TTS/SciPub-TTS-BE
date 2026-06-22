@@ -20,6 +20,7 @@ import com.brotherhood.scipubtts.auth.security.jwt.JwtTokenService;
 import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
+import com.brotherhood.scipubtts.user.service.AvatarService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -47,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthSessionService authSessionService;
     private final GoogleSignupTokenRepository googleSignupTokenRepository;
     private final SecureValueService secureValueService;
+    private final AvatarService avatarService;
 
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
@@ -76,6 +78,8 @@ public class AuthServiceImpl implements AuthService {
                 .banned(false)
                 .build();
 
+        userRepository.save(user);
+        user.setAvatarUrl(avatarService.buildDefaultAvatarUrl(user));
         userRepository.save(user);
 
         String rawToken = UUID.randomUUID().toString();
@@ -114,6 +118,8 @@ public class AuthServiceImpl implements AuthService {
         user.setEmailVerified(true);
         verificationToken.setUsedAt(OffsetDateTime.now());
 
+        userRepository.save(user);
+        user.setAvatarUrl(avatarService.buildDefaultAvatarUrl(user));
         userRepository.save(user);
         tokenRepository.save(verificationToken);
 
@@ -296,6 +302,8 @@ public class AuthServiceImpl implements AuthService {
                 .banned(false)
                 .build();
 
+        userRepository.save(user);
+        user.setAvatarUrl(avatarService.buildDefaultAvatarUrl(user));
         userRepository.save(user);
 
         token.setUsedAt(OffsetDateTime.now());

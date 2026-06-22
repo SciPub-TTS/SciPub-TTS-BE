@@ -21,8 +21,6 @@ public class BookmarkResponse {
 
     private String authors;
 
-    private String source;
-
     private String topic;
 
     private Integer publicationYear;
@@ -47,10 +45,6 @@ public class BookmarkResponse {
 
     public String authors() {
         return authors;
-    }
-
-    public String source() {
-        return source;
     }
 
     public String topic() {

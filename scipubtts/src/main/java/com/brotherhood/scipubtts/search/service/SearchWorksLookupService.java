@@ -37,14 +37,23 @@ public class SearchWorksLookupService {
     }
 
     public SearchWorksResponse searchWorks(SearchWorksQueryRequest request) {
+        // Step 1: make sure request is never null and invalid filter combinations are rejected early.
         SearchWorksQueryRequest safeRequest = getSafeRequest(request);
+
+        // Step 2: normalize paging so OpenAlex always receives valid values.
         int page = searchQuerySupport.normalizeWorksPage(safeRequest.page());
         int perPage = searchQuerySupport.normalizePerPage(safeRequest.perPage());
+
+        // Step 3: build one final filter string from keyword search + advanced filters.
         String appliedFilter = combineFilters(
                 buildKeywordFilter(safeRequest.query()),
                 searchFilterBuilder.build(safeRequest)
         );
+
+        // Step 4: choose the final sort in one place so controller/service code stays simple.
         String appliedSort = resolveSort(safeRequest);
+
+        // Step 5: convert our request into OpenAlex query parameters.
         Map<String, String> queryParams = buildOpenAlexQueryParams(
                 safeRequest,
                 page,
@@ -53,6 +62,7 @@ public class SearchWorksLookupService {
                 appliedSort
         );
 
+        // Step 6: call OpenAlex and map the raw response into our response DTO.
         Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
 //        String normalizedTrendingMode = searchQuerySupport.normalizeTrendingMode(safeRequest.getTrendingMode());
 //        if (!"none".equals(normalizedTrendingMode)) {
@@ -121,12 +131,10 @@ public class SearchWorksLookupService {
     ) {
         Map<String, String> queryParams = new LinkedHashMap<>();
 
-        // Filter string is produced by SearchFilterBuilder.
         if (StringUtils.hasText(appliedFilter)) {
             queryParams.put("filter", appliedFilter);
         }
 
-        // These values are always sent so the OpenAlex response is predictable.
         queryParams.put("sort", appliedSort);
         queryParams.put("page", String.valueOf(page));
         queryParams.put("per_page", String.valueOf(perPage));
@@ -142,6 +150,7 @@ public class SearchWorksLookupService {
             return null;
         }
 
+        // Search by title + abstract because this matches the expected FE search experience.
         return "title_and_abstract.search:" + normalizedQuery;
     }
 

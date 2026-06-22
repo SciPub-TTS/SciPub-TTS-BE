@@ -43,7 +43,6 @@ public class BookmarkServiceImpl implements BookmarkService {
                 bookmark.getOpenAlexId(),
                 bookmark.getTitleSnapshot(),
                 bookmark.getAuthorsSnapshot(),
-                bookmark.getSourceSnapshot(),
                 bookmark.getTopicSnapshot(),
                 bookmark.getPublicationYear(),
                 bookmark.getCitationSnapshot(),
@@ -84,12 +83,10 @@ public class BookmarkServiceImpl implements BookmarkService {
                     .entityType("WORK")
                     .titleSnapshot(normalizeNullable(request.titleSnapshot()))
                     .authorsSnapshot(normalizeNullable(request.authorsSnapshot()))
-                    .sourceSnapshot(normalizeNullable(request.sourceSnapshot()))
                     .topicSnapshot(normalizeNullable(request.topicSnapshot()))
                     .publicationYear(request.publicationYear())
                     .citationSnapshot(request.citationSnapshot())
                     .note(normalizeNullable(request.note()))
-                    .isPublic(false)
                     .createdAt(OffsetDateTime.now())
                     .build();
 
@@ -230,13 +227,12 @@ public class BookmarkServiceImpl implements BookmarkService {
     public BookmarkStatsResponse getStats(UUID userId) {
         long totalPapers = userBookmarkRepository.countByUserId(userId);
         long totalTopics = userBookmarkRepository.countDistinctTopicsByUserId(userId);
-        long totalSources = userBookmarkRepository.countDistinctSourcesByUserId(userId);
+//        long totalSources = userBookmarkRepository.countDistinctSourcesByUserId(userId);
         long totalAuthors = userBookmarkRepository.countDistinctAuthorsByUserId(userId);
 
         return new BookmarkStatsResponse(
                 safeLongToInt(totalPapers),
                 safeLongToInt(totalTopics),
-                safeLongToInt(totalSources),
                 safeLongToInt(totalAuthors)
         );
     }
@@ -258,13 +254,11 @@ public class BookmarkServiceImpl implements BookmarkService {
 
         List<String> topics = userBookmarkRepository.findDistinctTopicsByUserId(userId);
         List<Integer> years = userBookmarkRepository.findDistinctYearsByUserId(userId);
-        List<String> sources = userBookmarkRepository.findDistinctSourcesByUserId(userId);
         List<String> authors = userBookmarkRepository.findDistinctAuthorsByUserId(userId);
 
         return new FilterOptionsResponse(
                 topics,
                 years,
-                sources,
                 authors
         );
     }

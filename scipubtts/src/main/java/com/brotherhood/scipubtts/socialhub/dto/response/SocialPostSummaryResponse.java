@@ -1,17 +1,29 @@
 package com.brotherhood.scipubtts.socialhub.dto.response;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record SocialPostSummaryResponse(
         UUID id,
         String title,
-        String bodyPreview,     // 200 ký tự đầu
+        String bodyPreview,
+        List<String> topicTag,
+        List<ReferenceInfo> references,
         int likeCount,
-        boolean liked,          // hybrid-view: true nếu user đã like
+        boolean liked,
         AuthorInfo author,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt
 ) {
 
     public record AuthorInfo(UUID id, String fullName) {}
+
+    public record ReferenceInfo(
+            UUID id,
+            String openalexId,
+            String titleSnapshot,
+            String authorsSnapshot,
+            Integer yearSnapshot
+    ) {}
 }

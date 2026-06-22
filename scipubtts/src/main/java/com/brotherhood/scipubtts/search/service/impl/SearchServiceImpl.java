@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.search.service;
+package com.brotherhood.scipubtts.search.service.impl;
 
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
@@ -10,6 +10,12 @@ import com.brotherhood.scipubtts.search.dto.request.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.dto.response.SearchSummaryResponse;
 import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.service.SearchEntityLookupService;
+import com.brotherhood.scipubtts.search.service.SearchHistoryService;
+import com.brotherhood.scipubtts.search.service.SearchOptionsService;
+import com.brotherhood.scipubtts.search.service.SearchService;
+import com.brotherhood.scipubtts.search.service.SearchSummaryService;
+import com.brotherhood.scipubtts.search.service.SearchWorksLookupService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

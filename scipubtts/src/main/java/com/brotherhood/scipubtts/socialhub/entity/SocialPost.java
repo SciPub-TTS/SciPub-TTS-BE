@@ -37,7 +37,7 @@ public class SocialPost {
     @Column(name = "body", nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(name = "topic_tag", length = 100)
+    @Column(name = "topic_tag", length = 500)
     private String topicTag;
 
     @Column(name = "like_count", nullable = false)

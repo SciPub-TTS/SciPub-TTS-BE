@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SearchOptionsService {
 
     private static final Duration DEFAULT_FILTER_OPTIONS_CACHE_TTL = Duration.ofMinutes(5);
-    private static final int KEYWORD_OPTION_SCAN_PAGE_LIMIT = 20;
+    private static final int OPENALEX_GROUP_BY_MAX_RESULTS = 200;
 
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
@@ -173,15 +173,20 @@ public class SearchOptionsService {
             int limit,
             int page
     ) {
+        List<SearchFilterOptionsResponse.FacetOption> allOptions = loadGroupedWorkOptions(
+                groupBy,
+                resolveGroupedFetchSize(keyword, limit, page)
+        );
+
         if (!StringUtils.hasText(keyword)) {
-            return loadGroupedWorkOptionPage(groupBy, limit, page).options();
+            return paginateOptions(allOptions, limit, page);
         }
 
-        return collectKeywordMatchedOptions(
+        return filterAndPaginateOptions(
+                allOptions,
                 keyword,
                 limit,
                 page,
-                sourcePage -> loadGroupedWorkOptionPage(groupBy, limit, sourcePage),
                 SearchFilterOptionsResponse.FacetOption::label
         );
     }
@@ -350,15 +355,20 @@ public class SearchOptionsService {
             int limit,
             int page
     ) {
+        List<SearchFilterOptionsResponse.FacetOption> allOptions = loadScopedFacetOptions(
+                groupBy,
+                resolveGroupedFetchSize(keyword, limit, page)
+        );
+
         if (!StringUtils.hasText(keyword)) {
-            return loadScopedFacetOptionPage(groupBy, limit, page).options();
+            return paginateOptions(allOptions, limit, page);
         }
 
-        return collectKeywordMatchedOptions(
+        return filterAndPaginateOptions(
+                allOptions,
                 keyword,
                 limit,
                 page,
-                sourcePage -> loadScopedFacetOptionPage(groupBy, limit, sourcePage),
                 SearchFilterOptionsResponse.FacetOption::label
         );
     }
@@ -369,25 +379,29 @@ public class SearchOptionsService {
             int limit,
             int page
     ) {
+        List<SearchFilterOptionsResponse.EntityOption> allOptions = loadScopedEntityOptions(
+                groupBy,
+                resolveGroupedFetchSize(keyword, limit, page)
+        );
+
         if (!StringUtils.hasText(keyword)) {
-            return loadScopedEntityOptionPage(groupBy, limit, page).options();
+            return paginateOptions(allOptions, limit, page);
         }
 
-        return collectKeywordMatchedOptions(
+        return filterAndPaginateOptions(
+                allOptions,
                 keyword,
                 limit,
                 page,
-                sourcePage -> loadScopedEntityOptionPage(groupBy, limit, sourcePage),
                 SearchFilterOptionsResponse.EntityOption::label
         );
     }
 
-    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptionPage(
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptions(
             String groupBy,
-            int limit,
-            int page
+            int fetchSize
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, fetchSize);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
@@ -410,15 +424,14 @@ public class SearchOptionsService {
             ));
         }
 
-        return new OptionPage<>(options, groups.size() >= limit);
+        return options;
     }
 
-    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptionPage(
+    private List<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptions(
             String groupBy,
-            int limit,
-            int page
+            int fetchSize
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, fetchSize);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
@@ -441,15 +454,14 @@ public class SearchOptionsService {
             ));
         }
 
-        return new OptionPage<>(options, groups.size() >= limit);
+        return options;
     }
 
-    private OptionPage<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptionPage(
+    private List<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptions(
             String groupBy,
-            int limit,
-            int page
+            int fetchSize
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, fetchSize);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<SearchFilterOptionsResponse.EntityOption> options = new ArrayList<>();
@@ -470,7 +482,7 @@ public class SearchOptionsService {
             options.add(new SearchFilterOptionsResponse.EntityOption(value, label, count));
         }
 
-        return new OptionPage<>(options, groups.size() >= limit);
+        return options;
     }
 
     private List<SearchFilterOptionListResponse.OptionItem> mapFacetOptions(
@@ -505,37 +517,22 @@ public class SearchOptionsService {
         return mappedOptions;
     }
 
-    private <T> List<T> collectKeywordMatchedOptions(
+    private <T> List<T> filterAndPaginateOptions(
+            List<T> allOptions,
             String keyword,
             int limit,
             int page,
-            java.util.function.IntFunction<OptionPage<T>> pageLoader,
             java.util.function.Function<T, String> labelExtractor
     ) {
-        int offset = Math.max(page - 1, 0) * limit;
-        int targetMatchCount = offset + limit;
         List<T> matchedOptions = new ArrayList<>();
 
-        for (int sourcePage = 1; sourcePage <= KEYWORD_OPTION_SCAN_PAGE_LIMIT; sourcePage++) {
-            OptionPage<T> loadedPage = pageLoader.apply(sourcePage);
-
-            for (T option : loadedPage.options()) {
-                if (matchesKeyword(labelExtractor.apply(option), keyword)) {
-                    matchedOptions.add(option);
-                }
-            }
-
-            if (matchedOptions.size() >= targetMatchCount || !loadedPage.hasMorePages()) {
-                break;
+        for (T option : allOptions) {
+            if (matchesKeyword(labelExtractor.apply(option), keyword)) {
+                matchedOptions.add(option);
             }
         }
 
-        if (offset >= matchedOptions.size()) {
-            return List.of();
-        }
-
-        int toIndex = Math.min(targetMatchCount, matchedOptions.size());
-        return new ArrayList<>(matchedOptions.subList(offset, toIndex));
+        return paginateOptions(matchedOptions, limit, page);
     }
 
     private int fetchMaximumCitationCount() {
@@ -555,15 +552,35 @@ public class SearchOptionsService {
         return Math.max(openAlexMapReader.getInt(results.getFirst(), "cited_by_count", 0), 0);
     }
 
-    private Map<String, String> createPagedQueryParams(int limit, int page) {
+    private <T> List<T> paginateOptions(List<T> options, int limit, int page) {
+        int offset = Math.max(page - 1, 0) * limit;
+
+        if (offset >= options.size()) {
+            return List.of();
+        }
+
+        int toIndex = Math.min(offset + limit, options.size());
+        return new ArrayList<>(options.subList(offset, toIndex));
+    }
+
+    private int resolveGroupedFetchSize(String keyword, int limit, int page) {
+        if (StringUtils.hasText(keyword)) {
+            return OPENALEX_GROUP_BY_MAX_RESULTS;
+        }
+
+        long requiredSize = (long) limit * Math.max(page, 1);
+        return (int) Math.min(requiredSize, OPENALEX_GROUP_BY_MAX_RESULTS);
+    }
+
+    private Map<String, String> createPagedQueryParams(int limit) {
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("per_page", String.valueOf(limit));
-        queryParams.put("page", String.valueOf(page));
+        queryParams.put("page", "1");
         return queryParams;
     }
 
-    private Map<String, String> createScopedGroupedQueryParams(String groupBy, int limit, int page) {
-        Map<String, String> queryParams = createPagedQueryParams(limit, page);
+    private Map<String, String> createScopedGroupedQueryParams(String groupBy, int limit) {
+        Map<String, String> queryParams = createPagedQueryParams(limit);
         queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
         queryParams.put("group_by", groupBy);
         queryParams.put("sort", "count:desc");
@@ -600,6 +617,4 @@ public class SearchOptionsService {
         }
     }
 
-    private record OptionPage<T>(List<T> options, boolean hasMorePages) {
-    }
 }

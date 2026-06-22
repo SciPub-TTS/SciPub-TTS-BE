@@ -2,6 +2,8 @@ package com.brotherhood.scipubtts.search.controller;
 
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
+import com.brotherhood.scipubtts.search.dto.HotTopicResponse;
+import com.brotherhood.scipubtts.search.dto.HotKeywordResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchEntitiesResponse;
@@ -12,7 +14,9 @@ import com.brotherhood.scipubtts.search.dto.request.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.dto.response.SearchSummaryResponse;
 import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
+import com.brotherhood.scipubtts.search.service.KeywordTrendService;
 import com.brotherhood.scipubtts.search.service.SearchService;
+import com.brotherhood.scipubtts.search.service.TopicTrendService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.DeleteMapping;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,21 +41,24 @@ import java.util.UUID;
 @RequestMapping("/api/search")
 public class SearchController {
 
-    // This controller only receives HTTP requests and forwards them to the service layer.
     private final SearchService searchService;
+    private final TopicTrendService topicTrendService;
+    private final KeywordTrendService keywordTrendService;
 
-    public SearchController(SearchService searchService) {
+    public SearchController(
+            SearchService searchService,
+            TopicTrendService topicTrendService,
+            KeywordTrendService keywordTrendService
+    ) {
         this.searchService = searchService;
+        this.topicTrendService = topicTrendService;
+        this.keywordTrendService = keywordTrendService;
     }
 
     @GetMapping("/summary")
-    @Operation(
-            summary = "Get search summary",
-            description = "Returns the total indexed count shown at the top of the search page for the selected entity type."
-    )
+    @Operation(summary = "Get search summary")
     public ResponseEntity<ResponseObject> getSummary(
             @Parameter(
-                    description = "Entity type to summarize.",
                     example = "works",
                     schema = @Schema(allowableValues = {
                             "works",
@@ -64,43 +72,28 @@ public class SearchController {
                 SearchEntityType.fromParameter(entityType)
         );
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Loaded search summary", data)
-        );
+        return ok("Loaded search summary", data);
     }
 
     @GetMapping("/filters/options")
-    @Operation(
-            summary = "Get default search filter options",
-            description = "Loads the search filter data used by the frontend, such as type, subfield, author, institution, country, source and award options."
-    )
+    @Operation(summary = "Get search filter options")
     public ResponseEntity<ResponseObject> getFilterOptions(
-            @Parameter(
-                    description = "Optional keyword used to narrow the returned option lists.",
-                    example = "machine learning"
-            )
+            @Parameter(example = "machine learning")
             @RequestParam(defaultValue = "") String keyword,
-            @Parameter(description = "Number of options returned per filter list page.", example = "10")
+            @Parameter(example = "10")
             @RequestParam(defaultValue = "10") int limit,
-            @Parameter(description = "Page number for the option lists.", example = "1")
+            @Parameter(example = "1")
             @RequestParam(defaultValue = "1") int page
     ) {
-        // Load option lists used by the frontend filter widgets.
         SearchFilterOptionsResponse data = searchService.getFilterOptions(keyword, limit, page);
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Loaded search filter options", data)
-        );
+        return ok("Loaded search filter options", data);
     }
 
     @GetMapping("/filters/{filterKey}/options")
-    @Operation(
-            summary = "Get one filter option list",
-            description = "Loads options for one filter only. Valid filter keys depend on the entity type."
-    )
+    @Operation(summary = "Get one filter option list")
     public ResponseEntity<ResponseObject> getFilterOptionPage(
             @Parameter(
-                    description = "Which filter option list to load.",
                     example = "author",
                     schema = @Schema(allowableValues = {
                             "type",
@@ -116,7 +109,6 @@ public class SearchController {
             )
             @PathVariable String filterKey,
             @Parameter(
-                    description = "Entity type that owns the requested filter list.",
                     example = "works",
                     schema = @Schema(allowableValues = {
                             "works",
@@ -125,14 +117,11 @@ public class SearchController {
                     })
             )
             @RequestParam(defaultValue = "works") String entityType,
-            @Parameter(
-                    description = "Optional keyword used to match option labels, for example author or source names.",
-                    example = "machine learning"
-            )
+            @Parameter(example = "machine learning")
             @RequestParam(defaultValue = "") String keyword,
-            @Parameter(description = "Number of options returned in one page.", example = "10")
+            @Parameter(example = "10")
             @RequestParam(defaultValue = "10") int limit,
-            @Parameter(description = "Page number for the selected filter option list.", example = "1")
+            @Parameter(example = "1")
             @RequestParam(defaultValue = "1") int page
     ) {
         SearchFilterOptionListResponse data = searchService.getFilterOptionPage(
@@ -143,35 +132,23 @@ public class SearchController {
                 page
         );
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Loaded search filter option page", data)
-        );
+        return ok("Loaded search filter option page", data);
     }
 
     @GetMapping("/works")
-    @Operation(
-            summary = "Search works",
-            description = "Searches works by keyword and filters. Use either yearFrom/yearTo or yearExact, and either citationMin/citationMax or citationExact. Sending both modes together returns HTTP 400."
-    )
+    @Operation(summary = "Search works")
     public ResponseEntity<ResponseObject> searchWorks(
             @ParameterObject @ModelAttribute SearchWorksQueryRequest request
     ) {
-        // Search papers with the optional query, filters and sort values.
         SearchWorksResponse data = searchService.searchWorks(request);
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Search works successfully", data)
-        );
+        return ok("Search works successfully", data);
     }
 
     @GetMapping("/entities")
-    @Operation(
-            summary = "Search non-work entities",
-            description = "Searches authors or topics with optional filters and sort values."
-    )
+    @Operation(summary = "Search entities")
     public ResponseEntity<ResponseObject> searchEntities(
             @Parameter(
-                    description = "Entity type to search.",
                     example = "authors",
                     schema = @Schema(allowableValues = {
                             "authors",
@@ -186,85 +163,85 @@ public class SearchController {
                 request
         );
 
-        return ResponseEntity.ok(
-                new ResponseObject(
-                        HttpStatus.OK.value(),
-                        "Search entities successfully",
-                        data
-                )
-        );
+        return ok("Search entities successfully", data);
+    }
+
+    @GetMapping({"/trending-topics", "/hot-topics"})
+    @Operation(summary = "Load weekly trending topics from the internal topic trend table")
+    public ResponseEntity<ResponseObject> getTrendingTopics(
+            @Parameter(example = "2026-06-15")
+            @RequestParam(required = false) LocalDate snapshotDate,
+            @Parameter(example = "8")
+            @RequestParam(defaultValue = "8") int limit
+    ) {
+        HotTopicResponse data = topicTrendService.getWeeklyHotTopics(snapshotDate, limit);
+
+        return ok("Loaded weekly trending topics", data);
+    }
+
+    @GetMapping({"/trending-keywords", "/hot-keywords"})
+    @Operation(summary = "Load weekly trending keywords from the internal keyword trend table")
+    public ResponseEntity<ResponseObject> getTrendingKeywords(
+            @Parameter(example = "2026-06-15")
+            @RequestParam(required = false) LocalDate snapshotDate,
+            @Parameter(example = "8")
+            @RequestParam(defaultValue = "8") int limit
+    ) {
+        HotKeywordResponse data = keywordTrendService.getWeeklyHotKeywords(snapshotDate, limit);
+
+        return ok("Loaded weekly trending keywords", data);
     }
 
     @GetMapping("/history/recent")
-    @Operation(
-            summary = "Get recent search suggestions",
-            description = "Returns up to the latest search keywords for the current user. This powers the search suggestion dialog under the search box."
-    )
+    @Operation(summary = "Get recent search suggestions")
     public ResponseEntity<ResponseObject> getRecentSearches(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @Parameter(
-                    description = "Optional prefix keyword used to filter recent searches.",
-                    example = "AI"
-            )
+            @Parameter(example = "AI")
             @RequestParam(defaultValue = "") String keyword,
-            @Parameter(description = "Maximum number of recent items to return.", example = "7")
+            @Parameter(example = "7")
             @RequestParam(defaultValue = "7") int limit
     ) {
         List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, keyword, limit);
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Loaded recent searches", data)
-        );
+        return ok("Loaded recent searches", data);
     }
 
     @PostMapping("/history")
-    @Operation(
-            summary = "Save search history",
-            description = "Saves the current search keyword for the logged-in user so it can be suggested later in the search dialog."
-    )
+    @Operation(summary = "Save search history")
     public ResponseEntity<ResponseObject> saveSearchHistory(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestBody SearchHistorySaveRequest request
     ) {
         searchService.saveSearchHistory(request.withUserId(userId));
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Saved search history", null)
-        );
+        return ok("Saved search history", null);
     }
 
     @DeleteMapping("/history")
-    @Operation(
-            summary = "Delete one search history item",
-            description = "Deletes one saved search keyword for the current user."
-    )
+    @Operation(summary = "Delete one search history item")
     public ResponseEntity<ResponseObject> deleteSearchHistory(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @Parameter(
-                    description = "Saved search keyword to delete.",
-                    example = "AI in education"
-            )
+            @Parameter(example = "AI in education")
             @RequestParam String query
     ) {
         searchService.deleteSearchHistory(userId, query);
 
-        return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Deleted search history item", null)
-        );
+        return ok("Deleted search history item", null);
     }
 
     @DeleteMapping("/history/all")
-    @Operation(
-            summary = "Clear all search history",
-            description = "Deletes every saved search keyword of the current user."
-    )
+    @Operation(summary = "Clear all search history")
     public ResponseEntity<ResponseObject> clearSearchHistory(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId
     ) {
         searchService.clearSearchHistory(userId);
 
+        return ok("Cleared search history", null);
+    }
+
+    private ResponseEntity<ResponseObject> ok(String message, Object data) {
         return ResponseEntity.ok(
-                new ResponseObject(HttpStatus.OK.value(), "Cleared search history", null)
+                new ResponseObject(HttpStatus.OK.value(), message, data)
         );
     }
 }
