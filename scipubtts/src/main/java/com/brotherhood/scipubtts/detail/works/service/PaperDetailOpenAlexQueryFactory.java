@@ -62,7 +62,7 @@ public class PaperDetailOpenAlexQueryFactory {
 
         for (String workId : workIds) {
             String normalizedWorkId = normalizeWorkId(workId);
-            if (joinedWorkIds.length() > 0) {
+            if (!joinedWorkIds.isEmpty()) {
                 joinedWorkIds.append("|");
             }
             joinedWorkIds.append(normalizedWorkId);

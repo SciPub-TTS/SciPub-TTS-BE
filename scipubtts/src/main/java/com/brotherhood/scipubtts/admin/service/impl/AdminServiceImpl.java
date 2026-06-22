@@ -213,7 +213,6 @@ public class AdminServiceImpl implements AdminService {
             case "OLDEST" -> Sort.by(Sort.Direction.ASC, "createdAt");
             case "EMAIL_ASC" -> Sort.by(Sort.Direction.ASC, "email");
             case "EMAIL_DESC" -> Sort.by(Sort.Direction.DESC, "email");
-            case "RECENT" -> Sort.by(Sort.Direction.DESC, "createdAt");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
     }

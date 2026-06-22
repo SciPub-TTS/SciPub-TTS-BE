@@ -170,25 +170,16 @@ public class BookmarkServiceImpl implements BookmarkService {
 
         return switch (normalizedSort.toUpperCase()) {
             case "OLDEST" -> Sort.by(Sort.Direction.ASC, "createdAt");
-
             case "YEAR_DESC" -> Sort.by(Sort.Direction.DESC, "publicationYear")
                     .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-
             case "YEAR_ASC" -> Sort.by(Sort.Direction.ASC, "publicationYear")
                     .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-
             case "CITATION_DESC" -> Sort.by(Sort.Direction.DESC, "citationSnapshot")
                     .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-
             case "CITATION_ASC" -> Sort.by(Sort.Direction.ASC, "citationSnapshot")
                     .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-
             case "TITLE_ASC" -> Sort.by(Sort.Direction.ASC, "titleSnapshot");
-
             case "TITLE_DESC" -> Sort.by(Sort.Direction.DESC, "titleSnapshot");
-
-            case "RECENT" -> Sort.by(Sort.Direction.DESC, "createdAt");
-
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
     }

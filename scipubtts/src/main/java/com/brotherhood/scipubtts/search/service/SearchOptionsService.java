@@ -95,7 +95,7 @@ public class SearchOptionsService {
         CachedFilterOptions cachedFilterOptions = defaultFilterOptionsCache.get(cacheKey);
 
         if (cachedFilterOptions != null && !cachedFilterOptions.isExpired()) {
-            return cachedFilterOptions.getResponse();
+            return cachedFilterOptions.response();
         }
 
         SearchFilterOptionsResponse freshResponse = buildFilterOptionsResponse("", limit, page);
@@ -397,7 +397,7 @@ public class SearchOptionsService {
         );
     }
 
-    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptions(
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedFacetOptions(
             String groupBy,
             int fetchSize
     ) {
@@ -425,37 +425,22 @@ public class SearchOptionsService {
         }
 
         return options;
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptions(
+            String groupBy,
+            int fetchSize
+    ) {
+        return loadGroupedFacetOptions(groupBy, fetchSize);
     }
 
     private List<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptions(
             String groupBy,
             int fetchSize
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, fetchSize);
-        Map<String, Object> response = openAlexClient.get("/works", queryParams);
-        List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
-        List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
-
-        for (Map<String, Object> group : groups) {
-            String key = openAlexMapReader.getString(group, "key");
-            String label = openAlexMapReader.sanitizeDisplayText(
-                    openAlexMapReader.getString(group, "key_display_name")
-            );
-            long count = openAlexMapReader.getLong(group, "count", 0L);
-
-            if (key.isBlank() || label.isBlank()) {
-                continue;
-            }
-
-            options.add(new SearchFilterOptionsResponse.FacetOption(
-                    searchQuerySupport.normalizeGroupedValue(groupBy, key),
-                    label,
-                    count
-            ));
-        }
-
-        return options;
+        return loadGroupedFacetOptions(groupBy, fetchSize);
     }
+
 
     private List<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptions(
             String groupBy,
@@ -599,18 +584,7 @@ public class SearchOptionsService {
         return limit + ":" + page;
     }
 
-    private static class CachedFilterOptions {
-        private final SearchFilterOptionsResponse response;
-        private final Instant expiresAt;
-
-        private CachedFilterOptions(SearchFilterOptionsResponse response, Instant expiresAt) {
-            this.response = response;
-            this.expiresAt = expiresAt;
-        }
-
-        private SearchFilterOptionsResponse getResponse() {
-            return response;
-        }
+    private record CachedFilterOptions(SearchFilterOptionsResponse response, Instant expiresAt) {
 
         private boolean isExpired() {
             return Instant.now().isAfter(expiresAt);

@@ -6,5 +6,5 @@ import java.util.Collection;
 
 public interface FeedPersistenceService {
 
-    public int saveFeedDrafts(Collection<FeedDraft> drafts);
+    int saveFeedDrafts(Collection<FeedDraft> drafts);
 }

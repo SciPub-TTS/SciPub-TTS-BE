@@ -5,4 +5,4 @@ ALTER TABLE api_job
     ADD COLUMN IF NOT EXISTS request_params TEXT;
 
 
-ALTER TABLE api_job ADD COLUMN total_failed INT;
+ALTER TABLE api_job ADD COLUMN IF NOT EXISTS total_failed INT;

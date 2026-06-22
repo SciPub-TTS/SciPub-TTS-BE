@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.NonNull;
 
 public record RegisterLocalRequest(
 
@@ -36,6 +37,7 @@ public record RegisterLocalRequest(
 
 ) {
         @Override
+        @NonNull
         public String toString() {
                 return "RegisterLocalRequest[" +
                         "email=" + email +

@@ -43,7 +43,7 @@ public class TopicServiceImpl implements TopicService {
   /**
    * Generates mock metrics for a topic based on its real works and citations count.
    */
-  private Topic applyFakeMetrics(Topic topic, LocalDate startDate, LocalDate endDate) {
+  private void applyFakeMetrics(Topic topic, LocalDate startDate, LocalDate endDate) {
     topic.setStartTime(startDate);
     topic.setEndTime(endDate);
 
@@ -78,7 +78,6 @@ public class TopicServiceImpl implements TopicService {
 
     topic.setInstitution(Math.round(works * uniformBetween(minRate, maxRate)));
 
-    return topic;
   }
 
   private double gaussianAround(double mean, double stddev) {
@@ -113,24 +112,16 @@ public class TopicServiceImpl implements TopicService {
     var currentEnd =
             LocalDate.parse(endTime);
 
-    var currentStart =
-            currentEnd.minus(
-                    PERIOD_DAYS,
-                    ChronoUnit.DAYS
-            );
+    var previousEnd =
+            currentEnd.minusDays(PERIOD_DAYS);
 
-    var previousEnd = currentStart;
-
-    var previousStart =
-            previousEnd.minus(
-                    PERIOD_DAYS,
-                    ChronoUnit.DAYS
-            );
+      var previousStart =
+              previousEnd.minusDays(PERIOD_DAYS);
 
     var worksCurrentPeriod =
             openAlexService.numOfWorksInPeriodByTopic(
                     new OpenAlexTopicFilterRequest(
-                            currentStart.toString(),
+                            previousEnd.toString(),
                             currentEnd.toString(),
                             topicId
                     )
@@ -166,10 +157,7 @@ public class TopicServiceImpl implements TopicService {
     var currentEnd = topic.getEndTime();
 
     var previousEnd =
-            currentEnd.minus(
-                    PERIOD_DAYS,
-                    ChronoUnit.DAYS
-            );
+            currentEnd.minusDays(PERIOD_DAYS);
 
     var previousVelocity = calculateVelocity(
             previousEnd.toString(),
@@ -242,7 +230,7 @@ public class TopicServiceImpl implements TopicService {
 
   private double calculateNewcomerRatio(Topic topic){
     var currentEnd = topic.getEndTime();
-    var currentStart = currentEnd.minus(PERIOD_DAYS, ChronoUnit.DAYS);
+    var currentStart = currentEnd.minusDays(PERIOD_DAYS);
 
     Set<String> currentPeriodAuthor = openAlexService.takeDistinctAuthorIds(
             new OpenAlexTopicFilterRequest(
@@ -254,7 +242,7 @@ public class TopicServiceImpl implements TopicService {
 
     if (currentPeriodAuthor.isEmpty()) return 0.0;
 
-    var pastEnd = currentStart.minus(1, ChronoUnit.DAYS);
+    var pastEnd = currentStart.minusDays(1);
     var pastStart = topic.getStartTime();
     Set<String> allAuthor = openAlexService.takeDistinctAuthorIds(
             new OpenAlexTopicFilterRequest(

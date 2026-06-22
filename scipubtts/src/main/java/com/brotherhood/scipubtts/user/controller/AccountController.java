@@ -1,18 +1,17 @@
 package com.brotherhood.scipubtts.user.controller;
 
 import com.brotherhood.scipubtts.auth.dto.response.CurrentUserResponse;
-import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.user.dto.request.ChangePasswordRequest;
 import com.brotherhood.scipubtts.user.dto.request.UpdateUserProfileRequest;
 import com.brotherhood.scipubtts.user.service.AccountService;
+import com.brotherhood.scipubtts.user.service.DashboardService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -23,6 +22,7 @@ import java.util.UUID;
 public class AccountController {
 
     private final AccountService accountService;
+    private final DashboardService dashboardService;
 
     @PostMapping("/change-password")
     public ResponseEntity<ResponseObject> changePassword(
@@ -46,5 +46,14 @@ public class AccountController {
     ) {
         CurrentUserResponse result = accountService.updateProfile(userId, request);
         return ResponseEntity.ok(new ResponseObject(200, "Profile updated successfully", result));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<ResponseObject> getSummary(@Parameter(hidden = true) @CurrentUserUUID UUID userId) {
+        return ResponseEntity.ok(new ResponseObject(
+                200,
+                "Get User Summary Success",
+                dashboardService.getSummary(userId)
+        ));
     }
 }

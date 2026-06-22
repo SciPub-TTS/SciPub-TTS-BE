@@ -42,22 +42,6 @@ public class AccountServiceImpl implements AccountService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // Temporarily disable the "set password for Google-only account" flow
-        // while login/register is being tested in isolation.
-        //
-        // boolean hasLocalPassword = StringUtils.hasText(user.getPasswordHash());
-        //
-        // if (hasLocalPassword) {
-        //     if (!StringUtils.hasText(request.currentPassword())
-        //             || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-        //         throw new BusinessException(ErrorCode.CURRENT_PASSWORD_INVALID);
-        //     }
-        //
-        //     if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
-        //         throw new BusinessException(ErrorCode.PASSWORD_REUSE_NOT_ALLOWED);
-        //     }
-        // }
-
         if (!StringUtils.hasText(user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.LOCAL_PASSWORD_NOT_AVAILABLE);
         }

@@ -22,13 +22,13 @@ public class GoogleSignupToken {
     @Column(name = "token_hash", nullable = false, unique = true, length = 64)
     private String tokenHash;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String email;
 
-    @Column(name = "first_name", length = 255)
+    @Column(name = "first_name")
     private String firstName;
 
-    @Column(name = "last_name", length = 255)
+    @Column(name = "last_name")
     private String lastName;
 
     @Column(name = "expires_at", nullable = false)
