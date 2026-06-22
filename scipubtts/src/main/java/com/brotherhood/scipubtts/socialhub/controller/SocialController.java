@@ -67,7 +67,6 @@ public class SocialController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> createPost(
             @Valid @RequestBody CreateSocialPostRequest request,
             @Parameter(hidden = true) @CurrentUserUUID UUID userId
@@ -78,7 +77,6 @@ public class SocialController {
     }
 
     @PutMapping("/{postId}")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> updatePost(
             @PathVariable UUID postId,
             @Valid @RequestBody UpdateSocialPostRequest request,
@@ -89,7 +87,6 @@ public class SocialController {
     }
 
     @DeleteMapping("/{postId}")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> deletePost(
             @PathVariable UUID postId,
             @Parameter(hidden = true) @CurrentUserUUID UUID userId
@@ -99,7 +96,6 @@ public class SocialController {
     }
 
     @PostMapping("/{postId}/like")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseObject> toggleLike(
             @PathVariable UUID postId,
             @Parameter(hidden = true) @CurrentUserUUID UUID userId
