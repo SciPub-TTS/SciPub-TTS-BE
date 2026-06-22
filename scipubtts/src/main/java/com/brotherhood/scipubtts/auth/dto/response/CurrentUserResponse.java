@@ -7,6 +7,7 @@ public record CurrentUserResponse(
         String email,
         String firstName,
         String lastName,
+        String avatarUrl,
         String role,
         boolean googleLinked,
         String institution,

@@ -4,33 +4,30 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(
-        name = "SearchEntityQueryRequest",
-        description = "Search parameters for author/topic entity lookups."
-)
+@Schema(name = "SearchEntityQueryRequest")
 public record SearchEntityQueryRequest(
         @Schema(nullable = true, example = "john")
         String query,
 
-        @Schema(nullable = true, example = "[\"I201448701\"]", description = "Institution ids for author search.")
+        @Schema(nullable = true, example = "[\"I201448701\"]")
         List<String> institution,
 
-        @Schema(nullable = true, example = "[\"VN\"]", description = "Institution country codes for author search.")
+        @Schema(nullable = true, example = "[\"VN\"]")
         List<String> country,
 
-        @Schema(nullable = true, example = "[\"T10017\"]", description = "Primary topic ids for author search.")
+        @Schema(nullable = true, example = "[\"T10017\"]")
         List<String> primaryTopic,
 
-        @Schema(nullable = true, example = "[\"2202\"]", description = "Subfield ids for topic search.")
+        @Schema(nullable = true, example = "[\"2202\"]")
         List<String> subField,
 
-        @Schema(nullable = true, example = "[\"17\"]", description = "Field ids for topic search.")
+        @Schema(nullable = true, example = "[\"17\"]")
         List<String> field,
 
-        @Schema(nullable = true, allowableValues = {"relevance", "works", "alphabetical"}, description = "Primary sort field.")
+        @Schema(nullable = true, allowableValues = {"relevance", "works", "alphabetical"}, example = "works")
         String sortBy,
 
-        @Schema(nullable = true, allowableValues = {"asc", "desc"}, description = "Sort direction.")
+        @Schema(nullable = true, allowableValues = {"asc", "desc"}, example = "desc")
         String sortDirection,
 
         @Schema(nullable = true, example = "1", defaultValue = "1")

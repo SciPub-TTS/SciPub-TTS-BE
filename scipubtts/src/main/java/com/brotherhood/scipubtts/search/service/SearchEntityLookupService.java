@@ -17,6 +17,9 @@ import java.util.Set;
 @Service
 public class SearchEntityLookupService {
 
+    private static final int DEFAULT_PAGE = 1;
+    private static final int DEFAULT_PER_PAGE = 20;
+
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
     private final OpenAlexMapReader openAlexMapReader;
@@ -38,43 +41,39 @@ public class SearchEntityLookupService {
             SearchEntityType entityType,
             SearchEntityQueryRequest request
     ) {
-        SearchEntityType safeEntityType =
-                entityType == null ? SearchEntityType.WORKS : entityType;
-        int page = searchQuerySupport.normalizeWorksPage(
-                request == null ? null : request.page()
-        );
-        int perPage = searchQuerySupport.normalizePerPage(
-                request == null ? null : request.perPage()
-        );
-        String query = searchQuerySupport.normalizeKeyword(
-                request == null ? null : request.query()
-        );
+        SearchEntityType targetEntityType = resolveEntityType(entityType);
+        SearchEntityQueryRequest safeRequest = createSafeRequest(request);
+        int page = searchQuerySupport.normalizeWorksPage(safeRequest.page());
+        int perPage = searchQuerySupport.normalizePerPage(safeRequest.perPage());
+        String query = searchQuerySupport.normalizeKeyword(safeRequest.query());
+        boolean hasSearchQuery = StringUtils.hasText(query);
+
         List<String> institutionIds = searchQuerySupport.normalizeEntityIds(
-                request == null ? null : request.institution()
+                safeRequest.institution()
         );
         List<String> countryCodes = searchQuerySupport.normalizeCountryValues(
-                request == null ? null : request.country()
+                safeRequest.country()
         );
         List<String> primaryTopicIds = searchQuerySupport.normalizeEntityIds(
-                request == null ? null : request.primaryTopic()
+                safeRequest.primaryTopic()
         );
         List<String> subFieldIds = searchQuerySupport.normalizeSubFieldValues(
-                request == null ? null : request.subField()
+                safeRequest.subField()
         );
         List<String> fieldIds = searchQuerySupport.normalizeEntityIds(
-                request == null ? null : request.field()
+                safeRequest.field()
         );
-        boolean hasSearchQuery = StringUtils.hasText(query);
+
         String resolvedSort = searchQuerySupport.resolveEntitySort(
-                request == null ? null : request.sortBy(),
-                request == null ? null : request.sortDirection(),
+                safeRequest.sortBy(),
+                safeRequest.sortDirection(),
                 hasSearchQuery
         );
 
         if (
-                SearchEntityType.WORKS.equals(safeEntityType)
+                SearchEntityType.WORKS.equals(targetEntityType)
                         || !hasEntitySearchCriteria(
-                        safeEntityType,
+                        targetEntityType,
                         hasSearchQuery,
                         institutionIds,
                         countryCodes,
@@ -83,12 +82,12 @@ public class SearchEntityLookupService {
                         fieldIds
                 )
         ) {
-            return emptyResponse(safeEntityType, page, perPage);
+            return emptyResponse(targetEntityType, page, perPage);
         }
 
-        if (searchScopeSupport.requiresTopicProfileScope(safeEntityType)) {
+        if (searchScopeSupport.requiresTopicProfileScope(targetEntityType)) {
             return searchEntitiesWithinScopedTopicProfile(
-                    safeEntityType,
+                    targetEntityType,
                     query,
                     institutionIds,
                     countryCodes,
@@ -100,13 +99,40 @@ public class SearchEntityLookupService {
         }
 
         return searchEntitiesWithDirectFilter(
-                safeEntityType,
+                targetEntityType,
                 query,
                 subFieldIds,
                 fieldIds,
                 page,
                 perPage,
                 resolvedSort
+        );
+    }
+
+    private SearchEntityType resolveEntityType(SearchEntityType entityType) {
+        if (entityType == null) {
+            return SearchEntityType.WORKS;
+        }
+
+        return entityType;
+    }
+
+    private SearchEntityQueryRequest createSafeRequest(SearchEntityQueryRequest request) {
+        if (request != null) {
+            return request;
+        }
+
+        return new SearchEntityQueryRequest(
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                null,
+                DEFAULT_PAGE,
+                DEFAULT_PER_PAGE
         );
     }
 
@@ -119,31 +145,45 @@ public class SearchEntityLookupService {
             int perPage,
             String resolvedSort
     ) {
-        Map<String, String> queryParams = new LinkedHashMap<>();
-        queryParams.put("page", String.valueOf(page));
-        queryParams.put("per_page", String.valueOf(perPage));
-        queryParams.put("select", entityType.selectFields());
-        String directFilter = searchScopeSupport.getDirectFilter(entityType);
         String nameOnlyFilter = buildEntityNameFilter(query);
+        String directFilter = searchScopeSupport.getDirectFilter(entityType);
         String appliedFilter = combineFilters(
                 nameOnlyFilter,
                 directFilter,
                 buildMultiValueFilter("subfield.id", subFieldIds),
                 buildMultiValueFilter("field.id", fieldIds)
         );
+        Map<String, String> queryParams = buildDirectQueryParams(
+                entityType,
+                page,
+                perPage,
+                resolvedSort,
+                appliedFilter
+        );
+
+        Map<String, Object> openAlexResponse = openAlexClient.get(entityType.path(), queryParams);
+
+        return mapDirectResponse(entityType, openAlexResponse, page, perPage);
+    }
+
+    private Map<String, String> buildDirectQueryParams(
+            SearchEntityType entityType,
+            int page,
+            int perPage,
+            String resolvedSort,
+            String appliedFilter
+    ) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("page", String.valueOf(page));
+        queryParams.put("per_page", String.valueOf(perPage));
+        queryParams.put("select", entityType.selectFields());
+        queryParams.put("sort", resolvedSort);
 
         if (StringUtils.hasText(appliedFilter)) {
             queryParams.put("filter", appliedFilter);
         }
 
-        queryParams.put("sort", resolvedSort);
-
-        Map<String, Object> openAlexResponse = openAlexClient.get(
-                entityType.path(),
-                queryParams
-        );
-
-        return mapDirectResponse(entityType, openAlexResponse, page, perPage);
+        return queryParams;
     }
 
     private SearchEntitiesResponse searchEntitiesWithinScopedTopicProfile(
@@ -167,20 +207,13 @@ public class SearchEntityLookupService {
         List<Map<String, Object>> scopedRawResults = new ArrayList<>();
 
         while (!reachedEnd && scopedRawResults.size() < requiredScopedResultCount) {
-            Map<String, String> queryParams = new LinkedHashMap<>();
-            queryParams.put("page", String.valueOf(openAlexPage));
-            queryParams.put(
-                    "per_page",
-                    String.valueOf(SearchConstants.ENTITY_SCOPE_FETCH_PER_PAGE)
-            );
-            queryParams.put("select", entityType.selectFields());
             String nameOnlyFilter = buildEntityNameFilter(query);
-
-            if (StringUtils.hasText(nameOnlyFilter)) {
-                queryParams.put("filter", nameOnlyFilter);
-            }
-
-            queryParams.put("sort", resolvedSort);
+            Map<String, String> queryParams = buildScopedQueryParams(
+                    entityType,
+                    openAlexPage,
+                    resolvedSort,
+                    nameOnlyFilter
+            );
 
             Map<String, Object> openAlexResponse = openAlexClient.get(
                     entityType.path(),
@@ -203,22 +236,17 @@ public class SearchEntityLookupService {
             }
 
             for (Map<String, Object> rawResult : rawResults) {
-                String id = openAlexMapReader.getString(rawResult, "id").trim();
-
-                if (
-                        id.isBlank()
-                                || seenIds.contains(id)
-                                || !searchScopeSupport.matchesScopedTopicProfile(rawResult)
-                                || !matchesAuthorFilters(
-                                rawResult,
-                                institutionIds,
-                                countryCodes,
-                                primaryTopicIds
-                        )
-                ) {
+                if (!shouldKeepScopedAuthor(
+                        rawResult,
+                        seenIds,
+                        institutionIds,
+                        countryCodes,
+                        primaryTopicIds
+                )) {
                     continue;
                 }
 
+                String id = openAlexMapReader.getString(rawResult, "id").trim();
                 seenIds.add(id);
                 scopedRawResults.add(rawResult);
 
@@ -252,6 +280,57 @@ public class SearchEntityLookupService {
                         reachedEnd
                 ),
                 pageResults
+        );
+    }
+
+    private Map<String, String> buildScopedQueryParams(
+            SearchEntityType entityType,
+            int openAlexPage,
+            String resolvedSort,
+            String nameOnlyFilter
+    ) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("page", String.valueOf(openAlexPage));
+        queryParams.put(
+                "per_page",
+                String.valueOf(SearchConstants.ENTITY_SCOPE_FETCH_PER_PAGE)
+        );
+        queryParams.put("select", entityType.selectFields());
+        queryParams.put("sort", resolvedSort);
+
+        if (StringUtils.hasText(nameOnlyFilter)) {
+            queryParams.put("filter", nameOnlyFilter);
+        }
+
+        return queryParams;
+    }
+
+    private boolean shouldKeepScopedAuthor(
+            Map<String, Object> rawResult,
+            Set<String> seenIds,
+            List<String> institutionIds,
+            List<String> countryCodes,
+            List<String> primaryTopicIds
+    ) {
+        String id = openAlexMapReader.getString(rawResult, "id").trim();
+
+        if (id.isBlank()) {
+            return false;
+        }
+
+        if (seenIds.contains(id)) {
+            return false;
+        }
+
+        if (!searchScopeSupport.matchesScopedTopicProfile(rawResult)) {
+            return false;
+        }
+
+        return matchesAuthorFilters(
+                rawResult,
+                institutionIds,
+                countryCodes,
+                primaryTopicIds
         );
     }
 
@@ -411,6 +490,7 @@ public class SearchEntityLookupService {
 
         return null;
     }
+
     private String normalizeDisplayText(String value) {
         String normalizedValue = openAlexMapReader.sanitizeDisplayText(value);
 

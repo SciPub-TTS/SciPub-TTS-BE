@@ -7,6 +7,7 @@ import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.auth.service.SecureValueService;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
+import com.brotherhood.scipubtts.user.service.AvatarService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,6 +34,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final GoogleSignupTokenRepository googleSignupTokenRepository;
     private final SecureValueService secureValueService;
     private final RefreshTokenService refreshTokenService;
+    private final AvatarService avatarService;
     // Team rule:
     // Keep success/failure handlers on the same AuthorizationRequestRepository implementation that
     // SecurityConfig uses for oauth2Login(). If one side uses cookie storage and the other uses
@@ -83,6 +85,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
             if (!StringUtils.hasText(user.getLastName())) {
                 user.setLastName(familyName);
+            }
+
+            if (!StringUtils.hasText(user.getAvatarUrl())) {
+                user.setAvatarUrl(avatarService.buildDefaultAvatarUrl(user));
             }
 
             userRepository.save(user);

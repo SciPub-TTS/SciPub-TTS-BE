@@ -19,8 +19,12 @@ import java.util.Map;
 @Component
 public class OpenAlexClient {
 
-    private static final int MAX_RETRIES = 5;
+    public static final int MAX_RETRIES = 5;
     private static final long INITIAL_BACKOFF_MILLIS = 500L;
+
+    public static final long INITIAL_BACKOFF_MS = 1000;
+
+    public static final String SELECT_FIELDS = "id,title,publication_year,cited_by_count,open_access,authorships,topics,keywords,doi,type,abstract_inverted_index";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;

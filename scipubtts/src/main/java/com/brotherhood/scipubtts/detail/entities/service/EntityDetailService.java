@@ -45,6 +45,19 @@ public class EntityDetailService {
     public EntityDetailResponse getAuthorDetail(String rawAuthorId) {
         String authorId = normalizeEntityId(rawAuthorId);
         Map<String, Object> author = openAlexClient.get("/authors/" + authorId, Map.of());
+        return buildAuthorDetailResponse(authorId, author);
+    }
+
+    public EntityDetailResponse getTopicDetail(String rawTopicId) {
+        String topicId = normalizeEntityId(rawTopicId);
+        Map<String, Object> topic = openAlexClient.get("/topics/" + topicId, Map.of());
+        return buildTopicDetailResponse(topicId, topic);
+    }
+
+    private EntityDetailResponse buildAuthorDetailResponse(
+            String authorId,
+            Map<String, Object> author
+    ) {
         List<Map<String, Object>> institutions =
                 openAlexMapReader.getMapListFromObject(author.get("last_known_institutions"));
         List<Map<String, Object>> topics =
@@ -75,9 +88,10 @@ public class EntityDetailService {
         );
     }
 
-    public EntityDetailResponse getTopicDetail(String rawTopicId) {
-        String topicId = normalizeEntityId(rawTopicId);
-        Map<String, Object> topic = openAlexClient.get("/topics/" + topicId, Map.of());
+    private EntityDetailResponse buildTopicDetailResponse(
+            String topicId,
+            Map<String, Object> topic
+    ) {
         Map<String, Object> subfield = openAlexMapReader.getMap(topic, "subfield");
         Map<String, Object> field = openAlexMapReader.getMap(topic, "field");
         Map<String, Object> domain = openAlexMapReader.getMap(topic, "domain");
@@ -107,15 +121,19 @@ public class EntityDetailService {
     }
 
     private List<SearchWorksResponse.WorkItem> loadWorks(String filterValue) {
+        Map<String, String> queryParams = buildWorkQueryParams(filterValue);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
+        return searchWorksMapper.mapWorkItems(results);
+    }
+
+    private Map<String, String> buildWorkQueryParams(String filterValue) {
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("filter", filterValue);
         queryParams.put("sort", "publication_date:desc");
         queryParams.put("per_page", String.valueOf(DETAIL_WORK_LIMIT));
         queryParams.put("select", SearchConstants.WORKS_SELECT_FIELDS);
-
-        Map<String, Object> response = openAlexClient.get("/works", queryParams);
-        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
-        return searchWorksMapper.mapWorkItems(results);
+        return queryParams;
     }
 
     private List<EntityDetailResponse.CountByYearItem> mapAuthorCountsByYear(Object rawCountsByYear) {
@@ -141,11 +159,7 @@ public class EntityDetailService {
     }
 
     private List<EntityDetailResponse.CountByYearItem> loadTopicCountsByYear(String topicId) {
-        Map<String, String> queryParams = new LinkedHashMap<>();
-        queryParams.put("filter", "topics.id:" + topicId);
-        queryParams.put("group_by", "publication_year");
-        queryParams.put("per_page", String.valueOf(GROUP_BY_LIMIT));
-
+        Map<String, String> queryParams = buildTopicCountsByYearQueryParams(topicId);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<EntityDetailResponse.CountByYearItem> items = new ArrayList<>();
@@ -168,13 +182,16 @@ public class EntityDetailService {
         return items;
     }
 
-    private List<EntityDetailResponse.BreakdownItem> loadTopicTypeBreakdown(String topicId) {
+    private Map<String, String> buildTopicCountsByYearQueryParams(String topicId) {
         Map<String, String> queryParams = new LinkedHashMap<>();
         queryParams.put("filter", "topics.id:" + topicId);
-        queryParams.put("group_by", "type");
-        queryParams.put("sort", "count:desc");
-        queryParams.put("per_page", String.valueOf(TYPE_BREAKDOWN_LIMIT));
+        queryParams.put("group_by", "publication_year");
+        queryParams.put("per_page", String.valueOf(GROUP_BY_LIMIT));
+        return queryParams;
+    }
 
+    private List<EntityDetailResponse.BreakdownItem> loadTopicTypeBreakdown(String topicId) {
+        Map<String, String> queryParams = buildTopicTypeBreakdownQueryParams(topicId);
         Map<String, Object> response = openAlexClient.get("/works", queryParams);
         List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
         List<EntityDetailResponse.BreakdownItem> items = new ArrayList<>();
@@ -195,6 +212,15 @@ public class EntityDetailService {
         }
 
         return items;
+    }
+
+    private Map<String, String> buildTopicTypeBreakdownQueryParams(String topicId) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("filter", "topics.id:" + topicId);
+        queryParams.put("group_by", "type");
+        queryParams.put("sort", "count:desc");
+        queryParams.put("per_page", String.valueOf(TYPE_BREAKDOWN_LIMIT));
+        return queryParams;
     }
 
     private List<EntityDetailResponse.RelatedItem> mapRelatedItems(

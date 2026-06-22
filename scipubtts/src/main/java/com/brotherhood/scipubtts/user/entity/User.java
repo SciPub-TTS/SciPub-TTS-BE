@@ -35,6 +35,9 @@ public class User {
     @Column(name = "last_name", length = 255)
     private String lastName;
 
+    @Column(name = "avatar_url", length = 1024)
+    private String avatarUrl;
+
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
