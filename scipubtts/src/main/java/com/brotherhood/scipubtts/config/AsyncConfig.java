@@ -20,5 +20,5 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("mail-");
         executor.initialize();
         return executor;
-    };
+    }
 }

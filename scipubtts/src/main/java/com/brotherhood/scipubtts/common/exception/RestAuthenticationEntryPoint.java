@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -24,8 +25,8 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+                         @NonNull HttpServletResponse response,
+                         @NonNull AuthenticationException authException) throws IOException {
 
         String message = ErrorCode.UNAUTHORIZED.getMessage();
         Object detail = request.getAttribute("auth_error");
@@ -33,7 +34,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         if (authProperties.isExposeSecurityErrorDetails()) {
             if (detail instanceof String s && !s.isBlank()) {
                 message = s;
-            } else if (authException != null && authException.getMessage() != null) {
+            } else if (authException.getMessage() != null) {
                 message = authException.getMessage();
             }
         }

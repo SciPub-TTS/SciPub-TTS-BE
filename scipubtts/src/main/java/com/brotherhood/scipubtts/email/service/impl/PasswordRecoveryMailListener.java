@@ -15,16 +15,10 @@ public class PasswordRecoveryMailListener {
     private final EmailService emailService;
 
     @Async("mailExecutor")
-    //Chức năng: Đây là chốt chặn cực kỳ thông minh nhằm đồng bộ hóa giữa Database và Email.
-    //Hoạt động: Nó ra lệnh: "Chỉ được phép chạy hàm gửi email này SAU KHI giao dịch lưu mã code vào Database đã COMMIT (thành công hoàn toàn)".
+    // Function: A smart safeguard to synchronize the database with the email service.
+    // Behavior: Guarantees that the email is sent ONLY AFTER the transaction saving the code has successfully COMMITTED.
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCodeRequested(PasswordResetCodeRequestedEvent event) {
         emailService.sendPasswordResetCode(event.email(), event.code());
     }
-
-//    @Async("mailExecutor")
-//    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-//    public void onPasswordResetCompleted(PasswordResetCompletedEvent event) {
-//        emailService.sendPasswordResetSuccessNotice(event.email());
-//    }
 }

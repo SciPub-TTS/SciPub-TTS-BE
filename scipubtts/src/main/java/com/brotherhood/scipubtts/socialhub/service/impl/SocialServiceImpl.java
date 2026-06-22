@@ -5,7 +5,6 @@ import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.socialhub.dto.request.CreateSocialPostRequest;
-import com.brotherhood.scipubtts.socialhub.dto.request.PostReferenceRequest;
 import com.brotherhood.scipubtts.socialhub.dto.request.UpdateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.response.LikeToggleResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostDetailResponse;

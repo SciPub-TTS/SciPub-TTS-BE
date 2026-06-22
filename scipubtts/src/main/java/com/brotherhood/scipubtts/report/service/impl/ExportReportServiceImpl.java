@@ -195,24 +195,26 @@ public class ExportReportServiceImpl implements ExportReportService {
     }
 
     private String formatValue(Object rawValue) {
-        if (rawValue == null) {
-            return NOT_AVAILABLE;
-        }
-
-        if (rawValue instanceof List<?> list) {
-            if (list.isEmpty()) {
+        switch (rawValue) {
+            case null -> {
                 return NOT_AVAILABLE;
             }
-            String joined = list.stream()
-                    .filter(v -> v != null && !v.toString().isBlank())
-                    .map(Object::toString)
-                    .reduce((a, b) -> a + FIELD_SEPARATOR + b)
-                    .orElse("");
-            return joined.isBlank() ? NOT_AVAILABLE : joined;
-        }
-
-        if (rawValue instanceof String str) {
-            return str.isBlank() ? NOT_AVAILABLE : str;
+            case List<?> list -> {
+                if (list.isEmpty()) {
+                    return NOT_AVAILABLE;
+                }
+                String joined = list.stream()
+                        .filter(v -> v != null && !v.toString().isBlank())
+                        .map(Object::toString)
+                        .reduce((a, b) -> a + FIELD_SEPARATOR + b)
+                        .orElse("");
+                return joined.isBlank() ? NOT_AVAILABLE : joined;
+            }
+            case String str -> {
+                return str.isBlank() ? NOT_AVAILABLE : str;
+            }
+            default -> {
+            }
         }
 
         // Boolean, Integer, ...

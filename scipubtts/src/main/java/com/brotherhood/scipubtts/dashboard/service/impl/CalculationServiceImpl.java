@@ -13,7 +13,6 @@ import com.brotherhood.scipubtts.dashboard.statistic.TopicMetricStatistic;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class CalculationServiceImpl implements CalculationService {
@@ -148,11 +147,6 @@ public class CalculationServiceImpl implements CalculationService {
     FormulaType formulaType = FormulaType.from(formula);
     TopicWeight weight = resolveTopicWeight(formulaType);
     TopicMetricStatistic stat = buildTopicStatistic(topicList);
-
-    Map<String, Double> scoreMap = new HashMap<>();
-    for (Topic topic : topicList) {
-      scoreMap.put(topic.getTopicId(), calculateTopicScore(topic, weight, stat));
-    }
 
     return topicList.stream()
             .map(topic -> new TopicScore(topic, calculateTopicScore(topic, weight, stat)))

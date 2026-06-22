@@ -51,27 +51,6 @@ public class SearchQuerySupport {
         return keyword == null ? "" : keyword.trim();
     }
 
-    public String normalizeMode(String mode) {
-        if (!StringUtils.hasText(mode)) {
-            return "range";
-        }
-
-        return mode.trim().toLowerCase(Locale.ROOT);
-    }
-
-    public String normalizeTrendingMode(String trendingMode) {
-        if (!StringUtils.hasText(trendingMode)) {
-            return "none";
-        }
-
-        String normalizedValue = trendingMode.trim().toLowerCase(Locale.ROOT);
-
-        return switch (normalizedValue) {
-            case "keyword", "topic", "both" -> normalizedValue;
-            default -> "none";
-        };
-    }
-
     public String resolveSort(String sortBy, String sortDirection, boolean hasSearchQuery) {
         String defaultSort = hasSearchQuery ? "relevance_score:desc" : "cited_by_count:desc";
 
@@ -86,7 +65,6 @@ public class SearchQuerySupport {
         return switch (normalizedSortBy) {
             case "citation" -> "cited_by_count:" + normalizedSortDirection;
             case "published" -> "publication_year:" + normalizedSortDirection;
-            case "relevance" -> defaultSort;
             default -> defaultSort;
         };
     }
@@ -105,7 +83,6 @@ public class SearchQuerySupport {
         return switch (normalizedSortBy) {
             case "works" -> "works_count:" + normalizedSortDirection;
             case "alphabetical" -> "display_name:" + normalizedSortDirection;
-            case "relevance" -> defaultSort;
             default -> defaultSort;
         };
     }

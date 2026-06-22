@@ -1,6 +1,5 @@
 package com.brotherhood.scipubtts.feed.model;
 
-import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 

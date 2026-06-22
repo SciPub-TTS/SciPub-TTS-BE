@@ -28,6 +28,6 @@ public interface PasswordResetGrantRepository extends JpaRepository<PasswordRese
            and g.consumedAt is null
            and g.expiredAt > :now
     """)
-    int revokeActiveByUserId(@Param("userId") UUID userId,
+    void revokeActiveByUserId(@Param("userId") UUID userId,
                              @Param("now") OffsetDateTime now);
 }

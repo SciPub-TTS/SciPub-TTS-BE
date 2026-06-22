@@ -261,7 +261,7 @@ class AdminServiceImplTest {
     @Test
     void cannotBanAdminTarget() {
         UUID adminId = UUID.randomUUID();
-        User target = admin(false);
+        User target = admin();
 
         when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
 
@@ -288,8 +288,8 @@ class AdminServiceImplTest {
         return user(Role.RESEARCHER, banned);
     }
 
-    private User admin(boolean banned) {
-        return user(Role.ADMIN, banned);
+    private User admin() {
+        return user(Role.ADMIN, false);
     }
 
     private User user(Role role, boolean banned) {

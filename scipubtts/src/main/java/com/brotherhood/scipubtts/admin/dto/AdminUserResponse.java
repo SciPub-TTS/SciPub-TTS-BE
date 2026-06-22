@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@SuppressWarnings("unused")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -49,14 +50,6 @@ public class AdminUserResponse {
 
     public String role() {
         return role;
-    }
-
-    public boolean emailVerified() {
-        return emailVerified;
-    }
-
-    public boolean googleLinked() {
-        return googleLinked;
     }
 
     public boolean banned() {

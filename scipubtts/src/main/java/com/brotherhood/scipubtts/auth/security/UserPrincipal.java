@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.auth.security;
 
 import com.brotherhood.scipubtts.user.entity.User;
 import lombok.Getter;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
@@ -47,6 +48,7 @@ public class UserPrincipal implements UserDetails, OAuth2User, CredentialsContai
 
 
     @Override
+    @NullMarked
     public String getUsername() {
         return email;
     }
@@ -57,6 +59,7 @@ public class UserPrincipal implements UserDetails, OAuth2User, CredentialsContai
     }
 
     @Override
+    @NullMarked
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
     }
@@ -72,6 +75,7 @@ public class UserPrincipal implements UserDetails, OAuth2User, CredentialsContai
     }
 
     @Override
+    @NullMarked
     public String getName() {
         return id.toString();
     }
