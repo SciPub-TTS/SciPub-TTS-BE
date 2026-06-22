@@ -23,7 +23,7 @@ public class OpenAlexConfig {
             .requestInterceptor((request, body, execution) -> {
               URI originalUri = request.getURI();
               String separator = originalUri.getQuery() == null ? "?" : "&";
-              URI newUri = URI.create(originalUri + separator + "api_key=" + "");
+              URI newUri = URI.create(originalUri + separator + "api_key=" + "b6CPNoHsLmESY4uE9JgdLJ");
               return execution.execute(new HttpRequestWrapper(request) {
                 @Override
                 public URI getURI() { return newUri; }
