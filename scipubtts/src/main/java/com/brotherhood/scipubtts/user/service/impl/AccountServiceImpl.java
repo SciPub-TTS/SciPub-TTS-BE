@@ -90,7 +90,6 @@ public class AccountServiceImpl implements AccountService {
         User finalUser = user;
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> UserProfile.builder()
-                        .userId(userId)
                         .user(finalUser)
                         .build());
 
