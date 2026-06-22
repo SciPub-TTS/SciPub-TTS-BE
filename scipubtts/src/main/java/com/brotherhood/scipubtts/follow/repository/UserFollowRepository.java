@@ -76,4 +76,6 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, UUID> {
             GROUP BY target_type, target_openalex_id
             """, nativeQuery = true)
     List<FollowTargetGroupView> findFeedTargetGroups();
+
+    long countByUserIdAndTargetType(UUID userId, FollowTargetType targetType);
 }
