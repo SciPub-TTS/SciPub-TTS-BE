@@ -397,7 +397,7 @@ public class SearchOptionsService {
         );
     }
 
-    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadGroupedFacetOptionPage(
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedFacetOptions(
             String groupBy,
             int fetchSize
     ) {
@@ -427,20 +427,20 @@ public class SearchOptionsService {
         return options;
     }
 
-    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptionPage(
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptions(
             String groupBy,
             int fetchSize
     ) {
-        return loadGroupedFacetOptionPage(groupBy, limit, page);
+        return loadGroupedFacetOptions(groupBy, fetchSize);
     }
 
-    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptionPage(
+    private List<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptions(
             String groupBy,
-            int limit,
-            int page
+            int fetchSize
     ) {
-        return loadGroupedFacetOptionPage(groupBy, limit, page);
+        return loadGroupedFacetOptions(groupBy, fetchSize);
     }
+
 
     private List<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptions(
             String groupBy,
