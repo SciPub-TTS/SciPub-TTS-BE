@@ -7,7 +7,9 @@ import com.brotherhood.scipubtts.search.service.KeywordTrendService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 @Service
@@ -44,13 +46,7 @@ public class KeywordTrendServiceImpl implements KeywordTrendService {
             return snapshotDate;
         }
 
-        LocalDate latestSnapshotDate = keywordTrendReadRepository.findLatestSnapshotDate();
-
-        if (latestSnapshotDate != null) {
-            return latestSnapshotDate;
-        }
-
-        return LocalDate.now();
+        return LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 
     private int normalizeLimit(int limit) {
