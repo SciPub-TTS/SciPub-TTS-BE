@@ -95,7 +95,7 @@ public class SearchOptionsService {
         CachedFilterOptions cachedFilterOptions = defaultFilterOptionsCache.get(cacheKey);
 
         if (cachedFilterOptions != null && !cachedFilterOptions.isExpired()) {
-            return cachedFilterOptions.getResponse();
+            return cachedFilterOptions.response();
         }
 
         SearchFilterOptionsResponse freshResponse = buildFilterOptionsResponse("", limit, page);
@@ -382,7 +382,7 @@ public class SearchOptionsService {
         );
     }
 
-    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptionPage(
+    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadGroupedFacetOptionPage(
             String groupBy,
             int limit,
             int page
@@ -413,35 +413,20 @@ public class SearchOptionsService {
         return new OptionPage<>(options, groups.size() >= limit);
     }
 
+    private OptionPage<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptionPage(
+            String groupBy,
+            int limit,
+            int page
+    ) {
+        return loadGroupedFacetOptionPage(groupBy, limit, page);
+    }
+
     private OptionPage<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptionPage(
             String groupBy,
             int limit,
             int page
     ) {
-        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, limit, page);
-        Map<String, Object> response = openAlexClient.get("/works", queryParams);
-        List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
-        List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
-
-        for (Map<String, Object> group : groups) {
-            String key = openAlexMapReader.getString(group, "key");
-            String label = openAlexMapReader.sanitizeDisplayText(
-                    openAlexMapReader.getString(group, "key_display_name")
-            );
-            long count = openAlexMapReader.getLong(group, "count", 0L);
-
-            if (key.isBlank() || label.isBlank()) {
-                continue;
-            }
-
-            options.add(new SearchFilterOptionsResponse.FacetOption(
-                    searchQuerySupport.normalizeGroupedValue(groupBy, key),
-                    label,
-                    count
-            ));
-        }
-
-        return new OptionPage<>(options, groups.size() >= limit);
+        return loadGroupedFacetOptionPage(groupBy, limit, page);
     }
 
     private OptionPage<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptionPage(
@@ -582,18 +567,7 @@ public class SearchOptionsService {
         return limit + ":" + page;
     }
 
-    private static class CachedFilterOptions {
-        private final SearchFilterOptionsResponse response;
-        private final Instant expiresAt;
-
-        private CachedFilterOptions(SearchFilterOptionsResponse response, Instant expiresAt) {
-            this.response = response;
-            this.expiresAt = expiresAt;
-        }
-
-        private SearchFilterOptionsResponse getResponse() {
-            return response;
-        }
+    private record CachedFilterOptions(SearchFilterOptionsResponse response, Instant expiresAt) {
 
         private boolean isExpired() {
             return Instant.now().isAfter(expiresAt);

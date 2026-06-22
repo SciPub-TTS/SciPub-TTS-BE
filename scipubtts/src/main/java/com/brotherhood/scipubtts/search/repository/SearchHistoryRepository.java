@@ -32,8 +32,8 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
             Pageable pageable
     );
 
-    long deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
+    void deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
 
-    long deleteByUserId(UUID userId);
+    void deleteByUserId(UUID userId);
 }
 

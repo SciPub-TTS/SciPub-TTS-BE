@@ -30,10 +30,10 @@ public class PasswordResetChallenge {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "email_snapshot", nullable = false, length = 255)
+    @Column(name = "email_snapshot", nullable = false)
     private String emailSnapshot;
 
-    @Column(name = "code_hash", nullable = false, length = 255)
+    @Column(name = "code_hash", nullable = false)
     private String codeHash;
 
     @Column(name = "attempt_count", nullable = false)

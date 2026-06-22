@@ -1,5 +1,8 @@
 package com.brotherhood.scipubtts.report.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum ExportField {
 
     TITLE          ("Title",          false),
@@ -19,6 +22,10 @@ public enum ExportField {
     TYPE           ("Type",           false);
 
     private final String columnLabel;
+    /**
+     * -- GETTER --
+     * true nếu field này có thể có nhiều giá trị (Authors, Institutions, Countries, Topics, Keywords)
+     */
     private final boolean multiValued;
 
     ExportField(String columnLabel, boolean multiValued) {
@@ -26,12 +33,4 @@ public enum ExportField {
         this.multiValued = multiValued;
     }
 
-    public String getColumnLabel() {
-        return columnLabel;
-    }
-
-    /** true nếu field này có thể có nhiều giá trị (Authors, Institutions, Countries, Topics, Keywords) */
-    public boolean isMultiValued() {
-        return multiValued;
-    }
 }

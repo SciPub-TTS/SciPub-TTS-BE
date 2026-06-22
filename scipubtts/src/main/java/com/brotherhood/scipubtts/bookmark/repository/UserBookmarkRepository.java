@@ -4,7 +4,6 @@ import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -64,14 +63,6 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     long countDistinctTopicsByUserId(@Param("userId") UUID userId);
 
     // 4.3. Total unique sources
-//    @Query("""
-//        SELECT COUNT(DISTINCT b.sourceSnapshot)
-//        FROM UserBookmark b
-//        WHERE b.userId = :userId
-//          AND b.sourceSnapshot IS NOT NULL
-//          AND b.sourceSnapshot <> ''
-//    """)
-//    long countDistinctSourcesByUserId(@Param("userId") UUID userId);
 
     @Query("""
         SELECT COUNT(DISTINCT b.authorsSnapshot)
@@ -97,16 +88,6 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     """)
     List<String> findDistinctTopicsByUserId(@Param("userId") UUID userId);
 
-    // 5.2. Danh sách Sources (sắp xếp A-Z)
-//    @Query("""
-//        SELECT DISTINCT b.sourceSnapshot
-//        FROM UserBookmark b
-//        WHERE b.userId = :userId
-//          AND b.sourceSnapshot IS NOT NULL
-//          AND b.sourceSnapshot <> ''
-//        ORDER BY b.sourceSnapshot ASC
-//    """)
-//    List<String> findDistinctSourcesByUserId(@Param("userId") UUID userId);
 
     // 5.3. Danh sách Years (sắp xếp mới nhất -> cũ nhất)
     @Query("""
@@ -139,7 +120,7 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
     // ==========================================
     int deleteByIdAndUserId(UUID id, UUID userId);
 
-    int deleteByUserIdAndOpenAlexId(UUID userId, String openAlexId);
+    void deleteByUserIdAndOpenAlexId(UUID userId, String openAlexId);
 
 
     List<UserBookmark> findByUserIdAndOpenAlexIdIn(UUID userId, List<String> openAlexIds);

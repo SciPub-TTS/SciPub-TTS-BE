@@ -12,6 +12,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -48,8 +49,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Override
     @Transactional
     public void onAuthenticationSuccess(
-            HttpServletRequest request,
-            HttpServletResponse response,
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
 

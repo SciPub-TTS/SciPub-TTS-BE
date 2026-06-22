@@ -22,6 +22,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -175,11 +176,9 @@ public class FollowServiceImpl implements FollowService {
             return Sort.by(Sort.Direction.DESC, "createdAt");
         }
 
-        return switch (normalizedSort.toUpperCase()) {
-            case "OLDEST" -> Sort.by(Sort.Direction.ASC, "createdAt");
-            case "RECENT" -> Sort.by(Sort.Direction.DESC, "createdAt");
-            default -> Sort.by(Sort.Direction.DESC, "createdAt");
-        };
+        return Objects.equals(normalizedSort.toUpperCase(), "OLDEST")
+                ? Sort.by(Sort.Direction.ASC, "createdAt")
+                : Sort.by(Sort.Direction.DESC, "createdAt");
     }
 
     private String normalize(String value) {

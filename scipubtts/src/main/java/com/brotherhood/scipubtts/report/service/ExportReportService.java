@@ -7,7 +7,6 @@ public interface ExportReportService {
 
     /**
      * Tạo file report (CSV hoặc JSON) từ danh sách paperIds + fields đã chọn.
-     *
      * Business rules áp dụng:
      * - Tối đa 20 paperIds (validate ở DTO, double-check ở Service).
      * - Ít nhất 1 field (validate ở DTO).
