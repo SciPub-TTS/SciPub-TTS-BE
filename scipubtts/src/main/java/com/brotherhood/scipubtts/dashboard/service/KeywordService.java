@@ -9,20 +9,25 @@ import java.util.List;
 
 public interface KeywordService {
 
-  KeywordCalculateResponse calculateAndSaveKeywords(
-          KeywordCalculateAllRequest request
-  );
+    KeywordCalculateResponse calculateAndSaveKeywords(
+            KeywordCalculateAllRequest request
+    );
 
-  Keyword calculateKeywordMetrics(
-          Keyword keyword,
-          KeywordCalculateAllRequest request
-  );
+    Keyword calculateKeywordMetrics(
+            Keyword keyword,
+            KeywordCalculateAllRequest request
+    );
 
-  List<Keyword> getByPeriod(
-          KeywordCalculateAllRequest request
-  );
+    List<Keyword> getByPeriod(
+            KeywordCalculateAllRequest request
+    );
 
-  KeywordCalculateResponse getKeywordsRanking(
-          KeywordRankingRequest request
-  );
+    KeywordCalculateResponse getKeywordsRanking(
+            KeywordRankingRequest request
+    );
+
+
+    public KeywordCalculateResponse getTop6KeywordsRanking(KeywordRankingRequest request);
+
+    public KeywordCalculateResponse.KeywordMetric getTop1KeywordRanking(KeywordRankingRequest request);
 }
