@@ -1,12 +1,8 @@
 package com.brotherhood.scipubtts.bookmark.service.impl;
 
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
+import com.brotherhood.scipubtts.bookmark.dto.response.*;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkNoteRequest;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.FilterOptionsResponse;
 import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.bookmark.service.BookmarkService;
@@ -301,6 +297,13 @@ public class BookmarkServiceImpl implements BookmarkService {
         // Idempotent:
         // Nếu chưa từng bookmark hoặc đã bị xóa trước đó, vẫn coi là thành công.
         userBookmarkRepository.deleteByUserIdAndOpenAlexId(userId, normalizedOpenAlexId);
+    }
+
+    @Override
+    public List<TrendingPaperResponse> getTop6TrendingPapers() {
+        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
+
+        return userBookmarkRepository.findTrendingPaperThisWeek(oneWeekAgo, PageRequest.of(0, 6));
     }
 
     // =========================================================
