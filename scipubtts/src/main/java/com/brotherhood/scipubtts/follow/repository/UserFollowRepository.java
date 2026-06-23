@@ -50,7 +50,7 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, UUID> {
                   AND f.targetType = :targetType
                   AND f.targetOpenAlexId = :targetOpenAlexId
             """)
-    int deleteByUserIdAndTargetTypeAndTargetOpenAlexId(
+    void deleteByUserIdAndTargetTypeAndTargetOpenAlexId(
             @Param("userId") UUID userId,
             @Param("targetType") FollowTargetType targetType,
             @Param("targetOpenAlexId") String targetOpenAlexId);
@@ -76,4 +76,6 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, UUID> {
             GROUP BY target_type, target_openalex_id
             """, nativeQuery = true)
     List<FollowTargetGroupView> findFeedTargetGroups();
+
+    long countByUserIdAndTargetType(UUID userId, FollowTargetType targetType);
 }

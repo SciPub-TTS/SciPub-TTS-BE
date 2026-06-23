@@ -113,6 +113,16 @@ public enum ErrorCode {
     BOOKMARK_REQUIRED(HttpStatus.BAD_REQUEST, "Bookmark id is required."),
     BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
     BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark."),
+    BOOKMARK_COLLECTION_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "Collection name is required."),
+    BOOKMARK_COLLECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark collection not found."),
+    BOOKMARK_COLLECTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "A bookmark collection with this name already exists."),
+
+    // ===== REPORT =====
+    EXPORT_NO_PAPER_SELECTED(HttpStatus.BAD_REQUEST, "Phải chọn ít nhất 1 bài báo để export"),
+    EXPORT_EXCEEDS_PAPER_LIMIT(HttpStatus.BAD_REQUEST, "Chỉ được export tối đa 20 bài báo"),
+    EXPORT_NO_FIELD_SELECTED(HttpStatus.BAD_REQUEST, "Phải chọn ít nhất 1 trường dữ liệu để export"),
+    EXPORT_FORMAT_REQUIRED(HttpStatus.NOT_FOUND, "Phải chọn định dạng export (CSV hoặc JSON)"),
+    EXPORT_NO_PAPER_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy dữ liệu cho các bài báo đã chọn"),
 
     // ===== SOCIAL =====
     SOCIAL_POST_NOT_FOUND(HttpStatus.NOT_FOUND,

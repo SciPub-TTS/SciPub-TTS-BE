@@ -35,6 +35,15 @@ public class SocialPostReference {
     @Column(name = "authors_snapshot", columnDefinition = "TEXT")
     private String authorsSnapshot;
 
+    @Column(name = "author_openalex_ids_snapshot", columnDefinition = "TEXT")
+    private String authorOpenAlexIdsSnapshot;
+
+    @Column(name = "topic_snapshot", columnDefinition = "TEXT")
+    private String topicSnapshot;
+
+    @Column(name = "topic_openalex_id_snapshot", columnDefinition = "TEXT")
+    private String topicOpenAlexIdSnapshot;
+
     @Column(name = "year_snapshot")
     private Short yearSnapshot;
 

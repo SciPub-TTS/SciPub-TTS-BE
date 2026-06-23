@@ -2,10 +2,10 @@ package com.brotherhood.scipubtts.socialhub.service.impl;
 
 import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
+import com.brotherhood.scipubtts.bookmark.support.BookmarkSnapshotSupport;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.socialhub.dto.request.CreateSocialPostRequest;
-import com.brotherhood.scipubtts.socialhub.dto.request.PostReferenceRequest;
 import com.brotherhood.scipubtts.socialhub.dto.request.UpdateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.response.LikeToggleResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostDetailResponse;
@@ -19,6 +19,7 @@ import com.brotherhood.scipubtts.socialhub.repository.SocialPostRepository;
 import com.brotherhood.scipubtts.socialhub.service.SocialService;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +27,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,59 +50,12 @@ public class SocialServiceImpl implements SocialService {
     private final SocialPostReferenceRepository referenceRepository;
     private final UserRepository userRepository;
     private final UserBookmarkRepository bookmarkRepository;
-
-    // ─────────────────────────────────────────────────────────
-    // FLOW 1 — Helper validate References (dùng chung Create & Update)
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Bước 1: null/empty            → return List.of()
-     * Bước 2: size > 3              → throw SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT
-     * Bước 3: bóc tách ID duy nhất (distinct, đã chuẩn hóa)
-     * Bước 4: phải bắt đầu bằng "W" → throw nếu sai định dạng
-     * Bước 5: query bookmarkRepository.findByUserIdAndOpenalexIdIn(userId, ids)
-     * Bước 6: nếu kết quả ít hơn ids.size() → throw REFERENCE_NOT_IN_BOOKMARK
-     * Bước 7: trả về list UserBookmark hợp lệ
-     */
-    private List<UserBookmark> extractBookmarksForReferences(UUID userId, List<String> openalexIds) {
-        if (openalexIds == null || openalexIds.isEmpty()) {
-            return List.of();
-        }
-
-        if (openalexIds.size() > MAX_REFERENCES) {
-            throw new BusinessException(ErrorCode.SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT);
-        }
-
-        // Chuẩn hóa + loại trùng
-        List<String> distinctIds = openalexIds.stream()
-                .map(this::normalizeOpenAlexId)
-                .distinct()
-                .toList();
-
-        // Chỉ cho phép tham chiếu WORK ("W...")
-        boolean hasInvalidFormat = distinctIds.stream()
-                .anyMatch(id -> id == null || !id.startsWith("W"));
-        if (hasInvalidFormat) {
-            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_INVALID_FORMAT);
-        }
-
-        List<UserBookmark> validBookmarks = bookmarkRepository.findByUserIdAndOpenAlexIdIn(userId, distinctIds);
-
-        if (validBookmarks.size() < distinctIds.size()) {
-            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK);
-        }
-
-        return validBookmarks;
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // FLOW 2 — createPost
-    // ─────────────────────────────────────────────────────────
+    private final EntityManager entityManager;
+    private final BookmarkSnapshotSupport snapshotSupport;
 
     @Override
     @Transactional
     public SocialPostDetailResponse createPost(UUID authorId, CreateSocialPostRequest request) {
-
         if (!StringUtils.hasText(request.title()) || !StringUtils.hasText(request.body())) {
             throw new BusinessException(ErrorCode.SOCIAL_POST_TITLE_OR_BODY_BLANK);
         }
@@ -107,35 +69,33 @@ public class SocialServiceImpl implements SocialService {
                 .author(author)
                 .title(request.title().trim())
                 .body(request.body().trim())
-                .topicTag(StringUtils.hasText(request.topicTag()) ? request.topicTag().trim() : null)
+                .topicTag(snapshotSupport.normalizeText(request.topicTag()))
                 .build();
 
-        List<SocialPostReference> refs = validBookmarks.stream()
-                .map(bm -> buildReferenceFromBookmark(post, bm))
-                .collect(Collectors.toList());
-        post.setReferences(refs);
+        post.setReferences(validBookmarks.stream()
+                .map(bookmark -> buildReferenceFromBookmark(post, bookmark))
+                .collect(Collectors.toList()));
 
         SocialPost saved = postRepository.save(post);
-
         return toDetailResponse(saved, false, false);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // READ
-    // ─────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
     public Page<SocialPostSummaryResponse> getNewest(Pageable pageable, UUID viewerId) {
-        Page<SocialPost> page = postRepository.findAllByOrderByCreatedAtDesc(pageable);
-        return toSummaryPage(page, viewerId);
+        return toSummaryPage(
+                postRepository.findAllByOrderByCreatedAtDesc(pageable),
+                viewerId
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<SocialPostSummaryResponse> getTop(Pageable pageable, UUID viewerId) {
-        Page<SocialPost> page = postRepository.findAllByOrderByLikeCountDescCreatedAtDesc(pageable);
-        return toSummaryPage(page, viewerId);
+        return toSummaryPage(
+                postRepository.findAllByOrderByLikeCountDescCreatedAtDesc(pageable),
+                viewerId
+        );
     }
 
     @Override
@@ -146,113 +106,335 @@ public class SocialServiceImpl implements SocialService {
         return toDetailResponse(post, liked, false);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // FLOW 3 — updatePost (kèm phạt Like khi đổi reference)
-    // ─────────────────────────────────────────────────────────
-
     @Override
     @Transactional
     public SocialPostDetailResponse updatePost(UUID postId, UUID editorId, UpdateSocialPostRequest request) {
-
         SocialPost post = findActivePost(postId);
         assertIsAuthor(post, editorId);
 
-        if (StringUtils.hasText(request.title())) post.setTitle(request.title().trim());
-        if (StringUtils.hasText(request.body()))  post.setBody(request.body().trim());
-        if (request.topicTag() != null)           post.setTopicTag(
-                StringUtils.hasText(request.topicTag()) ? request.topicTag().trim() : null);
+        if (StringUtils.hasText(request.title())) {
+            post.setTitle(request.title().trim());
+        }
 
-        boolean isLikesReset = false;
+        if (StringUtils.hasText(request.body())) {
+            post.setBody(request.body().trim());
+        }
+
+        if (request.topicTag() != null) {
+            post.setTopicTag(snapshotSupport.normalizeText(request.topicTag()));
+        }
+
+        boolean likesReset = false;
 
         if (request.references() != null) {
-
-            Set<String> oldOpenalexIds = new HashSet<>(referenceRepository.findOpenalexIdByPostId(postId));
-
-            Set<String> newOpenalexIds = request.references().stream()
+            Set<String> previousReferenceIds = new HashSet<>(
+                    referenceRepository.findOpenalexIdByPostId(postId)
+            );
+            Set<String> nextReferenceIds = request.references().stream()
                     .map(this::normalizeOpenAlexId)
                     .collect(Collectors.toSet());
 
-            boolean referencesChanged = !oldOpenalexIds.equals(newOpenalexIds);
-
-            if (referencesChanged) {
-                List<UserBookmark> validBookmarks = extractBookmarksForReferences(editorId, request.references());
+            if (!previousReferenceIds.equals(nextReferenceIds)) {
+                List<UserBookmark> validBookmarks = extractBookmarksForReferences(
+                        editorId,
+                        request.references()
+                );
 
                 likeRepository.deleteAllByPostId(postId);
                 post.resetLikeCount();
-                isLikesReset = true;
+                likesReset = true;
 
                 post.getReferences().clear();
-
-                List<SocialPostReference> newRefs = validBookmarks.stream()
-                        .map(bm -> buildReferenceFromBookmark(post, bm))
-                        .toList();
-                post.getReferences().addAll(newRefs);
+                post.getReferences().addAll(validBookmarks.stream()
+                        .map(bookmark -> buildReferenceFromBookmark(post, bookmark))
+                        .toList());
             }
         }
 
         SocialPost updated = postRepository.save(post);
+        boolean liked = !likesReset && likeRepository.existsByPostIdAndUserId(postId, editorId);
 
-        boolean liked = !isLikesReset && likeRepository.existsByPostIdAndUserId(postId, editorId);
-
-        return toDetailResponse(updated, liked, isLikesReset);
+        return toDetailResponse(updated, liked, likesReset);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // DELETE (soft)
-    // ─────────────────────────────────────────────────────────
 
     @Override
     @Transactional
     public void deletePost(UUID postId, UUID requesterId) {
         SocialPost post = findActivePost(postId);
-
-        if (!post.getAuthor().getId().equals(requesterId)) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        }
-
+        assertIsAuthor(post, requesterId);
         post.softDelete();
         postRepository.save(post);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // LIKE TOGGLE — INSERT/DELETE like + UPDATE like_count cộng dồn
-    // tại DB, cùng nằm trong 1 @Transactional để tránh race condition
-    // ─────────────────────────────────────────────────────────
 
     @Override
     @Transactional
     public LikeToggleResponse toggleLike(UUID postId, UUID userId) {
         SocialPost post = findActivePost(postId);
+        Optional<SocialPostLike> existingLike = likeRepository.findByPostIdAndUserId(postId, userId);
 
-        Optional<SocialPostLike> existing = likeRepository.findByPostIdAndUserId(postId, userId);
-
-        if (existing.isPresent()) {
-            likeRepository.delete(existing.get());
+        if (existingLike.isPresent()) {
+            likeRepository.delete(existingLike.get());
             postRepository.decrementLikeCount(postId);
-
-            int newCount = findActivePost(postId).getLikeCount();
-            return new LikeToggleResponse(false, newCount);
-
-        } else {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-            SocialPostLike like = SocialPostLike.builder()
-                    .post(post)
-                    .user(user)
-                    .build();
-
-            likeRepository.save(like);
-            postRepository.incrementLikeCount(postId);
-
-            int newCount = findActivePost(postId).getLikeCount();
-            return new LikeToggleResponse(true, newCount);
+            entityManager.refresh(post);
+            return new LikeToggleResponse(false, post.getLikeCount());
         }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        likeRepository.save(SocialPostLike.builder()
+                .post(post)
+                .user(user)
+                .build());
+        postRepository.incrementLikeCount(postId);
+        entityManager.refresh(post);
+
+        return new LikeToggleResponse(true, post.getLikeCount());
     }
 
-    // ─────────────────────────────────────────────────────────
-    // PRIVATE HELPERS
-    // ─────────────────────────────────────────────────────────
+    private List<UserBookmark> extractBookmarksForReferences(UUID userId, List<String> openAlexIds) {
+        if (openAlexIds == null || openAlexIds.isEmpty()) {
+            return List.of();
+        }
+
+        if (openAlexIds.size() > MAX_REFERENCES) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_EXCEEDS_REFERENCE_LIMIT);
+        }
+
+        List<String> distinctIds = openAlexIds.stream()
+                .map(this::normalizeOpenAlexId)
+                .distinct()
+                .toList();
+
+        boolean hasInvalidFormat = distinctIds.stream()
+                .anyMatch(id -> id == null || !id.startsWith("W"));
+
+        if (hasInvalidFormat) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_INVALID_FORMAT);
+        }
+
+        List<UserBookmark> validBookmarks = bookmarkRepository.findByUserIdAndOpenAlexIdIn(
+                userId,
+                distinctIds
+        );
+
+        if (validBookmarks.size() != distinctIds.size()) {
+            throw new BusinessException(ErrorCode.SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK);
+        }
+
+        return validBookmarks;
+    }
+
+    private Page<SocialPostSummaryResponse> toSummaryPage(Page<SocialPost> page, UUID viewerId) {
+        List<UUID> postIds = page.stream().map(SocialPost::getId).toList();
+        Set<UUID> likedIds = (viewerId != null && !postIds.isEmpty())
+                ? likeRepository.findLikedPostIds(viewerId, postIds)
+                : Set.of();
+
+        return page.map(post -> toSummaryResponse(post, likedIds.contains(post.getId())));
+    }
+
+    private SocialPostSummaryResponse toSummaryResponse(SocialPost post, boolean liked) {
+        User author = post.getAuthor();
+        List<ResolvedReferenceSnapshot> references = resolveReferenceSnapshots(
+                author.getId(),
+                post.getReferences()
+        );
+
+        return new SocialPostSummaryResponse(
+                post.getId(),
+                post.getTitle(),
+                buildBodyPreview(post.getBody()),
+                extractTopicTags(post.getTopicTag()),
+                references.stream().map(this::toSummaryReferenceInfo).toList(),
+                post.getLikeCount(),
+                liked,
+                new SocialPostSummaryResponse.AuthorInfo(author.getId(), buildAuthorName(author)),
+                post.getCreatedAt(),
+                post.getUpdatedAt()
+        );
+    }
+
+    private SocialPostDetailResponse toDetailResponse(
+            SocialPost post,
+            boolean liked,
+            boolean likesReset
+    ) {
+        User author = post.getAuthor();
+        List<ResolvedReferenceSnapshot> references = resolveReferenceSnapshots(
+                author.getId(),
+                post.getReferences()
+        );
+
+        return new SocialPostDetailResponse(
+                post.getId(),
+                post.getTitle(),
+                post.getBody(),
+                extractTopicTags(post.getTopicTag()),
+                post.getLikeCount(),
+                liked,
+                new SocialPostDetailResponse.AuthorInfo(author.getId(), buildAuthorName(author)),
+                references.stream().map(this::toDetailReferenceInfo).toList(),
+                post.getCreatedAt(),
+                post.getUpdatedAt(),
+                likesReset
+        );
+    }
+
+    private String buildBodyPreview(String body) {
+        if (body.length() <= BODY_PREVIEW_LENGTH) {
+            return body;
+        }
+
+        return body.substring(0, BODY_PREVIEW_LENGTH) + "...";
+    }
+
+    private String buildAuthorName(User author) {
+        return (author.getFirstName() + " " + author.getLastName()).trim();
+    }
+
+    private SocialPostReference buildReferenceFromBookmark(SocialPost post, UserBookmark bookmark) {
+        return SocialPostReference.builder()
+                .post(post)
+                .openalexId(bookmark.getOpenAlexId())
+                .titleSnapshot(bookmark.getTitleSnapshot())
+                .authorsSnapshot(bookmark.getAuthorsSnapshot())
+                .authorOpenAlexIdsSnapshot(bookmark.getAuthorOpenAlexIdsSnapshot())
+                .topicSnapshot(bookmark.getTopicSnapshot())
+                .topicOpenAlexIdSnapshot(bookmark.getTopicOpenAlexIdSnapshot())
+                .yearSnapshot(bookmark.getPublicationYear() != null
+                        ? bookmark.getPublicationYear().shortValue()
+                        : null)
+                .build();
+    }
+
+    private List<String> extractTopicTags(String rawTopicTag) {
+        if (!StringUtils.hasText(rawTopicTag)) {
+            return List.of();
+        }
+
+        return Arrays.stream(rawTopicTag.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    private List<ResolvedReferenceSnapshot> resolveReferenceSnapshots(
+            UUID userId,
+            List<SocialPostReference> references
+    ) {
+        if (references == null || references.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, UserBookmark> bookmarksByOpenAlexId = loadBookmarksByOpenAlexId(
+                userId,
+                references
+        );
+
+        return references.stream()
+                .map(reference -> resolveReferenceSnapshot(
+                        reference,
+                        bookmarksByOpenAlexId.get(reference.getOpenalexId())
+                ))
+                .toList();
+    }
+
+    private Map<String, UserBookmark> loadBookmarksByOpenAlexId(
+            UUID userId,
+            List<SocialPostReference> references
+    ) {
+        if (references == null || references.isEmpty()) {
+            return Map.of();
+        }
+
+        List<String> openAlexIds = references.stream()
+                .map(SocialPostReference::getOpenalexId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+
+        if (openAlexIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return bookmarkRepository.findByUserIdAndOpenAlexIdIn(userId, openAlexIds).stream()
+                .collect(Collectors.toMap(
+                        UserBookmark::getOpenAlexId,
+                        Function.identity(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+    }
+
+    private ResolvedReferenceSnapshot resolveReferenceSnapshot(
+            SocialPostReference reference,
+            UserBookmark fallbackBookmark
+    ) {
+        String rawAuthorIds = snapshotSupport.firstNonBlank(
+                reference.getAuthorOpenAlexIdsSnapshot(),
+                fallbackBookmark != null ? fallbackBookmark.getAuthorOpenAlexIdsSnapshot() : null
+        );
+
+        Integer yearSnapshot = reference.getYearSnapshot() != null
+                ? reference.getYearSnapshot().intValue()
+                : fallbackBookmark != null
+                ? fallbackBookmark.getPublicationYear()
+                : null;
+
+        return new ResolvedReferenceSnapshot(
+                reference.getId(),
+                reference.getOpenalexId(),
+                snapshotSupport.firstNonBlank(
+                        reference.getTitleSnapshot(),
+                        fallbackBookmark != null ? fallbackBookmark.getTitleSnapshot() : null
+                ),
+                snapshotSupport.firstNonBlank(
+                        reference.getAuthorsSnapshot(),
+                        fallbackBookmark != null ? fallbackBookmark.getAuthorsSnapshot() : null
+                ),
+                snapshotSupport.deserializeEntityIds(rawAuthorIds),
+                snapshotSupport.firstNonBlank(
+                        reference.getTopicSnapshot(),
+                        fallbackBookmark != null ? fallbackBookmark.getTopicSnapshot() : null
+                ),
+                snapshotSupport.normalizeEntityId(snapshotSupport.firstNonBlank(
+                        reference.getTopicOpenAlexIdSnapshot(),
+                        fallbackBookmark != null ? fallbackBookmark.getTopicOpenAlexIdSnapshot() : null
+                )),
+                yearSnapshot
+        );
+    }
+
+    private SocialPostSummaryResponse.ReferenceInfo toSummaryReferenceInfo(
+            ResolvedReferenceSnapshot reference
+    ) {
+        return new SocialPostSummaryResponse.ReferenceInfo(
+                reference.id(),
+                reference.openAlexId(),
+                reference.titleSnapshot(),
+                reference.authorsSnapshot(),
+                reference.authorOpenAlexIdsSnapshot(),
+                reference.topicSnapshot(),
+                reference.topicOpenAlexIdSnapshot(),
+                reference.yearSnapshot()
+        );
+    }
+
+    private SocialPostDetailResponse.ReferenceInfo toDetailReferenceInfo(
+            ResolvedReferenceSnapshot reference
+    ) {
+        return new SocialPostDetailResponse.ReferenceInfo(
+                reference.id(),
+                reference.openAlexId(),
+                reference.titleSnapshot(),
+                reference.authorsSnapshot(),
+                reference.authorOpenAlexIdsSnapshot(),
+                reference.topicSnapshot(),
+                reference.topicOpenAlexIdSnapshot(),
+                reference.yearSnapshot()
+        );
+    }
 
     private SocialPost findActivePost(UUID postId) {
         return postRepository.findById(postId)
@@ -265,126 +447,19 @@ public class SocialServiceImpl implements SocialService {
         }
     }
 
-    /**
-     * Chuẩn hóa OpenAlex ID — đồng bộ với module Bookmark.
-     * Input:  "https://openalex.org/W123456789" hoặc "W123456789" hoặc "w123456789"
-     * Output: "W123456789"
-     */
-    private String normalizeOpenAlexId(String raw) {
-        if (raw == null) return null;
-        String trimmed = raw.trim();
-        if (trimmed.contains("/")) {
-            trimmed = trimmed.substring(trimmed.lastIndexOf('/') + 1);
-        }
-        return trimmed.toUpperCase();
+    private String normalizeOpenAlexId(String rawValue) {
+        return snapshotSupport.normalizeEntityId(rawValue);
     }
 
-    /**
-     * Lấy snapshot trực tiếp từ Bookmark đã xác thực — KHÔNG dùng dữ liệu
-     * FE gửi lên, KHÔNG gọi lại OpenAlex API.
-     * ⚠️ ĐÃ SỬA theo entity chốt cuối:
-     *   - UserBookmark.getOpenAlexId()  (chữ A hoa, KHÔNG phải getOpenalexId())
-     *   - UserBookmark KHÔNG có sourceSnapshot → bỏ field này
-     *   - SocialPostReference KHÔNG có sourceSnapshot/doiSnapshot → bỏ luôn builder call
-     */
-    private SocialPostReference buildReferenceFromBookmark(SocialPost post, UserBookmark bookmark) {
-        return SocialPostReference.builder()
-                .post(post)
-                .openalexId(bookmark.getOpenAlexId())
-                .titleSnapshot(bookmark.getTitleSnapshot())
-                .authorsSnapshot(bookmark.getAuthorsSnapshot())
-                .yearSnapshot(bookmark.getPublicationYear() != null
-                        ? bookmark.getPublicationYear().shortValue() : null)
-                .build();
-    }
-
-    /**
-     * Hybrid-view: batch check liked status cho toàn bộ page một lần query
-     * thay vì N+1 queries.
-     */
-    private Page<SocialPostSummaryResponse> toSummaryPage(Page<SocialPost> page, UUID viewerId) {
-        List<UUID> postIds = page.stream().map(SocialPost::getId).toList();
-
-        Set<UUID> likedIds = (viewerId != null && !postIds.isEmpty())
-                ? likeRepository.findLikedPostIds(viewerId, postIds)
-                : Set.of();
-
-        return page.map(post -> toSummaryResponse(post, likedIds.contains(post.getId())));
-    }
-
-    private SocialPostSummaryResponse toSummaryResponse(SocialPost post, boolean liked) {
-        String preview = post.getBody().length() > BODY_PREVIEW_LENGTH
-                ? post.getBody().substring(0, BODY_PREVIEW_LENGTH) + "…"
-                : post.getBody();
-
-        User author = post.getAuthor();
-        String fullName = (author.getFirstName() + " " + author.getLastName()).trim();
-        List<SocialPostSummaryResponse.ReferenceInfo> refs = post.getReferences().stream()
-                .map(r -> new SocialPostSummaryResponse.ReferenceInfo(
-                        r.getId(),
-                        r.getOpenalexId(),
-                        r.getTitleSnapshot(),
-                        r.getAuthorsSnapshot(),
-                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null
-                ))
-                .toList();
-
-        return new SocialPostSummaryResponse(
-                post.getId(),
-                post.getTitle(),
-                preview,
-                extractTopicTags(post.getTopicTag()),
-                refs,
-                post.getLikeCount(),
-                liked,
-                new SocialPostSummaryResponse.AuthorInfo(author.getId(), fullName),
-                post.getCreatedAt(),
-                post.getUpdatedAt()
-        );
-    }
-
-    /**
-     * ⚠️ ĐÃ SỬA: bỏ sourceSnapshot/doiSnapshot khỏi ReferenceInfo
-     * (SocialPostReference entity chốt cuối chỉ có 5 field: id, openalexId,
-     *  titleSnapshot, authorsSnapshot, yearSnapshot)
-     */
-    private SocialPostDetailResponse toDetailResponse(SocialPost post, boolean liked, boolean likesReset) {
-        User author = post.getAuthor();
-        String fullName = (author.getFirstName() + " " + author.getLastName()).trim();
-
-        List<SocialPostDetailResponse.ReferenceInfo> refs = post.getReferences().stream()
-                .map(r -> new SocialPostDetailResponse.ReferenceInfo(
-                        r.getId(),
-                        r.getOpenalexId(),
-                        r.getTitleSnapshot(),
-                        r.getAuthorsSnapshot(),
-                        r.getYearSnapshot() != null ? r.getYearSnapshot().intValue() : null
-                ))
-                .toList();
-
-        return new SocialPostDetailResponse(
-                post.getId(),
-                post.getTitle(),
-                post.getBody(),
-                extractTopicTags(post.getTopicTag()),
-                post.getLikeCount(),
-                liked,
-                new SocialPostDetailResponse.AuthorInfo(author.getId(), fullName),
-                refs,
-                post.getCreatedAt(),
-                post.getUpdatedAt(),
-                likesReset
-        );
-    }
-
-    private List<String> extractTopicTags(String rawTopicTag) {
-        if (!StringUtils.hasText(rawTopicTag)) {
-            return List.of();
-        }
-
-        return Arrays.stream(rawTopicTag.split(","))
-                .map(String::trim)
-                .filter(StringUtils::hasText)
-                .toList();
+    private record ResolvedReferenceSnapshot(
+            UUID id,
+            String openAlexId,
+            String titleSnapshot,
+            String authorsSnapshot,
+            List<String> authorOpenAlexIdsSnapshot,
+            String topicSnapshot,
+            String topicOpenAlexIdSnapshot,
+            Integer yearSnapshot
+    ) {
     }
 }

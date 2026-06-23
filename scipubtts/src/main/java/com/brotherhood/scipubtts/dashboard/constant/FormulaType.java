@@ -1,5 +1,8 @@
 package com.brotherhood.scipubtts.dashboard.constant;
 
+import lombok.Getter;
+
+@Getter
 public enum FormulaType {
 
   BALANCED("balanced"),
@@ -18,11 +21,7 @@ public enum FormulaType {
     this.formula = formula;
   }
 
-  public String getFormula() {
-    return formula;
-  }
-
-  public static FormulaType from(String formula) {
+    public static FormulaType from(String formula) {
     for (FormulaType type : values()) {
       if (type.formula.equalsIgnoreCase(formula)) {
         return type;

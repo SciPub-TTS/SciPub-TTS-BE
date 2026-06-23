@@ -1,9 +1,9 @@
 package com.brotherhood.scipubtts.auth.security.oauth2;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -28,10 +28,10 @@ public class CustomAuthenticationFailureHandler implements AuthenticationFailure
 
     @Override
     public void onAuthenticationFailure(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException exception
-    ) throws IOException, ServletException {
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull AuthenticationException exception
+    ) throws IOException {
         String errorCode = "oauth2_failed";
 
         if (exception instanceof OAuth2AuthenticationException oAuth2Exception) {

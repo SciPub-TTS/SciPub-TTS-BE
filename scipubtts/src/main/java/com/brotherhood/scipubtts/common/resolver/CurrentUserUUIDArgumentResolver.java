@@ -4,7 +4,7 @@ import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
-import com.brotherhood.scipubtts.user.entity.User;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
@@ -44,9 +44,9 @@ public class CurrentUserUUIDArgumentResolver implements HandlerMethodArgumentRes
     public @Nullable Object resolveArgument(
             MethodParameter parameter,
             @Nullable ModelAndViewContainer mavContainer,
-            NativeWebRequest webRequest,
+            @NonNull NativeWebRequest webRequest,
             @Nullable WebDataBinderFactory binderFactory
-    ) throws Exception {
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         CurrentUserUUID annotation = parameter.getParameterAnnotation(CurrentUserUUID.class);

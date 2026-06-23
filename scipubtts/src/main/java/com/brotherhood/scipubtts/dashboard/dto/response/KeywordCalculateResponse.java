@@ -1,8 +1,5 @@
 package com.brotherhood.scipubtts.dashboard.dto.response;
 
-import com.brotherhood.scipubtts.dashboard.entity.Keyword;
-
-import java.time.LocalDate;
 import java.util.List;
 
 public record KeywordCalculateResponse(

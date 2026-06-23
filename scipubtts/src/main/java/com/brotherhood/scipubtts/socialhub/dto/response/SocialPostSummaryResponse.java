@@ -24,6 +24,9 @@ public record SocialPostSummaryResponse(
             String openalexId,
             String titleSnapshot,
             String authorsSnapshot,
+            List<String> authorOpenAlexIdsSnapshot,
+            String topicSnapshot,
+            String topicOpenAlexIdSnapshot,
             Integer yearSnapshot
     ) {}
 }

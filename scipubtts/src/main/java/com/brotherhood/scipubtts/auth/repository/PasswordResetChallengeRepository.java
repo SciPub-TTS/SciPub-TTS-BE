@@ -27,6 +27,6 @@ public interface PasswordResetChallengeRepository extends JpaRepository<Password
            and c.invalidatedAt is null
            and c.expiresAt > :now
     """)
-    int invalidateActiveByUserId(@Param("userId") UUID userId,
+    void invalidateActiveByUserId(@Param("userId") UUID userId,
                                  @Param("now") OffsetDateTime now);
 }

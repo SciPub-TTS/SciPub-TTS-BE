@@ -39,8 +39,17 @@ public class UserBookmark {
     @Column(name = "authors_snapshot", columnDefinition = "TEXT")
     private String authorsSnapshot;
 
+    @Column(name = "author_openalex_ids_snapshot", columnDefinition = "TEXT")
+    private String authorOpenAlexIdsSnapshot;
+
+    @Column(name = "source_snapshot", columnDefinition = "TEXT")
+    private String sourceSnapshot;
+
     @Column(name = "topic_snapshot", columnDefinition = "TEXT")
     private String topicSnapshot;
+
+    @Column(name = "topic_openalex_id_snapshot", columnDefinition = "TEXT")
+    private String topicOpenAlexIdSnapshot;
 
     @Column(name = "publication_year")
     private Integer publicationYear;

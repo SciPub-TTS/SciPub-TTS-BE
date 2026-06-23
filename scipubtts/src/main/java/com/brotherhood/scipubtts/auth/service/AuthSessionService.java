@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public interface AuthSessionService {
-    public AuthResponse issueSession(
+    AuthResponse issueSession(
             User user,
             boolean rememberMe,
             HttpServletRequest request,

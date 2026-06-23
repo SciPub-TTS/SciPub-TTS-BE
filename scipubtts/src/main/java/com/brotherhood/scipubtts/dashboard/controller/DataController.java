@@ -7,7 +7,6 @@ import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.TopicServiceImpl;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
