@@ -146,6 +146,30 @@ public class KeywordServiceImpl implements KeywordService {
     );
   }
 
+  public KeywordCalculateResponse getTop6KeywordsRanking(KeywordRankingRequest request) {
+    KeywordCalculateResponse response = getKeywordsRanking(request);
+
+    if (response == null || response.keywordList() == null || response.keywordList().isEmpty()) {
+      return response;
+    }
+
+    List<KeywordCalculateResponse.KeywordMetric> top6List = response.keywordList().stream()
+            .limit(6)
+            .toList();
+
+    return new KeywordCalculateResponse(top6List);
+  }
+
+  public KeywordCalculateResponse.KeywordMetric getTop1KeywordRanking(KeywordRankingRequest request) {
+    KeywordCalculateResponse response = getKeywordsRanking(request);
+
+    if (response == null || response.keywordList() == null || response.keywordList().isEmpty()) {
+      return null;
+    }
+
+    return response.keywordList().getFirst();
+  }
+
   private List<Keyword> saveRankedKeywords(
           List<Keyword> keywords
   ) {

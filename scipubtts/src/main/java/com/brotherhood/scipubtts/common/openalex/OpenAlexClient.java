@@ -13,14 +13,16 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.LinkedHashMap;
-import java.net.URI;
 import java.util.Map;
 
 @Component
 public class OpenAlexClient {
 
-    private static final int MAX_RETRIES = 5;
+    public static final int MAX_RETRIES = 5;
     private static final long INITIAL_BACKOFF_MILLIS = 500L;
+
+
+    public static final String SELECT_FIELDS = "id,title,publication_year,cited_by_count,open_access,authorships,topics,keywords,doi,type,abstract_inverted_index";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -43,7 +45,7 @@ public class OpenAlexClient {
         String responseBody = performGetWithRetry(path, buildQueryParams(queryParams));
 
         try {
-            return objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {
+            return objectMapper.readValue(responseBody, new TypeReference<>() {
             });
         } catch (Exception exception) {
             throw new BusinessException(ErrorCode.OPENALEX_PARSE_ERROR);

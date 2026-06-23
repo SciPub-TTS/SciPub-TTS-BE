@@ -120,11 +120,6 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
                             challenge.getId(),
                             now
                     );
-//            challenge.setAttemptCount(challenge.getAttemptCount() + 1);
-//            if (challenge.getAttemptCount() >= challenge.getMaxAttempts()) {
-//                challenge.setInvalidatedAt(now);
-//            }
-//            challengeRepository.save(challenge);
             throw new BusinessException(
                     challenge.getAttemptCount() >= challenge.getMaxAttempts()
                             ? ErrorCode.PASSWORD_RESET_CODE_ATTEMPTS_EXCEEDED
@@ -205,9 +200,6 @@ public class PasswordRecoveryServiceImpl implements PasswordRecoveryService {
         //Khi một người phải đi đổi mật khẩu, khả năng cao là tài khoản của họ đã bị lộ (hoặc họ vừa đăng nhập ở một máy tính công cộng nào đó mà quên thoát). Lệnh này sẽ lập tức đá văng (đăng xuất bắt buộc) tài khoản này ra khỏi tất cả các thiết bị đang đăng nhập hiện tại (như điện thoại, laptop khác, trình duyệt khác, hay máy của hacker).
         refreshTokenService.revokeAllByUserId(user.getId());
 
-//        eventPublisher.publishEvent(
-//                new PasswordResetCompletedEvent(user.getEmail())
-//        );
     }
 
 }

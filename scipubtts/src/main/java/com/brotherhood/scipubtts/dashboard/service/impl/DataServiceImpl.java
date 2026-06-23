@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -256,10 +255,9 @@ public class DataServiceImpl implements DataService {
             .collect(Collectors.toSet());
 
     // Take 4 weeks ago and current week with normalize data
-    int totalWeeks = HISTORY_WEEKS;
-    List<WeekSnapshot> weekSnapshots = new ArrayList<>();
+      List<WeekSnapshot> weekSnapshots = new ArrayList<>();
 
-    for (int i = totalWeeks - 1; i >= 0; i--) {
+    for (int i = HISTORY_WEEKS - 1; i >= 0; i--) {
       long shiftDays = (long) i * PERIOD_DAYS;
       LocalDate wStart = startDate.minusDays(shiftDays);
       LocalDate wEnd   = endDate.minusDays(shiftDays);

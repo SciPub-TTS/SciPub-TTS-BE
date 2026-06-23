@@ -23,7 +23,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-        return getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
+        return getCookie(request)
                 .map(cookie -> safelyDeserialize(cookie.getValue(), request))
                 .orElse(null);
     }
@@ -35,7 +35,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
             HttpServletResponse response
     ) {
         if (authorizationRequest == null) {
-            deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+            deleteCookie(request, response);
             return;
         }
 
@@ -55,20 +55,20 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
             HttpServletResponse response
     ) {
         OAuth2AuthorizationRequest authRequest = this.loadAuthorizationRequest(request);
-        if (getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME).isPresent()) {
-            deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+        if (getCookie(request).isPresent()) {
+            deleteCookie(request, response);
         }
         return authRequest;
     }
 
-    private Optional<Cookie> getCookie(HttpServletRequest request, String name) {
+    private Optional<Cookie> getCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return Optional.empty();
         }
 
         for (Cookie cookie : cookies) {
-            if (cookie.getName().equals(name)) {
+            if (cookie.getName().equals(HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)) {
                 return Optional.of(cookie);
             }
         }
@@ -76,14 +76,14 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         return Optional.empty();
     }
 
-    private void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
+    private void deleteCookie(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return;
         }
 
         for (Cookie cookie : cookies) {
-            if (cookie.getName().equals(name)) {
+            if (cookie.getName().equals(HttpCookieOAuth2AuthorizationRequestRepository.OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)) {
                 cookie.setValue("");
                 cookie.setPath("/");
                 cookie.setMaxAge(0);
@@ -92,13 +92,14 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         }
     }
 
-    private <T> T deserialize(String cookieValue, Class<T> cls) {
-        return cls.cast(SerializationUtils.deserialize(Base64.getUrlDecoder().decode(cookieValue)));
+    private OAuth2AuthorizationRequest deserialize(String cookieValue) {
+        return SerializationUtils.deserialize(
+                Base64.getUrlDecoder().decode(cookieValue)
+        );
     }
-
     private OAuth2AuthorizationRequest safelyDeserialize(String cookieValue, HttpServletRequest request) {
         try {
-            return deserialize(cookieValue, OAuth2AuthorizationRequest.class);
+            return deserialize(cookieValue);
         } catch (IllegalArgumentException | SerializationException ex) {
             log.warn(
                     "Ignoring invalid OAuth2 authorization request cookie for {} {}",

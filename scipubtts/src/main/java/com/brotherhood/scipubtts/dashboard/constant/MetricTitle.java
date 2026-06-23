@@ -1,5 +1,8 @@
 package com.brotherhood.scipubtts.dashboard.constant;
 
+import lombok.Getter;
+
+@Getter
 public enum MetricTitle {
 
   TOTAL_PAPERS("TOTAL PAPERS"),
@@ -17,11 +20,7 @@ public enum MetricTitle {
     this.title = title;
   }
 
-  public String getTitle() {
-    return title;
-  }
-
-  public static MetricTitle fromTitle(String title) {
+    public static MetricTitle fromTitle(String title) {
     for (MetricTitle metric : values()) {
       if (metric.title.equalsIgnoreCase(title)) {
         return metric;

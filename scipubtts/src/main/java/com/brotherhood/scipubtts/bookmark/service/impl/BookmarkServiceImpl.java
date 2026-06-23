@@ -12,6 +12,7 @@ import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.FilterOptionsResponse;
+import com.brotherhood.scipubtts.bookmark.dto.response.TrendingPaperResponse;
 import com.brotherhood.scipubtts.bookmark.entity.BookmarkCollection;
 import com.brotherhood.scipubtts.bookmark.entity.CollectionBookmark;
 import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
@@ -271,6 +272,13 @@ public class BookmarkServiceImpl implements BookmarkService {
                 userId,
                 normalizeOpenAlexId(openAlexId)
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrendingPaperResponse> getTop6TrendingPapers() {
+        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
+        return userBookmarkRepository.findTrendingPaperThisWeek(oneWeekAgo, PageRequest.of(0, 6));
     }
 
     private BookmarkResponse createNewBookmark(

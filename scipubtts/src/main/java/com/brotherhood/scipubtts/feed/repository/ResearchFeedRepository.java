@@ -77,7 +77,7 @@ public class ResearchFeedRepository {
                         ps.setInt(9, draft.getCitationSnapshot());
                     }
 
-                    String reasonJson = null;
+                    String reasonJson;
                     try {
                         reasonJson = objectMapper.writeValueAsString(
                                 java.util.Map.of("reasons", draft.getReasons())
