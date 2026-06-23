@@ -1,13 +1,17 @@
 package com.brotherhood.scipubtts.bookmark.service;
 
+import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkCollectionRequest;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
+import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkNoteRequest;
+import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.FilterOptionsResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface BookmarkService {
@@ -18,6 +22,8 @@ public interface BookmarkService {
             UUID userId,
             int page,
             int size,
+            UUID collectionId,
+            String title,
             String keyword,
             String topic,
             String source,
@@ -33,6 +39,14 @@ public interface BookmarkService {
     FilterOptionsResponse getFilterOptions(UUID userId);
 
     BookmarkResponse updateNote(UUID userId, UUID bookmarkId, UpdateBookmarkNoteRequest request);
+
+    List<BookmarkCollectionResponse> getCollections(UUID userId);
+
+    BookmarkCollectionResponse createCollection(UUID userId, CreateBookmarkCollectionRequest request);
+
+    void addBookmarksToCollection(UUID userId, UUID collectionId, UpdateBookmarkCollectionItemsRequest request);
+
+    void removeBookmarkFromCollection(UUID userId, UUID collectionId, UUID bookmarkId);
 
     void deleteBookmark(UUID userId, UUID bookmarkId);
 

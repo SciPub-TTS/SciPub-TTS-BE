@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID> {
 
@@ -27,18 +28,34 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
             SELECT b
             FROM UserBookmark b
             WHERE b.userId = :userId
+              AND (:collectionId IS NULL OR EXISTS (
+                  SELECT 1
+                  FROM CollectionBookmark cb
+                  JOIN BookmarkCollection c ON c.id = cb.collectionId
+                  WHERE cb.bookmarkId = b.id
+                    AND c.userId = :userId
+                    AND c.id = :collectionId
+              ))
+              AND (
+                  :title IS NULL OR :title = ''
+                  OR LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :title, '%'))
+              )
               AND (:topic IS NULL OR :topic = '' OR b.topicSnapshot = :topic)
+              AND (:source IS NULL OR :source = '' OR b.sourceSnapshot = :source)
               AND (:author IS NULL OR :author = '' OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :author, '%')))
               AND (:year IS NULL OR b.publicationYear = :year)
               AND (
                   :keyword IS NULL OR :keyword = ''
                   OR LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(b.sourceSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.topicSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
           )
     """)
     Page<UserBookmark> searchMyBookmarks(
             @Param("userId") UUID userId,
+            @Param("collectionId") UUID collectionId,
+            @Param("title") String title,
             @Param("keyword") String keyword,
             @Param("topic") String topic,
             @Param("source") String source,
@@ -143,4 +160,8 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
 
 
     List<UserBookmark> findByUserIdAndOpenAlexIdIn(UUID userId, List<String> openAlexIds);
+
+    List<UserBookmark> findByUserIdAndIdIn(UUID userId, Collection<UUID> ids);
+
+    long countByUserIdAndIdIn(UUID userId, Collection<UUID> ids);
 }

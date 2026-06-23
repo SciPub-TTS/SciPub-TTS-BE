@@ -2,9 +2,9 @@ package com.brotherhood.scipubtts.bookmark.dto.response;
 
 import java.util.UUID;
 
-public record BookmarkStatusResponse(
-        boolean bookmarked,
+public record BookmarkCollectionMembershipRow(
         UUID bookmarkId,
-        String openAlexId
+        UUID collectionId,
+        String collectionName
 ) {
 }
