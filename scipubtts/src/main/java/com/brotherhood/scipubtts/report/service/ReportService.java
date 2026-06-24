@@ -1,8 +1,8 @@
 package com.brotherhood.scipubtts.report.service;
 
-import com.brotherhood.scipubtts.report.dto.ReportOverviewResponse;
-import com.brotherhood.scipubtts.report.dto.TopicFormulaComparisonResponse;
-import com.brotherhood.scipubtts.report.dto.TopicTrendReportResponse;
+import com.brotherhood.scipubtts.report.dto.response.ReportOverviewResponse;
+import com.brotherhood.scipubtts.report.dto.response.TopicFormulaComparisonResponse;
+import com.brotherhood.scipubtts.report.dto.response.TopicTrendReportResponse;
 
 public interface ReportService {
 

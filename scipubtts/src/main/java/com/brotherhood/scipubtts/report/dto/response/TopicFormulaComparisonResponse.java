@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.report.dto;
+package com.brotherhood.scipubtts.report.dto.response;
 
 import java.util.Map;
 

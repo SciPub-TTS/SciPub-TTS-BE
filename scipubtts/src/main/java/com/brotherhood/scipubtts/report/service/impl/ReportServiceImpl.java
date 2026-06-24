@@ -12,9 +12,9 @@ import com.brotherhood.scipubtts.dashboard.service.DataService;
 import com.brotherhood.scipubtts.dashboard.service.impl.KeywordServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.MetricServiceImpl;
 import com.brotherhood.scipubtts.dashboard.service.impl.PublicationServiceImpl;
-import com.brotherhood.scipubtts.report.dto.ReportOverviewResponse;
-import com.brotherhood.scipubtts.report.dto.TopicFormulaComparisonResponse;
-import com.brotherhood.scipubtts.report.dto.TopicTrendReportResponse;
+import com.brotherhood.scipubtts.report.dto.response.ReportOverviewResponse;
+import com.brotherhood.scipubtts.report.dto.response.TopicFormulaComparisonResponse;
+import com.brotherhood.scipubtts.report.dto.response.TopicTrendReportResponse;
 import com.brotherhood.scipubtts.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,23 +40,29 @@ public class ReportServiceImpl implements ReportService {
 
     MetricsResponse metrics = metricService.getMetricsFromDb(new PeriodRequest(startTime, endTime));
 
-    var trending = dataService.getTopicsRanking(
+    var trendingTopics = dataService.getTopicsRanking(
             new TopicDataRequest(startTime, endTime, fieldId, FormulaType.TRENDING.getFormula()));
-    var emerging = dataService.getTopicsRanking(
+    var emergingTopics = dataService.getTopicsRanking(
             new TopicDataRequest(startTime, endTime, fieldId, FormulaType.EMERGING.getFormula()));
-    var impact = dataService.getTopicsRanking(
+    var impactTopics = dataService.getTopicsRanking(
             new TopicDataRequest(startTime, endTime, fieldId, FormulaType.IMPACT.getFormula()));
 
-    var keywords = keywordService.getKeywordsRanking(
+    var trendingKeywords = keywordService.getKeywordsRanking(
+            new KeywordRankingRequest(LocalDate.parse(startTime), LocalDate.parse(endTime), fieldId, FormulaType.TRENDING.getFormula()));
+    var emergingKeywords = keywordService.getKeywordsRanking(
+            new KeywordRankingRequest(LocalDate.parse(startTime), LocalDate.parse(endTime), fieldId, FormulaType.EMERGING.getFormula()));
+    var dominantKeywords = keywordService.getKeywordsRanking(
             new KeywordRankingRequest(LocalDate.parse(startTime), LocalDate.parse(endTime), fieldId, FormulaType.DOMINANT.getFormula()));
 
     return new ReportOverviewResponse(
             pubSummary,
             metrics,
-            toTopicHighlights(trending, 5),
-            toTopicHighlights(emerging, 5),
-            toTopicHighlights(impact, 5),
-            toKeywordHighlights(keywords, 10)
+            toTopicHighlights(trendingTopics, 5),
+            toTopicHighlights(emergingTopics, 5),
+            toTopicHighlights(impactTopics, 5),
+            toKeywordHighlights(trendingKeywords, 5),
+            toKeywordHighlights(emergingKeywords, 5),
+            toKeywordHighlights(dominantKeywords, 5)
     );
   }
 
@@ -68,7 +74,7 @@ public class ReportServiceImpl implements ReportService {
     String name = null;
 
     for (FormulaType formula : FormulaType.values()) {
-      if (formula == FormulaType.DOMINANT) continue; // chỉ áp dụng cho keyword
+      if (formula == FormulaType.DOMINANT) continue; // Only applicable for keywords
 
       var ranking = dataService.getTopicsRanking(
               new TopicDataRequest(startTime, endTime, fieldId, formula.getFormula()));
@@ -93,27 +99,72 @@ public class ReportServiceImpl implements ReportService {
   public TopicTrendReportResponse getTopicTrendReport(
           String topicId, String fieldId, String startTime, String endTime) {
 
-    var history = dataService.getSpecificTopicMetric(
+    var history = dataService.getTopicHeatMAp(
             new SpecificTopicDataRequest(startTime, endTime, fieldId));
-    // Giả sử dùng API topicScore-periods (topicService.getTopicAcrossPeriods) để có timeline theo tuần
-    var periods = dataService.getTopicsRanking(
-            new TopicDataRequest(startTime, endTime, fieldId, FormulaType.BALANCED.getFormula()));
 
-    // ... (lấy timeline thực tế từ TopicHistory nếu có topicId match)
-    // Đoạn dưới minh hoạ logic tính insight, cần nối với dữ liệu thực tế của SpecificTopicHistoryResponse
+    var topicHistory = history.topics().stream()
+            .filter(t -> t.topicId().equals(topicId))
+            .findFirst()
+            .orElse(null);
 
-    List<TopicTrendReportResponse.WeeklyPoint> timeline = new ArrayList<>();
-    String direction = "STABLE";
-    String peakWeek = null;
-    String insight = "Không đủ dữ liệu để đánh giá xu hướng.";
+    if (topicHistory == null || topicHistory.weeks().isEmpty()) {
+      return new TopicTrendReportResponse(
+              topicId, null, List.of(), "STABLE", null,
+              "No historical data found for this topic within the selected time frame.");
+    }
 
-    return new TopicTrendReportResponse(topicId, null, timeline, direction, peakWeek, insight);
+    List<TopicTrendReportResponse.WeeklyPoint> timeline = topicHistory.weeks().stream()
+            .map(w -> new TopicTrendReportResponse.WeeklyPoint(
+                    w.startDate(), w.endDate(),
+                    w.velocity(), w.accelerate(), w.citationDecay(),
+                    w.newComerAuthor(), w.institution()))
+            .collect(Collectors.toList());
+
+    double firstVelocity = topicHistory.weeks().get(0).velocity();
+    double lastVelocity = topicHistory.weeks().get(topicHistory.weeks().size() - 1).velocity();
+    double diff = lastVelocity - firstVelocity;
+
+    String direction;
+    if (diff > 0.05) direction = "RISING";
+    else if (diff < -0.05) direction = "DECLINING";
+    else direction = "STABLE";
+
+    var peak = topicHistory.weeks().stream()
+            .max(Comparator.comparingDouble(
+                    com.brotherhood.scipubtts.dashboard.dto.response.data.SpecificTopicHistoryResponse.HistoryData::velocity))
+            .orElse(null);
+    String peakWeek = peak != null ? peak.startDate() + " - " + peak.endDate() : null;
+
+    String insight = buildTrendInsight(topicHistory.name(), direction, peak, lastVelocity);
+
+    return new TopicTrendReportResponse(
+            topicId, topicHistory.name(), timeline, direction, peakWeek, insight);
+  }
+
+  private String buildTrendInsight(
+          String name, String direction,
+          com.brotherhood.scipubtts.dashboard.dto.response.data.SpecificTopicHistoryResponse.HistoryData peak,
+          double lastVelocity) {
+
+    String trendText = switch (direction) {
+      case "RISING" -> "is gaining momentum";
+      case "DECLINING" -> "is slowing down";
+      default -> "remains stable";
+    };
+
+    String peakText = peak != null
+            ? String.format(" The peak was recorded during the week of %s - %s with a velocity of %.2f.",
+            peak.startDate(), peak.endDate(), peak.velocity())
+            : "";
+
+    return String.format("Topic \"%s\" %s, with a current velocity of %.2f.%s",
+            name, trendText, lastVelocity, peakText);
   }
 
   // ---- helpers ----
 
   private ReportOverviewResponse.PublicationSummary buildPublicationSummary(Object trends) {
-    // tính growth % dựa trên 2 điểm đầu/cuối của trends — tuỳ cấu trúc thực tế của PublicationServiceImpl
+    // Calculate growth % based on the first and last points of trends — depending on the actual structure of PublicationServiceImpl
     return new ReportOverviewResponse.PublicationSummary(0, 0.0, "");
   }
 

@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.report.dto;
+package com.brotherhood.scipubtts.report.dto.response;
 
 import com.brotherhood.scipubtts.dashboard.dto.response.MetricsResponse;
 
@@ -10,7 +10,9 @@ public record ReportOverviewResponse(
         List<TopicHighlight> trendingTopics,
         List<TopicHighlight> emergingTopics,
         List<TopicHighlight> impactTopics,
-        List<KeywordHighlight> topKeywords
+        List<KeywordHighlight> trendingKeywords,
+        List<KeywordHighlight> emergingKeywords,
+        List<KeywordHighlight> dominantKeywords
 ) {
   public record PublicationSummary(
           int totalPublications,

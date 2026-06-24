@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.report.dto;
+package com.brotherhood.scipubtts.report.dto.response;
 
 import java.util.List;
 
@@ -15,6 +15,8 @@ public record TopicTrendReportResponse(
           String endDate,
           double velocity,
           double accelerate,
-          double citationDecay
+          double citationDecay,
+          double newComerAuthor,
+          double institution
   ) {}
 }
