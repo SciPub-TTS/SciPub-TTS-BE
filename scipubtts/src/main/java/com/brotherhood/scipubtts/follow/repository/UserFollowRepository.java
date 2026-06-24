@@ -78,4 +78,26 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, UUID> {
     List<FollowTargetGroupView> findFeedTargetGroups();
 
     long countByUserIdAndTargetType(UUID userId, FollowTargetType targetType);
+
+    @Query("""
+            SELECT
+                f.userId AS userId,
+                f.targetType AS targetType,
+                COUNT(f) AS count
+            FROM UserFollow f
+            WHERE f.userId IN :userIds
+              AND f.targetType IN :targetTypes
+            GROUP BY f.userId, f.targetType
+            """)
+    List<UserFollowCountView> countByUserIdsAndTargetTypes(
+            @Param("userIds") List<UUID> userIds,
+            @Param("targetTypes") List<FollowTargetType> targetTypes);
+
+    interface UserFollowCountView {
+        UUID getUserId();
+
+        FollowTargetType getTargetType();
+
+        long getCount();
+    }
 }
