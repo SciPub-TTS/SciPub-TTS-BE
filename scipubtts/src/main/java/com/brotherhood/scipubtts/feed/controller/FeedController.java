@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/feed")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173") // Enables safe cross-origin communication for development
+@CrossOrigin(origins = "http://localhost:5173")
 public class FeedController {
 
     private final ResearchFeedSyncService researchFeedSyncService;
@@ -36,11 +36,12 @@ public class FeedController {
     @GetMapping
     @Operation(summary = "Get personalized feed publications", description = "Retrieves publications filtered by interest criteria and target tab categories.")
     public ResponseEntity<ResponseObject> getFeed(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam FeedTab feedTab,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
 
-        FeedResponse data = feedService.getFeed(feedTab, page, pageSize);
+        FeedResponse data = feedService.getFeed(userId, feedTab, page, pageSize);
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded feed publications", data));
