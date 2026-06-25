@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.email.service.impl;
+package com.brotherhood.scipubtts.email.listener;
 
 import com.brotherhood.scipubtts.auth.dto.request.PasswordResetCodeRequestedEvent;
 import com.brotherhood.scipubtts.email.service.EmailService;

@@ -2,14 +2,21 @@ package com.brotherhood.scipubtts.admin.service.impl;
 
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserPageResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserResponse;
 import com.brotherhood.scipubtts.admin.repository.AdminDashboardRepository;
 import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
+import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
+import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
+import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
 import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
+import com.brotherhood.scipubtts.user.entity.UserProfile;
+import com.brotherhood.scipubtts.user.repository.UserProfileRepository;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +39,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,11 +56,35 @@ class AdminServiceImplTest {
     @Mock
     private AdminDashboardRepository adminDashboardRepository;
 
+    @Mock
+    private UserFollowRepository userFollowRepository;
+
+    @Mock
+    private UserBookmarkRepository userBookmarkRepository;
+
+    @Mock
+    private UserProfileRepository userProfileRepository;
+
+    @Mock
+    private SearchHistoryRepository searchHistoryRepository;
+
+    @Mock
+    private ApplicationEventPublisher  applicationEventPublisher;
+
     private AdminServiceImpl adminService;
 
     @BeforeEach
     void setUp() {
-        adminService = new AdminServiceImpl(userRepository, refreshTokenService, adminDashboardRepository);
+        adminService = new AdminServiceImpl(
+                userRepository,
+                refreshTokenService,
+                adminDashboardRepository,
+                userFollowRepository,
+                userBookmarkRepository,
+                userProfileRepository,
+                searchHistoryRepository,
+                applicationEventPublisher
+        );
     }
 
     @Test
@@ -62,13 +95,23 @@ class AdminServiceImplTest {
 
         when(userRepository.findAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(first, second), pageRequest, 3));
+        when(userFollowRepository.countByUserIdsAndTargetTypes(anyList(), anyList()))
+                .thenReturn(List.of(
+                        followCount(first.getId(), FollowTargetType.TOPIC, 3),
+                        followCount(first.getId(), FollowTargetType.AUTHOR, 5),
+                        followCount(second.getId(), FollowTargetType.AUTHOR, 2)
+                ));
 
         AdminUserPageResponse response = adminService.getAllUsers(0, 2, "RECENT");
 
         assertThat(response.items()).hasSize(2);
         assertThat(response.items().getFirst().id()).isEqualTo(first.getId());
         assertThat(response.items().getFirst().email()).isEqualTo(first.getEmail());
+        assertThat(response.items().getFirst().topicCount()).isEqualTo(3);
+        assertThat(response.items().getFirst().authorCount()).isEqualTo(5);
         assertThat(response.items().get(1).banned()).isTrue();
+        assertThat(response.items().get(1).topicCount()).isZero();
+        assertThat(response.items().get(1).authorCount()).isEqualTo(2);
         assertThat(response.page()).isZero();
         assertThat(response.size()).isEqualTo(2);
         assertThat(response.totalElements()).isEqualTo(3);
@@ -92,6 +135,47 @@ class AdminServiceImplTest {
     }
 
     @Test
+    void getAllUsersReturnsZeroFollowCountsWhenUserHasNoFollows() {
+        User user = researcher(false);
+        PageRequest pageRequest = PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        when(userRepository.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(user), pageRequest, 1));
+        when(userFollowRepository.countByUserIdsAndTargetTypes(anyList(), anyList()))
+                .thenReturn(List.of());
+
+        AdminUserPageResponse response = adminService.getAllUsers(0, 1, "RECENT");
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().getFirst().topicCount()).isZero();
+        assertThat(response.items().getFirst().authorCount()).isZero();
+    }
+
+    @Test
+    void getAllUsersQueriesFollowCountsForUsersInCurrentPageOnly() {
+        User first = researcher(false);
+        User second = researcher(false);
+        PageRequest pageRequest = PageRequest.of(0, 2, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        when(userRepository.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(first, second), pageRequest, 4));
+        when(userFollowRepository.countByUserIdsAndTargetTypes(anyList(), anyList()))
+                .thenReturn(List.of());
+
+        adminService.getAllUsers(0, 2, "RECENT");
+
+        ArgumentCaptor<List<UUID>> userIdsCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<FollowTargetType>> targetTypesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(userFollowRepository).countByUserIdsAndTargetTypes(
+                userIdsCaptor.capture(),
+                targetTypesCaptor.capture()
+        );
+
+        assertThat(userIdsCaptor.getValue()).containsExactly(first.getId(), second.getId());
+        assertThat(targetTypesCaptor.getValue()).containsExactly(FollowTargetType.TOPIC, FollowTargetType.AUTHOR);
+    }
+
+    @Test
     void getAllUsersClampsInvalidPageAndSize() {
         when(userRepository.findAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
@@ -106,6 +190,115 @@ class AdminServiceImplTest {
         Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("createdAt");
         assertThat(order).isNotNull();
         assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getUserDetailReturnsProfileAndActivityCounts() {
+        User user = researcher(false);
+        user.setUsername("researcher-one");
+        user.setAvatarUrl("https://example.com/avatar.png");
+        UserProfile profile = profile(user, "FPT University", "AI Lab", "Vietnam");
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(userProfileRepository.findById(user.getId())).thenReturn(Optional.of(profile));
+        when(userFollowRepository.countByUserIdAndTargetType(user.getId(), FollowTargetType.TOPIC)).thenReturn(3L);
+        when(userFollowRepository.countByUserIdAndTargetType(user.getId(), FollowTargetType.AUTHOR)).thenReturn(5L);
+        when(userBookmarkRepository.countByUserId(user.getId())).thenReturn(7L);
+        when(searchHistoryRepository.countByUserId(user.getId())).thenReturn(9L);
+
+        AdminUserDetailResponse response = adminService.getUserDetail(user.getId());
+
+        assertThat(response.user().id()).isEqualTo(user.getId());
+        assertThat(response.user().username()).isEqualTo("researcher-one");
+        assertThat(response.user().avatarUrl()).isEqualTo("https://example.com/avatar.png");
+        assertThat(response.profile().institution()).isEqualTo("FPT University");
+        assertThat(response.profile().department()).isEqualTo("AI Lab");
+        assertThat(response.profile().country()).isEqualTo("Vietnam");
+        assertThat(response.activity().topicCount()).isEqualTo(3);
+        assertThat(response.activity().authorCount()).isEqualTo(5);
+        assertThat(response.activity().bookmarkCount()).isEqualTo(7);
+        assertThat(response.activity().searchCount()).isEqualTo(9);
+    }
+
+    @Test
+    void getUserDetailReturnsNullableProfileAndZeroCountsWhenProfileDoesNotExist() {
+        User user = researcher(false);
+
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(userProfileRepository.findById(user.getId())).thenReturn(Optional.empty());
+
+        AdminUserDetailResponse response = adminService.getUserDetail(user.getId());
+
+        assertThat(response.profile().institution()).isNull();
+        assertThat(response.profile().department()).isNull();
+        assertThat(response.profile().country()).isNull();
+        assertThat(response.profile().createdAt()).isNull();
+        assertThat(response.profile().updatedAt()).isNull();
+        assertThat(response.activity().topicCount()).isZero();
+        assertThat(response.activity().authorCount()).isZero();
+        assertThat(response.activity().bookmarkCount()).isZero();
+        assertThat(response.activity().searchCount()).isZero();
+    }
+
+    @Test
+    void getUserDetailThrowsWhenUserDoesNotExist() {
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminService.getUserDetail(userId))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+    }
+
+    @Test
+    void getUserSearchHistoryReturnsPagedRecentDistinctSearches() {
+        UUID userId = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.now();
+        PageRequest pageRequest = PageRequest.of(0, 2);
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(searchHistoryRepository.findRecentDistinctSearchesByUserId(userId, pageRequest))
+                .thenReturn(new PageImpl<>(
+                        List.of(
+                                recentSearch("machine learning", now),
+                                recentSearch("science education", now.minusDays(1))
+                        ),
+                        pageRequest,
+                        3
+                ));
+
+        var response = adminService.getUserSearchHistory(userId, 0, 2);
+
+        assertThat(response.items()).hasSize(2);
+        assertThat(response.items().getFirst().keyword()).isEqualTo("machine learning");
+        assertThat(response.items().getFirst().searchedAt()).isEqualTo(now);
+        assertThat(response.page()).isZero();
+        assertThat(response.size()).isEqualTo(2);
+        assertThat(response.totalElements()).isEqualTo(3);
+        assertThat(response.totalPages()).isEqualTo(2);
+        assertThat(response.hasNext()).isTrue();
+    }
+
+    @Test
+    void getUserSearchHistoryClampsInvalidPageAndSize() {
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(searchHistoryRepository.findRecentDistinctSearchesByUserId(any(UUID.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
+
+        adminService.getUserSearchHistory(userId, -1, 200);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(searchHistoryRepository).findRecentDistinctSearchesByUserId(
+                any(UUID.class),
+                pageableCaptor.capture()
+        );
+
+        assertThat(pageableCaptor.getValue().getPageNumber()).isZero();
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(100);
     }
 
     @Test
@@ -304,5 +497,58 @@ class AdminServiceImplTest {
                 .banned(banned)
                 .createdAt(OffsetDateTime.now())
                 .build();
+    }
+
+    private UserProfile profile(User user, String institution, String department, String country) {
+        OffsetDateTime now = OffsetDateTime.now();
+        return UserProfile.builder()
+                .userId(user.getId())
+                .user(user)
+                .institution(institution)
+                .department(department)
+                .country(country)
+                .createdAt(now.minusDays(1))
+                .updatedAt(now)
+                .build();
+    }
+
+    private UserFollowRepository.UserFollowCountView followCount(
+            UUID userId,
+            FollowTargetType targetType,
+            long count
+    ) {
+        return new UserFollowRepository.UserFollowCountView() {
+            @Override
+            public UUID getUserId() {
+                return userId;
+            }
+
+            @Override
+            public FollowTargetType getTargetType() {
+                return targetType;
+            }
+
+            @Override
+            public long getCount() {
+                return count;
+            }
+        };
+    }
+
+    private SearchHistoryRepository.RecentSearchProjection recentSearch(
+            String content,
+            OffsetDateTime latestCreatedAt
+    ) {
+        return new SearchHistoryRepository.RecentSearchProjection() {
+            @Override
+            public String getContent() {
+                return content;
+            }
+
+            @Override
+            public OffsetDateTime getLatestCreatedAt() {
+                return latestCreatedAt;
+            }
+        };
     }
 }

@@ -3,9 +3,11 @@ package com.brotherhood.scipubtts.admin.controller;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserBanSummaryResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserPageResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserSearchHistoryPageResponse;
 import com.brotherhood.scipubtts.admin.service.AdminService;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
@@ -42,6 +44,38 @@ public class AdminController {
                 new ResponseObject(
                         HttpStatus.OK.value(),
                         "Users fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<ResponseObject> getUserDetail(
+            @PathVariable UUID userId
+    ) {
+        AdminUserDetailResponse data = adminService.getUserDetail(userId);
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "User detail fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("/users/{userId}/search-history")
+    public ResponseEntity<ResponseObject> getUserSearchHistory(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        AdminUserSearchHistoryPageResponse data = adminService.getUserSearchHistory(userId, page, size);
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "User search history fetched successfully",
                         data
                 )
         );

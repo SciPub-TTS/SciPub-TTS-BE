@@ -32,6 +32,10 @@ public class AdminUserResponse {
 
     private OffsetDateTime createdAt;
 
+    private long topicCount;
+
+    private long authorCount;
+
     public UUID id() {
         return id;
     }
@@ -58,6 +62,14 @@ public class AdminUserResponse {
 
     public OffsetDateTime createdAt() {
         return createdAt;
+    }
+
+    public long topicCount() {
+        return topicCount;
+    }
+
+    public long authorCount() {
+        return authorCount;
     }
 }
 

@@ -1,8 +1,11 @@
 package com.brotherhood.scipubtts.bookmark.controller;
 
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
+import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkCollectionRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
+import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkNoteRequest;
+import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
@@ -18,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -49,6 +53,8 @@ public class BookmarkController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) UUID collectionId,
+            @RequestParam(required = false) String title,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String topic,
             @RequestParam(required = false) String source,
@@ -57,7 +63,7 @@ public class BookmarkController {
             @RequestParam(defaultValue = "RECENT") String sort) {
 
         BookmarkPageResponse data = bookmarkService.getMyBookmarks(
-                userId, page, size, keyword, topic, source, author, year, sort
+                userId, page, size, collectionId, title, keyword, topic, source, author, year, sort
         );
 
         return ResponseEntity.ok(
@@ -121,6 +127,54 @@ public class BookmarkController {
 
         return ResponseEntity.ok(
                 new ResponseObject(200, "Bookmark note updated successfully", data)
+        );
+    }
+
+    @GetMapping("/collections")
+    public ResponseEntity<ResponseObject> getCollections(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
+
+        List<BookmarkCollectionResponse> data = bookmarkService.getCollections(userId);
+
+        return ResponseEntity.ok(
+                new ResponseObject(200, "Bookmark collections fetched successfully", data)
+        );
+    }
+
+    @PostMapping("/collections")
+    public ResponseEntity<ResponseObject> createCollection(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+            @Valid @RequestBody CreateBookmarkCollectionRequest request) {
+
+        BookmarkCollectionResponse data = bookmarkService.createCollection(userId, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResponseObject(201, "Bookmark collection created successfully", data));
+    }
+
+    @PostMapping("/collections/{collectionId}/items")
+    public ResponseEntity<ResponseObject> addBookmarksToCollection(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+            @PathVariable UUID collectionId,
+            @Valid @RequestBody UpdateBookmarkCollectionItemsRequest request) {
+
+        bookmarkService.addBookmarksToCollection(userId, collectionId, request);
+
+        return ResponseEntity.ok(
+                new ResponseObject(200, "Bookmarks added to collection successfully", null)
+        );
+    }
+
+    @DeleteMapping("/collections/{collectionId}/items/{bookmarkId}")
+    public ResponseEntity<ResponseObject> removeBookmarkFromCollection(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+            @PathVariable UUID collectionId,
+            @PathVariable UUID bookmarkId) {
+
+        bookmarkService.removeBookmarkFromCollection(userId, collectionId, bookmarkId);
+
+        return ResponseEntity.ok(
+                new ResponseObject(200, "Bookmark removed from collection successfully", null)
         );
     }
 

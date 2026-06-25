@@ -42,11 +42,10 @@ public class LandingController {
         var top1Keyword = keywordService.getTop1KeywordRanking(kwReq);
         var top6Keywords = keywordService.getTop6KeywordsRanking(kwReq).keywordList();
 
-        var top10Topics = topicService.getTopicsRanking(topicReq);
+        var top10Topics = topicService.getTopic10Ranking(topicReq);
 
         var top6Papers = bookmarkService.getTop6TrendingPapers();
 
-        // 3. Đóng gói toàn bộ vào 1 DTO duy nhất
         LandingSummaryResponse landingData = new LandingSummaryResponse(
                 top1Keyword,
                 top6Keywords,

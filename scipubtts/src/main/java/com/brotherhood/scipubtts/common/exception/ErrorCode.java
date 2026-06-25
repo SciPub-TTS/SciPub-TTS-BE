@@ -113,6 +113,9 @@ public enum ErrorCode {
     BOOKMARK_REQUIRED(HttpStatus.BAD_REQUEST, "Bookmark id is required."),
     BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "This paper has already been bookmarked."),
     BOOKMARK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "You do not have permission to modify this bookmark."),
+    BOOKMARK_COLLECTION_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "Collection name is required."),
+    BOOKMARK_COLLECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark collection not found."),
+    BOOKMARK_COLLECTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "A bookmark collection with this name already exists."),
 
     // ===== REPORT =====
     EXPORT_NO_PAPER_SELECTED(HttpStatus.BAD_REQUEST, "Phải chọn ít nhất 1 bài báo để export"),
