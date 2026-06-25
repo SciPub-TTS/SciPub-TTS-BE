@@ -58,4 +58,54 @@ public class EmailServiceImpl implements EmailService {
             throw new BusinessException(ErrorCode.INVALID_EMAIL_FORMAT);
         }
     }
+
+    @Override
+    public void sendAccountBannedEmail(String to) {
+        validateEmail(to);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Important Notice: Your SciPub-TTS Account Status");
+        message.setText(
+                """
+                        Hello,
+                        
+                        We are writing to inform you that your SciPub-TTS account has been temporarily suspended due to a violation of our Terms of Service or community guidelines.
+                        
+                        During this suspension, you will not be able to log in or access our services.
+                        
+                        If you believe this action was taken in error, please reply to this email or contact our support team for further assistance.
+                        
+                        Best regards,
+                        The SciPub-TTS Team"""
+        );
+
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendAccountUnbannedEmail(String to) {
+        validateEmail(to);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Update: Your SciPub-TTS Account has been Restored");
+        message.setText(
+                """
+                        Hello,
+                        
+                        Good news! We have reviewed your account status and your SciPub-TTS account has been successfully restored.
+                        
+                        You can now log in and resume using all of our services normally.
+                        
+                        Thank you for your patience and for being a part of the SciPub-TTS community.
+                        
+                        Best regards,
+                        The SciPub-TTS Team"""
+        );
+
+        mailSender.send(message);
+    }
 }

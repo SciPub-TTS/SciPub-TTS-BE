@@ -3,19 +3,34 @@ package com.brotherhood.scipubtts.admin.service.impl;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserActivityResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserDetailUserResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserBanSummaryResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserPageResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserProfileResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserSearchHistoryItemResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminUserSearchHistoryPageResponse;
 import com.brotherhood.scipubtts.admin.repository.AdminDashboardRepository;
 import com.brotherhood.scipubtts.admin.service.AdminService;
 import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
+import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.email.event.UserBannedEvent;
+import com.brotherhood.scipubtts.email.event.UserUnbannedEvent;
+import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
+import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
+import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
 import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
+import com.brotherhood.scipubtts.user.entity.UserProfile;
+import com.brotherhood.scipubtts.user.repository.UserProfileRepository;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -27,7 +42,9 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -38,6 +55,11 @@ public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
     private final AdminDashboardRepository adminDashboardRepository;
+    private final UserFollowRepository userFollowRepository;
+    private final UserBookmarkRepository userBookmarkRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final SearchHistoryRepository searchHistoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.dashboard.total-api-credit:100000}")
     private long totalApiCredit;
@@ -50,9 +72,10 @@ public class AdminServiceImpl implements AdminService {
         PageRequest pageRequest = PageRequest.of(safePage, safeSize, buildUserSort(sort));
 
         Page<User> userPage = userRepository.findAll(pageRequest);
+        Map<UUID, FollowCounts> followCountsByUserId = getFollowCountsByUserId(userPage.getContent());
         List<AdminUserResponse> items = userPage.getContent()
                 .stream()
-                .map(this::toResponse)
+                .map(user -> toResponse(user, followCountsByUserId.getOrDefault(user.getId(), FollowCounts.ZERO)))
                 .toList();
 
         return new AdminUserPageResponse(
@@ -62,6 +85,57 @@ public class AdminServiceImpl implements AdminService {
                 userPage.getTotalElements(),
                 userPage.getTotalPages(),
                 userPage.hasNext()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminUserDetailResponse getUserDetail(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
+
+        return new AdminUserDetailResponse(
+                toDetailUserResponse(user),
+                toProfileResponse(profile),
+                new AdminUserActivityResponse(
+                        userFollowRepository.countByUserIdAndTargetType(userId, FollowTargetType.TOPIC),
+                        userFollowRepository.countByUserIdAndTargetType(userId, FollowTargetType.AUTHOR),
+                        userBookmarkRepository.countByUserId(userId),
+                        searchHistoryRepository.countByUserId(userId)
+                )
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminUserSearchHistoryPageResponse getUserSearchHistory(UUID userId, int page, int size) {
+        if (!userRepository.existsById(userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        int safePage = Math.max(page, 0);
+        int safeSize = normalizeSize(size);
+        Page<SearchHistoryRepository.RecentSearchProjection> searchPage =
+                searchHistoryRepository.findRecentDistinctSearchesByUserId(
+                        userId,
+                        PageRequest.of(safePage, safeSize)
+                );
+        List<AdminUserSearchHistoryItemResponse> items = searchPage.getContent()
+                .stream()
+                .map(search -> new AdminUserSearchHistoryItemResponse(
+                        search.getContent(),
+                        search.getLatestCreatedAt()
+                ))
+                .toList();
+
+        return new AdminUserSearchHistoryPageResponse(
+                items,
+                searchPage.getNumber(),
+                searchPage.getSize(),
+                searchPage.getTotalElements(),
+                searchPage.getTotalPages(),
+                searchPage.hasNext()
         );
     }
 
@@ -78,6 +152,8 @@ public class AdminServiceImpl implements AdminService {
         userRepository.save(user);
         refreshTokenService.revokeAllByUserId(user.getId());
 
+        eventPublisher.publishEvent(new UserBannedEvent(user.getEmail()));
+
         return toResponse(user);
     }
 
@@ -92,6 +168,8 @@ public class AdminServiceImpl implements AdminService {
 
         user.setBanned(false);
         userRepository.save(user);
+
+        eventPublisher.publishEvent(new UserUnbannedEvent(user.getEmail()));
 
         return toResponse(user);
     }
@@ -218,6 +296,10 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private AdminUserResponse toResponse(User user) {
+        return toResponse(user, FollowCounts.ZERO);
+    }
+
+    private AdminUserResponse toResponse(User user, FollowCounts followCounts) {
         return new AdminUserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -227,8 +309,65 @@ public class AdminServiceImpl implements AdminService {
                 user.isEmailVerified(),
                 user.isGoogleLinked(),
                 user.isBanned(),
+                user.getCreatedAt(),
+                followCounts.topicCount(),
+                followCounts.authorCount()
+        );
+    }
+
+    private AdminUserDetailUserResponse toDetailUserResponse(User user) {
+        return new AdminUserDetailUserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getUsername(),
+                user.getAvatarUrl(),
+                user.getRole().name(),
+                user.isEmailVerified(),
+                user.isGoogleLinked(),
+                user.isBanned(),
                 user.getCreatedAt()
         );
+    }
+
+    private AdminUserProfileResponse toProfileResponse(UserProfile profile) {
+        if (profile == null) {
+            return new AdminUserProfileResponse(null, null, null, null, null);
+        }
+
+        return new AdminUserProfileResponse(
+                profile.getInstitution(),
+                profile.getDepartment(),
+                profile.getCountry(),
+                profile.getCreatedAt(),
+                profile.getUpdatedAt()
+        );
+    }
+
+    private Map<UUID, FollowCounts> getFollowCountsByUserId(List<User> users) {
+        if (users.isEmpty()) {
+            return Map.of();
+        }
+
+        List<UUID> userIds = users.stream()
+                .map(User::getId)
+                .toList();
+        List<FollowTargetType> targetTypes = List.of(FollowTargetType.TOPIC, FollowTargetType.AUTHOR);
+        Map<UUID, FollowCounts> countsByUserId = new HashMap<>();
+
+        userFollowRepository.countByUserIdsAndTargetTypes(userIds, targetTypes)
+                .forEach(count -> {
+                    FollowCounts current = countsByUserId.getOrDefault(count.getUserId(), FollowCounts.ZERO);
+                    FollowCounts updated = switch (count.getTargetType()) {
+                        case TOPIC -> new FollowCounts(count.getCount(), current.authorCount());
+                        case AUTHOR -> new FollowCounts(current.topicCount(), count.getCount());
+                        default -> current;
+                    };
+                    countsByUserId.put(count.getUserId(), updated);
+                });
+
+        return countsByUserId;
     }
 
     private <T> AdminDashboardStatisticsResponse.StatisticCard<T> card(
@@ -267,5 +406,9 @@ public class AdminServiceImpl implements AdminService {
         long percent = Math.round(((double) (current - previous) / previous) * 100);
         String sign = percent >= 0 ? "+" : "";
         return sign + percent + "% vs last month";
+    }
+
+    private record FollowCounts(long topicCount, long authorCount) {
+        private static final FollowCounts ZERO = new FollowCounts(0, 0);
     }
 }

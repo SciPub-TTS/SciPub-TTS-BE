@@ -23,6 +23,10 @@ public interface TopicService {
           TopicDataRequest request
   );
 
+  public TopicRankingResponse getTopic10Ranking(
+          TopicDataRequest request
+  );
+
   Topic getTopicFromDb(
           String topicId,
           String startTime,
