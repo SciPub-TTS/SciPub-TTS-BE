@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.databind.JsonNode;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -128,5 +129,39 @@ public class OpenAlexClient {
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.RETRY_INTERRUPTED);
         }
+    }
+
+    public long getWorksCount() {
+        return fetchCount("/works?per-page=1");
+    }
+
+    public long getAuthorsCount() {
+        return fetchCount("/authors?per-page=1");
+    }
+
+    public long getTopicsCount() {
+        return fetchCount("/topics?per-page=1");
+    }
+
+    public long getFieldsCount() {
+        return fetchCount("/fields?per-page=1");
+    }
+
+    private long fetchCount(String uri) {
+
+        JsonNode response = restClient
+                .get()
+                .uri(uri)
+                .retrieve()
+                .body(JsonNode.class);
+
+        if (response == null) {
+            return 0;
+        }
+
+        return response
+                .path("meta")
+                .path("count")
+                .asLong();
     }
 }
