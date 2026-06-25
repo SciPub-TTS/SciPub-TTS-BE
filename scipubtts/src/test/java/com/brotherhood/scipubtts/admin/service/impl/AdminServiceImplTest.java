@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -67,6 +68,9 @@ class AdminServiceImplTest {
     @Mock
     private SearchHistoryRepository searchHistoryRepository;
 
+    @Mock
+    private ApplicationEventPublisher  applicationEventPublisher;
+
     private AdminServiceImpl adminService;
 
     @BeforeEach
@@ -78,7 +82,8 @@ class AdminServiceImplTest {
                 userFollowRepository,
                 userBookmarkRepository,
                 userProfileRepository,
-                searchHistoryRepository
+                searchHistoryRepository,
+                applicationEventPublisher
         );
     }
 
