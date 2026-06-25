@@ -166,7 +166,7 @@ public class SearchController {
         return ok("Search entities successfully", data);
     }
 
-    @GetMapping({"/trending-topics", "/hot-topics"})
+    @GetMapping("/trending-topics")
     @Operation(summary = "Load weekly trending topics from the internal topic trend table")
     public ResponseEntity<ResponseObject> getTrendingTopics(
             @Parameter(example = "2026-06-15")
@@ -179,7 +179,7 @@ public class SearchController {
         return ok("Loaded weekly trending topics", data);
     }
 
-    @GetMapping({"/trending-keywords", "/hot-keywords"})
+    @GetMapping("/trending-keywords")
     @Operation(summary = "Load weekly trending keywords from the internal keyword trend table")
     public ResponseEntity<ResponseObject> getTrendingKeywords(
             @Parameter(example = "2026-06-15")
