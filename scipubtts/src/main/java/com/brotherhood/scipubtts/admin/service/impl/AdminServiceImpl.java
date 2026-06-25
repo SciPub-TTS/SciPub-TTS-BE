@@ -18,6 +18,8 @@ import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.email.event.UserBannedEvent;
+import com.brotherhood.scipubtts.email.event.UserUnbannedEvent;
 import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
 import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
 import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
@@ -28,6 +30,7 @@ import com.brotherhood.scipubtts.user.repository.UserProfileRepository;
 import com.brotherhood.scipubtts.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -56,6 +59,7 @@ public class AdminServiceImpl implements AdminService {
     private final UserBookmarkRepository userBookmarkRepository;
     private final UserProfileRepository userProfileRepository;
     private final SearchHistoryRepository searchHistoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.dashboard.total-api-credit:100000}")
     private long totalApiCredit;
@@ -148,6 +152,8 @@ public class AdminServiceImpl implements AdminService {
         userRepository.save(user);
         refreshTokenService.revokeAllByUserId(user.getId());
 
+        eventPublisher.publishEvent(new UserBannedEvent(user.getEmail()));
+
         return toResponse(user);
     }
 
@@ -162,6 +168,8 @@ public class AdminServiceImpl implements AdminService {
 
         user.setBanned(false);
         userRepository.save(user);
+
+        eventPublisher.publishEvent(new UserUnbannedEvent(user.getEmail()));
 
         return toResponse(user);
     }

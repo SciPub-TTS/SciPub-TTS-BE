@@ -520,6 +520,41 @@ public class TopicServiceImpl implements TopicService {
             ));
   }
 
+  @Override
+  public TopicRankingResponse getTopic10Ranking(TopicDataRequest request) {
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate   = LocalDate.parse(request.endTime());
+    Integer   fieldId   = Integer.parseInt(request.fieldId());
+
+    List<Topic> topics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+            startDate, endDate, fieldId
+    );
+
+    // SỬA TẠI ĐÂY: Trả về một object Response với list trống thay vì null
+    if (topics.isEmpty()) {
+      return new TopicRankingResponse(java.util.Collections.emptyList());
+    }
+
+    List<TopicScore> scores = calculationService.calculateTopicsFinalScore(
+            request.formula(), topics
+    );
+
+    List<TopicRankingResponse.TopicData> topicDataList = scores.stream()
+            .map(ts -> new TopicRankingResponse.TopicData(
+                    ts.topic().getName(),
+                    ts.topic().getTopicId(),
+                    (int) ts.topic().getWorks(),
+                    (int) ts.topic().getCitations(),
+                    ts.score(),
+                    null,
+                    null,
+                    false
+            ))
+            .toList();
+
+    return new TopicRankingResponse(topicDataList);
+  }
+
   private Topic createTopicSnapshot(Topic source) {
     Topic topic = new Topic();
     topic.setTopicId(source.getTopicId());

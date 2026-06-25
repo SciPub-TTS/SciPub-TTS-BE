@@ -150,7 +150,7 @@ public class KeywordServiceImpl implements KeywordService {
     KeywordCalculateResponse response = getKeywordsRanking(request);
 
     if (response == null || response.keywordList() == null || response.keywordList().isEmpty()) {
-      return response;
+      return new KeywordCalculateResponse(java.util.Collections.emptyList());
     }
 
     List<KeywordCalculateResponse.KeywordMetric> top6List = response.keywordList().stream()

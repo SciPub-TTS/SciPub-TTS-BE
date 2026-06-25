@@ -27,7 +27,7 @@ public interface KeywordService {
     );
 
 
-    public KeywordCalculateResponse getTop6KeywordsRanking(KeywordRankingRequest request);
+    KeywordCalculateResponse getTop6KeywordsRanking(KeywordRankingRequest request);
 
-    public KeywordCalculateResponse.KeywordMetric getTop1KeywordRanking(KeywordRankingRequest request);
+    KeywordCalculateResponse.KeywordMetric getTop1KeywordRanking(KeywordRankingRequest request);
 }
