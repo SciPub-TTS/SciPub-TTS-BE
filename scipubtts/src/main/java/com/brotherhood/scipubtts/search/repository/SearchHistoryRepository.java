@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.search.repository;
 
 import com.brotherhood.scipubtts.search.entity.SearchHistory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +32,27 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    @Query(
+            value = """
+                    select sh.content as content, max(sh.createdAt) as latestCreatedAt
+                    from SearchHistory sh
+                    where sh.userId = :userId
+                    group by sh.content
+                    order by max(sh.createdAt) desc
+                    """,
+            countQuery = """
+                    select count(distinct lower(sh.content))
+                    from SearchHistory sh
+                    where sh.userId = :userId
+                    """
+    )
+    Page<RecentSearchProjection> findRecentDistinctSearchesByUserId(
+            @Param("userId") UUID userId,
+            Pageable pageable
+    );
+
+    long countByUserId(UUID userId);
 
     void deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
 
