@@ -128,7 +128,7 @@ public class SecurityConfig {
                                 "/api/statistic/**",
                                 "/api/data/**",
                                 "/api/report/**",
-                                "/api/home/landing/summary",
+                                "/api/home/landing/**",
                                 "/api/health"
                         )
                         .permitAll()
