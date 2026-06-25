@@ -3,7 +3,6 @@ package com.brotherhood.scipubtts.bookmark.service;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkCollectionRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
-import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkNoteRequest;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
@@ -38,8 +37,6 @@ public interface BookmarkService {
     BookmarkStatsResponse getStats(UUID userId);
 
     FilterOptionsResponse getFilterOptions(UUID userId);
-
-    BookmarkResponse updateNote(UUID userId, UUID bookmarkId, UpdateBookmarkNoteRequest request);
 
     List<BookmarkCollectionResponse> getCollections(UUID userId);
 

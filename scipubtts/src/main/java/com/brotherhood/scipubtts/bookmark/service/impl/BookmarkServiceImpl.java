@@ -3,7 +3,6 @@ package com.brotherhood.scipubtts.bookmark.service.impl;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkCollectionRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
-import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkNoteRequest;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionSummaryResponse;
@@ -21,8 +20,11 @@ import com.brotherhood.scipubtts.bookmark.repository.CollectionBookmarkRepositor
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.bookmark.service.BookmarkService;
 import com.brotherhood.scipubtts.bookmark.support.BookmarkSnapshotSupport;
+import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.search.service.OpenAlexMapReader;
+import com.brotherhood.scipubtts.search.service.SearchQuerySupport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -49,11 +51,15 @@ public class BookmarkServiceImpl implements BookmarkService {
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 12;
     private static final int MAX_SIZE = 50;
+    private static final String OPENALEX_WORK_TYPE_SELECT_FIELDS = "id,type";
 
     private final UserBookmarkRepository userBookmarkRepository;
     private final BookmarkCollectionRepository bookmarkCollectionRepository;
     private final CollectionBookmarkRepository collectionBookmarkRepository;
     private final BookmarkSnapshotSupport snapshotSupport;
+    private final OpenAlexClient openAlexClient;
+    private final OpenAlexMapReader openAlexMapReader;
+    private final SearchQuerySupport searchQuerySupport;
 
     @Override
     @Transactional
@@ -70,7 +76,7 @@ public class BookmarkServiceImpl implements BookmarkService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public BookmarkPageResponse getMyBookmarks(
             UUID userId,
             int page,
@@ -101,11 +107,12 @@ public class BookmarkServiceImpl implements BookmarkService {
         );
 
         List<UserBookmark> bookmarks = bookmarkPage.getContent();
+        Map<String, String> resolvedWorkTypes = backfillMissingWorkTypeSnapshots(bookmarks);
         Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId =
                 loadCollectionsByBookmarkId(userId, bookmarks);
 
         List<BookmarkResponse> items = bookmarks.stream()
-                .map(bookmark -> toResponse(bookmark, collectionsByBookmarkId))
+                .map(bookmark -> toResponse(bookmark, collectionsByBookmarkId, resolvedWorkTypes))
                 .toList();
 
         return new BookmarkPageResponse(
@@ -162,22 +169,6 @@ public class BookmarkServiceImpl implements BookmarkService {
                 userBookmarkRepository.findDistinctYearsByUserId(userId),
                 userBookmarkRepository.findDistinctAuthorsByUserId(userId)
         );
-    }
-
-    @Override
-    @Transactional
-    public BookmarkResponse updateNote(
-            UUID userId,
-            UUID bookmarkId,
-            UpdateBookmarkNoteRequest request
-    ) {
-        UserBookmark bookmark = userBookmarkRepository.findByIdAndUserId(bookmarkId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BOOKMARK_NOT_FOUND));
-
-        bookmark.setNote(request == null ? null : normalizeText(request.note()));
-
-        UserBookmark saved = userBookmarkRepository.save(bookmark);
-        return loadSingleBookmarkResponse(userId, saved);
     }
 
     @Override
@@ -287,6 +278,11 @@ public class BookmarkServiceImpl implements BookmarkService {
             CreateBookmarkRequest request
     ) {
         try {
+            String workTypeSnapshot = resolveRequestedWorkTypeSnapshot(
+                    openAlexId,
+                    request.workTypeSnapshot()
+            );
+
             UserBookmark saved = userBookmarkRepository.save(
                     UserBookmark.builder()
                             .userId(userId)
@@ -299,6 +295,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                                             request.authorOpenAlexIdsSnapshot()
                                     )
                             )
+                            .workTypeSnapshot(workTypeSnapshot)
                             .sourceSnapshot(normalizeText(request.sourceSnapshot()))
                             .topicSnapshot(normalizeText(request.topicSnapshot()))
                             .topicOpenAlexIdSnapshot(
@@ -308,7 +305,6 @@ public class BookmarkServiceImpl implements BookmarkService {
                             )
                             .publicationYear(request.publicationYear())
                             .citationSnapshot(request.citationSnapshot())
-                            .note(normalizeText(request.note()))
                             .createdAt(OffsetDateTime.now())
                             .build()
             );
@@ -327,16 +323,24 @@ public class BookmarkServiceImpl implements BookmarkService {
             UserBookmark bookmark,
             List<BookmarkCollectionSummaryResponse> collections
     ) {
+        return toResponse(bookmark, collections, Map.of());
+    }
+
+    private BookmarkResponse toResponse(
+            UserBookmark bookmark,
+            List<BookmarkCollectionSummaryResponse> collections,
+            Map<String, String> resolvedWorkTypes
+    ) {
         return new BookmarkResponse(
                 bookmark.getId(),
                 bookmark.getOpenAlexId(),
                 bookmark.getTitleSnapshot(),
                 bookmark.getAuthorsSnapshot(),
+                resolveWorkTypeLabel(bookmark, resolvedWorkTypes),
                 bookmark.getSourceSnapshot(),
                 bookmark.getTopicSnapshot(),
                 bookmark.getPublicationYear(),
                 bookmark.getCitationSnapshot(),
-                bookmark.getNote(),
                 collections,
                 bookmark.getCreatedAt()
         );
@@ -346,14 +350,27 @@ public class BookmarkServiceImpl implements BookmarkService {
             UserBookmark bookmark,
             Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId
     ) {
+        return toResponse(bookmark, collectionsByBookmarkId, Map.of());
+    }
+
+    private BookmarkResponse toResponse(
+            UserBookmark bookmark,
+            Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId,
+            Map<String, String> resolvedWorkTypes
+    ) {
         return toResponse(
                 bookmark,
-                collectionsByBookmarkId.getOrDefault(bookmark.getId(), List.of())
+                collectionsByBookmarkId.getOrDefault(bookmark.getId(), List.of()),
+                resolvedWorkTypes
         );
     }
 
     private BookmarkResponse loadSingleBookmarkResponse(UUID userId, UserBookmark bookmark) {
-        return toResponse(bookmark, loadCollectionsByBookmarkId(userId, List.of(bookmark)));
+        return toResponse(
+                bookmark,
+                loadCollectionsByBookmarkId(userId, List.of(bookmark)),
+                backfillMissingWorkTypeSnapshots(List.of(bookmark))
+        );
     }
 
     private Map<UUID, List<BookmarkCollectionSummaryResponse>> loadCollectionsByBookmarkId(
@@ -495,5 +512,175 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private String normalizeOpenAlexId(String value) {
         return snapshotSupport.normalizeEntityId(value);
+    }
+
+    private String resolveRequestedWorkTypeSnapshot(
+            String openAlexId,
+            String requestedWorkTypeSnapshot
+    ) {
+        String normalizedRequestedWorkType = formatWorkTypeLabel(requestedWorkTypeSnapshot);
+
+        if (StringUtils.hasText(normalizedRequestedWorkType)) {
+            return normalizedRequestedWorkType;
+        }
+
+        return fetchWorkTypeLabels(List.of(openAlexId)).get(openAlexId);
+    }
+
+    private Map<String, String> backfillMissingWorkTypeSnapshots(List<UserBookmark> bookmarks) {
+        if (bookmarks.isEmpty()) {
+            return Map.of();
+        }
+
+        List<UserBookmark> bookmarksMissingWorkType = bookmarks.stream()
+                .filter(this::shouldFetchWorkTypeSnapshot)
+                .toList();
+
+        if (bookmarksMissingWorkType.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> resolvedWorkTypes = fetchWorkTypeLabels(
+                bookmarksMissingWorkType.stream()
+                        .map(UserBookmark::getOpenAlexId)
+                        .toList()
+        );
+
+        if (resolvedWorkTypes.isEmpty()) {
+            return Map.of();
+        }
+
+        List<UserBookmark> bookmarksToUpdate = new ArrayList<>();
+
+        for (UserBookmark bookmark : bookmarksMissingWorkType) {
+            String normalizedOpenAlexId = normalizeOpenAlexId(bookmark.getOpenAlexId());
+            String resolvedWorkType = resolvedWorkTypes.get(normalizedOpenAlexId);
+
+            if (!StringUtils.hasText(resolvedWorkType)) {
+                continue;
+            }
+
+            bookmark.setWorkTypeSnapshot(resolvedWorkType);
+            bookmarksToUpdate.add(bookmark);
+        }
+
+        if (!bookmarksToUpdate.isEmpty()) {
+            userBookmarkRepository.saveAll(bookmarksToUpdate);
+        }
+
+        return resolvedWorkTypes;
+    }
+
+    private boolean shouldFetchWorkTypeSnapshot(UserBookmark bookmark) {
+        if (!StringUtils.hasText(normalizeOpenAlexId(bookmark.getOpenAlexId()))) {
+            return false;
+        }
+
+        if (!"WORK".equalsIgnoreCase(normalizeText(bookmark.getEntityType()))) {
+            return false;
+        }
+
+        return !StringUtils.hasText(normalizeText(bookmark.getWorkTypeSnapshot()));
+    }
+
+    private Map<String, String> fetchWorkTypeLabels(List<String> openAlexIds) {
+        List<String> normalizedOpenAlexIds = openAlexIds.stream()
+                .map(this::normalizeOpenAlexId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+
+        if (normalizedOpenAlexIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("filter", "openalex:" + String.join("|", normalizedOpenAlexIds));
+        queryParams.put("per_page", String.valueOf(normalizedOpenAlexIds.size()));
+        queryParams.put("select", OPENALEX_WORK_TYPE_SELECT_FIELDS);
+
+        try {
+            Map<String, Object> response = openAlexClient.get("/works", queryParams);
+            List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
+            Map<String, String> resolvedWorkTypes = new LinkedHashMap<>();
+
+            for (Map<String, Object> result : results) {
+                String normalizedOpenAlexId = normalizeOpenAlexId(
+                        searchQuerySupport.normalizeEntityValue(
+                                openAlexMapReader.getString(result, "id")
+                        )
+                );
+                String normalizedWorkType = formatWorkTypeLabel(
+                        openAlexMapReader.getString(result, "type")
+                );
+
+                if (StringUtils.hasText(normalizedOpenAlexId)
+                        && StringUtils.hasText(normalizedWorkType)) {
+                    resolvedWorkTypes.put(normalizedOpenAlexId, normalizedWorkType);
+                }
+            }
+
+            return resolvedWorkTypes;
+        } catch (RuntimeException exception) {
+            return Map.of();
+        }
+    }
+
+    private String formatWorkTypeLabel(String value) {
+        String normalizedValue = normalizeText(value);
+
+        if (!StringUtils.hasText(normalizedValue)) {
+            return null;
+        }
+
+        String[] segments = normalizedValue
+                .trim()
+                .toLowerCase()
+                .replace('_', '-')
+                .split("-");
+        StringBuilder formattedValue = new StringBuilder();
+
+        for (String segment : segments) {
+            if (!StringUtils.hasText(segment)) {
+                continue;
+            }
+
+            if (formattedValue.length() > 0) {
+                formattedValue.append(' ');
+            }
+
+            formattedValue.append(Character.toUpperCase(segment.charAt(0)));
+            formattedValue.append(segment.substring(1));
+        }
+
+        return formattedValue.length() == 0 ? null : formattedValue.toString();
+    }
+
+    private String resolveWorkTypeLabel(
+            UserBookmark bookmark,
+            Map<String, String> resolvedWorkTypes
+    ) {
+        String workTypeSnapshot = normalizeText(bookmark.getWorkTypeSnapshot());
+
+        if (StringUtils.hasText(workTypeSnapshot)) {
+            return workTypeSnapshot;
+        }
+
+        String resolvedWorkType = resolvedWorkTypes.get(
+                normalizeOpenAlexId(bookmark.getOpenAlexId())
+        );
+
+        if (StringUtils.hasText(resolvedWorkType)) {
+            return resolvedWorkType;
+        }
+
+        String entityType = normalizeText(bookmark.getEntityType());
+
+        if (!StringUtils.hasText(entityType)) {
+            return "Work";
+        }
+
+        String normalizedEntityType = entityType.trim().toLowerCase().replace('_', ' ');
+        return Character.toUpperCase(normalizedEntityType.charAt(0)) + normalizedEntityType.substring(1);
     }
 }

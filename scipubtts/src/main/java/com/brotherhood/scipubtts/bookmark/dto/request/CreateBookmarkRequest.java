@@ -10,11 +10,11 @@ public record CreateBookmarkRequest(
         String titleSnapshot,
         String authorsSnapshot,
         List<String> authorOpenAlexIdsSnapshot,
+        String workTypeSnapshot,
         String sourceSnapshot,
         String topicSnapshot,
         String topicOpenAlexIdSnapshot,
         Integer publicationYear,
-        Integer citationSnapshot,
-        String note
+        Integer citationSnapshot
 ) {
 }

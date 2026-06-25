@@ -42,6 +42,9 @@ public class UserBookmark {
     @Column(name = "author_openalex_ids_snapshot", columnDefinition = "TEXT")
     private String authorOpenAlexIdsSnapshot;
 
+    @Column(name = "work_type_snapshot", columnDefinition = "TEXT")
+    private String workTypeSnapshot;
+
     @Column(name = "source_snapshot", columnDefinition = "TEXT")
     private String sourceSnapshot;
 
@@ -56,9 +59,6 @@ public class UserBookmark {
 
     @Column(name = "citation_snapshot")
     private Integer citationSnapshot;
-
-    @Column(columnDefinition = "TEXT")
-    private String note;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

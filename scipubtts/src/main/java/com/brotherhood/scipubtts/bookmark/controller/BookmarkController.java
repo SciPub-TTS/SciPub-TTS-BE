@@ -4,7 +4,6 @@ import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkCollectionRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
-import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkNoteRequest;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
@@ -114,22 +113,6 @@ public class BookmarkController {
         );
     }
 
-    // ==========================================
-    // 6. ADD OR UPDATE NOTE
-    // ==========================================
-    @PatchMapping("/{bookmarkId}/note")
-    public ResponseEntity<ResponseObject> updateNote(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @PathVariable UUID bookmarkId,
-            @RequestBody UpdateBookmarkNoteRequest request) {
-
-        BookmarkResponse data = bookmarkService.updateNote(userId, bookmarkId, request);
-
-        return ResponseEntity.ok(
-                new ResponseObject(200, "Bookmark note updated successfully", data)
-        );
-    }
-
     @GetMapping("/collections")
     public ResponseEntity<ResponseObject> getCollections(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
@@ -179,7 +162,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 7. DELETE BOOKMARK BY ID
+    // 6. DELETE BOOKMARK BY ID
     // ==========================================
     @DeleteMapping("/{bookmarkId}")
     public ResponseEntity<ResponseObject> deleteBookmark(
@@ -194,7 +177,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 8. DELETE BOOKMARK BY OPENALEX ID
+    // 7. DELETE BOOKMARK BY OPENALEX ID
     // ==========================================
     @DeleteMapping("/by-openalex/{openAlexId}")
     public ResponseEntity<ResponseObject> deleteByOpenAlexId(

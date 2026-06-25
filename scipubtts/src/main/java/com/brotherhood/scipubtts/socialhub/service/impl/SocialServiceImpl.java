@@ -3,8 +3,11 @@ package com.brotherhood.scipubtts.socialhub.service.impl;
 import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.bookmark.support.BookmarkSnapshotSupport;
+import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.search.service.OpenAlexMapReader;
+import com.brotherhood.scipubtts.search.service.SearchQuerySupport;
 import com.brotherhood.scipubtts.socialhub.dto.request.CreateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.request.UpdateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.response.LikeToggleResponse;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -44,6 +48,7 @@ public class SocialServiceImpl implements SocialService {
 
     private static final int MAX_REFERENCES = 3;
     private static final int BODY_PREVIEW_LENGTH = 200;
+    private static final String OPENALEX_WORK_TYPE_SELECT_FIELDS = "id,type";
 
     private final SocialPostRepository postRepository;
     private final SocialPostLikeRepository likeRepository;
@@ -52,6 +57,9 @@ public class SocialServiceImpl implements SocialService {
     private final UserBookmarkRepository bookmarkRepository;
     private final EntityManager entityManager;
     private final BookmarkSnapshotSupport snapshotSupport;
+    private final OpenAlexClient openAlexClient;
+    private final OpenAlexMapReader openAlexMapReader;
+    private final SearchQuerySupport searchQuerySupport;
 
     @Override
     @Transactional
@@ -64,6 +72,8 @@ public class SocialServiceImpl implements SocialService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         List<UserBookmark> validBookmarks = extractBookmarksForReferences(authorId, request.references());
+        Map<String, String> workTypeSnapshotsByOpenAlexId =
+                resolveBookmarkWorkTypeSnapshots(validBookmarks);
 
         SocialPost post = SocialPost.builder()
                 .author(author)
@@ -73,7 +83,13 @@ public class SocialServiceImpl implements SocialService {
                 .build();
 
         post.setReferences(validBookmarks.stream()
-                .map(bookmark -> buildReferenceFromBookmark(post, bookmark))
+                .map(bookmark -> buildReferenceFromBookmark(
+                        post,
+                        bookmark,
+                        workTypeSnapshotsByOpenAlexId.get(
+                                normalizeOpenAlexId(bookmark.getOpenAlexId())
+                        )
+                ))
                 .collect(Collectors.toList()));
 
         SocialPost saved = postRepository.save(post);
@@ -139,6 +155,8 @@ public class SocialServiceImpl implements SocialService {
                         editorId,
                         request.references()
                 );
+                Map<String, String> workTypeSnapshotsByOpenAlexId =
+                        resolveBookmarkWorkTypeSnapshots(validBookmarks);
 
                 likeRepository.deleteAllByPostId(postId);
                 post.resetLikeCount();
@@ -146,7 +164,13 @@ public class SocialServiceImpl implements SocialService {
 
                 post.getReferences().clear();
                 post.getReferences().addAll(validBookmarks.stream()
-                        .map(bookmark -> buildReferenceFromBookmark(post, bookmark))
+                        .map(bookmark -> buildReferenceFromBookmark(
+                                post,
+                                bookmark,
+                                workTypeSnapshotsByOpenAlexId.get(
+                                        normalizeOpenAlexId(bookmark.getOpenAlexId())
+                                )
+                        ))
                         .toList());
             }
         }
@@ -293,13 +317,21 @@ public class SocialServiceImpl implements SocialService {
         return (author.getFirstName() + " " + author.getLastName()).trim();
     }
 
-    private SocialPostReference buildReferenceFromBookmark(SocialPost post, UserBookmark bookmark) {
+    private SocialPostReference buildReferenceFromBookmark(
+            SocialPost post,
+            UserBookmark bookmark,
+            String resolvedWorkTypeSnapshot
+    ) {
         return SocialPostReference.builder()
                 .post(post)
                 .openalexId(bookmark.getOpenAlexId())
                 .titleSnapshot(bookmark.getTitleSnapshot())
                 .authorsSnapshot(bookmark.getAuthorsSnapshot())
                 .authorOpenAlexIdsSnapshot(bookmark.getAuthorOpenAlexIdsSnapshot())
+                .workTypeSnapshot(snapshotSupport.firstNonBlank(
+                        resolvedWorkTypeSnapshot,
+                        bookmark.getWorkTypeSnapshot()
+                ))
                 .topicSnapshot(bookmark.getTopicSnapshot())
                 .topicOpenAlexIdSnapshot(bookmark.getTopicOpenAlexIdSnapshot())
                 .yearSnapshot(bookmark.getPublicationYear() != null
@@ -331,11 +363,16 @@ public class SocialServiceImpl implements SocialService {
                 userId,
                 references
         );
+        Map<String, String> resolvedWorkTypesByOpenAlexId = resolveReferenceWorkTypeSnapshots(
+                references,
+                bookmarksByOpenAlexId
+        );
 
         return references.stream()
                 .map(reference -> resolveReferenceSnapshot(
                         reference,
-                        bookmarksByOpenAlexId.get(reference.getOpenalexId())
+                        bookmarksByOpenAlexId.get(reference.getOpenalexId()),
+                        resolvedWorkTypesByOpenAlexId
                 ))
                 .toList();
     }
@@ -369,7 +406,8 @@ public class SocialServiceImpl implements SocialService {
 
     private ResolvedReferenceSnapshot resolveReferenceSnapshot(
             SocialPostReference reference,
-            UserBookmark fallbackBookmark
+            UserBookmark fallbackBookmark,
+            Map<String, String> resolvedWorkTypesByOpenAlexId
     ) {
         String rawAuthorIds = snapshotSupport.firstNonBlank(
                 reference.getAuthorOpenAlexIdsSnapshot(),
@@ -381,6 +419,15 @@ public class SocialServiceImpl implements SocialService {
                 : fallbackBookmark != null
                 ? fallbackBookmark.getPublicationYear()
                 : null;
+        String fallbackWorkTypeSnapshot = fallbackBookmark != null
+                ? snapshotSupport.normalizeText(fallbackBookmark.getWorkTypeSnapshot())
+                : null;
+
+        if (!StringUtils.hasText(fallbackWorkTypeSnapshot)) {
+            fallbackWorkTypeSnapshot = resolvedWorkTypesByOpenAlexId.get(
+                    normalizeOpenAlexId(reference.getOpenalexId())
+            );
+        }
 
         return new ResolvedReferenceSnapshot(
                 reference.getId(),
@@ -394,6 +441,10 @@ public class SocialServiceImpl implements SocialService {
                         fallbackBookmark != null ? fallbackBookmark.getAuthorsSnapshot() : null
                 ),
                 snapshotSupport.deserializeEntityIds(rawAuthorIds),
+                snapshotSupport.firstNonBlank(
+                        reference.getWorkTypeSnapshot(),
+                        fallbackWorkTypeSnapshot
+                ),
                 snapshotSupport.firstNonBlank(
                         reference.getTopicSnapshot(),
                         fallbackBookmark != null ? fallbackBookmark.getTopicSnapshot() : null
@@ -415,6 +466,7 @@ public class SocialServiceImpl implements SocialService {
                 reference.titleSnapshot(),
                 reference.authorsSnapshot(),
                 reference.authorOpenAlexIdsSnapshot(),
+                reference.workTypeSnapshot(),
                 reference.topicSnapshot(),
                 reference.topicOpenAlexIdSnapshot(),
                 reference.yearSnapshot()
@@ -430,6 +482,7 @@ public class SocialServiceImpl implements SocialService {
                 reference.titleSnapshot(),
                 reference.authorsSnapshot(),
                 reference.authorOpenAlexIdsSnapshot(),
+                reference.workTypeSnapshot(),
                 reference.topicSnapshot(),
                 reference.topicOpenAlexIdSnapshot(),
                 reference.yearSnapshot()
@@ -447,6 +500,166 @@ public class SocialServiceImpl implements SocialService {
         }
     }
 
+    private Map<String, String> resolveBookmarkWorkTypeSnapshots(List<UserBookmark> bookmarks) {
+        if (bookmarks == null || bookmarks.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> resolvedWorkTypesByOpenAlexId = new LinkedHashMap<>();
+        List<String> missingOpenAlexIds = new ArrayList<>();
+
+        for (UserBookmark bookmark : bookmarks) {
+            String normalizedOpenAlexId = normalizeOpenAlexId(bookmark.getOpenAlexId());
+
+            if (!StringUtils.hasText(normalizedOpenAlexId)) {
+                continue;
+            }
+
+            String workTypeSnapshot = snapshotSupport.normalizeText(
+                    bookmark.getWorkTypeSnapshot()
+            );
+
+            if (StringUtils.hasText(workTypeSnapshot)) {
+                resolvedWorkTypesByOpenAlexId.put(normalizedOpenAlexId, workTypeSnapshot);
+                continue;
+            }
+
+            missingOpenAlexIds.add(normalizedOpenAlexId);
+        }
+
+        if (!missingOpenAlexIds.isEmpty()) {
+            resolvedWorkTypesByOpenAlexId.putAll(fetchWorkTypeLabels(missingOpenAlexIds));
+        }
+
+        return resolvedWorkTypesByOpenAlexId;
+    }
+
+    private Map<String, String> resolveReferenceWorkTypeSnapshots(
+            List<SocialPostReference> references,
+            Map<String, UserBookmark> bookmarksByOpenAlexId
+    ) {
+        if (references == null || references.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> resolvedWorkTypesByOpenAlexId = new LinkedHashMap<>();
+        List<String> missingOpenAlexIds = new ArrayList<>();
+
+        for (SocialPostReference reference : references) {
+            String normalizedOpenAlexId = normalizeOpenAlexId(reference.getOpenalexId());
+
+            if (!StringUtils.hasText(normalizedOpenAlexId)) {
+                continue;
+            }
+
+            String referenceWorkTypeSnapshot = snapshotSupport.normalizeText(
+                    reference.getWorkTypeSnapshot()
+            );
+
+            if (StringUtils.hasText(referenceWorkTypeSnapshot)) {
+                resolvedWorkTypesByOpenAlexId.put(
+                        normalizedOpenAlexId,
+                        referenceWorkTypeSnapshot
+                );
+                continue;
+            }
+
+            UserBookmark fallbackBookmark = bookmarksByOpenAlexId.get(reference.getOpenalexId());
+            String bookmarkWorkTypeSnapshot = fallbackBookmark != null
+                    ? snapshotSupport.normalizeText(fallbackBookmark.getWorkTypeSnapshot())
+                    : null;
+
+            if (StringUtils.hasText(bookmarkWorkTypeSnapshot)) {
+                resolvedWorkTypesByOpenAlexId.put(
+                        normalizedOpenAlexId,
+                        bookmarkWorkTypeSnapshot
+                );
+                continue;
+            }
+
+            missingOpenAlexIds.add(normalizedOpenAlexId);
+        }
+
+        if (!missingOpenAlexIds.isEmpty()) {
+            resolvedWorkTypesByOpenAlexId.putAll(fetchWorkTypeLabels(missingOpenAlexIds));
+        }
+
+        return resolvedWorkTypesByOpenAlexId;
+    }
+
+    private Map<String, String> fetchWorkTypeLabels(List<String> openAlexIds) {
+        List<String> normalizedOpenAlexIds = openAlexIds.stream()
+                .map(this::normalizeOpenAlexId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+
+        if (normalizedOpenAlexIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("filter", "openalex:" + String.join("|", normalizedOpenAlexIds));
+        queryParams.put("per_page", String.valueOf(normalizedOpenAlexIds.size()));
+        queryParams.put("select", OPENALEX_WORK_TYPE_SELECT_FIELDS);
+
+        try {
+            Map<String, Object> response = openAlexClient.get("/works", queryParams);
+            List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
+            Map<String, String> resolvedWorkTypes = new LinkedHashMap<>();
+
+            for (Map<String, Object> result : results) {
+                String normalizedOpenAlexId = normalizeOpenAlexId(
+                        searchQuerySupport.normalizeEntityValue(
+                                openAlexMapReader.getString(result, "id")
+                        )
+                );
+                String normalizedWorkType = formatWorkTypeLabel(
+                        openAlexMapReader.getString(result, "type")
+                );
+
+                if (StringUtils.hasText(normalizedOpenAlexId)
+                        && StringUtils.hasText(normalizedWorkType)) {
+                    resolvedWorkTypes.put(normalizedOpenAlexId, normalizedWorkType);
+                }
+            }
+
+            return resolvedWorkTypes;
+        } catch (RuntimeException exception) {
+            return Map.of();
+        }
+    }
+
+    private String formatWorkTypeLabel(String rawValue) {
+        String normalizedValue = snapshotSupport.normalizeText(rawValue);
+
+        if (!StringUtils.hasText(normalizedValue)) {
+            return null;
+        }
+
+        String[] segments = normalizedValue
+                .trim()
+                .toLowerCase()
+                .replace('_', '-')
+                .split("-");
+        StringBuilder formattedValue = new StringBuilder();
+
+        for (String segment : segments) {
+            if (!StringUtils.hasText(segment)) {
+                continue;
+            }
+
+            if (formattedValue.length() > 0) {
+                formattedValue.append(' ');
+            }
+
+            formattedValue.append(Character.toUpperCase(segment.charAt(0)));
+            formattedValue.append(segment.substring(1));
+        }
+
+        return formattedValue.length() == 0 ? null : formattedValue.toString();
+    }
+
     private String normalizeOpenAlexId(String rawValue) {
         return snapshotSupport.normalizeEntityId(rawValue);
     }
@@ -457,6 +670,7 @@ public class SocialServiceImpl implements SocialService {
             String titleSnapshot,
             String authorsSnapshot,
             List<String> authorOpenAlexIdsSnapshot,
+            String workTypeSnapshot,
             String topicSnapshot,
             String topicOpenAlexIdSnapshot,
             Integer yearSnapshot

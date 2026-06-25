@@ -9,11 +9,11 @@ public record BookmarkResponse(
         String openAlexId,
         String title,
         String authors,
+        String workType,
         String source,
         String topic,
         Integer publicationYear,
         Integer citationCount,
-        String note,
         List<BookmarkCollectionSummaryResponse> collections,
         OffsetDateTime createdAt
 ) {

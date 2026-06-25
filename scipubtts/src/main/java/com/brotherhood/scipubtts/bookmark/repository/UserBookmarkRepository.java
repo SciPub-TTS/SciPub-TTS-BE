@@ -47,6 +47,7 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
                   :keyword IS NULL OR :keyword = ''
                   OR LOWER(b.titleSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.authorsSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(b.workTypeSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.sourceSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
                   OR LOWER(b.topicSnapshot) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
