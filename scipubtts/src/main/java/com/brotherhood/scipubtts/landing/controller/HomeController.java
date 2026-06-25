@@ -7,7 +7,8 @@ import com.brotherhood.scipubtts.dashboard.dto.request.KeywordRankingRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
 import com.brotherhood.scipubtts.dashboard.service.KeywordService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
-import com.brotherhood.scipubtts.landing.dto.response.LandingSummaryResponse;
+import com.brotherhood.scipubtts.landing.dto.response.HomeSummaryResponse;
+import com.brotherhood.scipubtts.landing.service.HomeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +22,12 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("api/home")
 @RequiredArgsConstructor
-public class LandingController {
+public class HomeController {
 
     private final KeywordService keywordService;
     private final TopicService topicService;
     private final BookmarkService bookmarkService;
+    private final HomeService homeService;
 
     @GetMapping("/landing/summary")
     public ResponseEntity<ResponseObject> getLandingSummary(
@@ -46,7 +48,7 @@ public class LandingController {
 
         var top6Papers = bookmarkService.getTop6TrendingPapers();
 
-        LandingSummaryResponse landingData = new LandingSummaryResponse(
+        HomeSummaryResponse landingData = new HomeSummaryResponse(
                 top1Keyword,
                 top6Keywords,
                 top10Topics.topics(),
@@ -58,6 +60,17 @@ public class LandingController {
                         HttpStatus.OK.value(),
                         "Successfully fetched landing dashboard data",
                         landingData
+                )
+        );
+    }
+
+    @GetMapping("/landing/statistics")
+    public ResponseEntity<ResponseObject> getLandingStatistics() {
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Statistics fetched successfully",
+                        homeService.getStatistics()
                 )
         );
     }

@@ -6,7 +6,7 @@ import com.brotherhood.scipubtts.dashboard.dto.response.data.TopicRankingRespons
 
 import java.util.List;
 
-public record LandingSummaryResponse(
+public record HomeSummaryResponse(
         KeywordCalculateResponse.KeywordMetric top1Keyword,
         List<KeywordCalculateResponse.KeywordMetric> top6Keywords,
         List<TopicRankingResponse.TopicData> top10Topics,
