@@ -4,5 +4,6 @@ import lombok.Builder;
 
 @Builder
 public record SuggestedTopicResponse(
-                                                                String name) {
+                String id, // OpenAlex Target Identifier
+                String name) {
 }

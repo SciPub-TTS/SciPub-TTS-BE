@@ -61,7 +61,9 @@ public class FeedServiceImpl implements FeedService {
         List<UserFollow> follows = userFollowRepository.findByUserIdAndTargetType(userId, FollowTargetType.TOPIC);
         return follows.stream()
                 .map(follow -> FollowedTopicResponse.builder()
-                        .name(follow.getDisplayNameSnapshot() != null ? follow.getDisplayNameSnapshot() : "Unknown Topic")
+                        .id(follow.getTargetOpenAlexId())
+                        .name(follow.getDisplayNameSnapshot() != null ? follow.getDisplayNameSnapshot()
+                                : "Unknown Topic")
                         .status("Stable")
                         .build())
                 .toList();
@@ -72,7 +74,9 @@ public class FeedServiceImpl implements FeedService {
         List<UserFollow> follows = userFollowRepository.findByUserIdAndTargetType(userId, FollowTargetType.AUTHOR);
         return follows.stream()
                 .map(follow -> FollowedAuthorResponse.builder()
-                        .name(follow.getDisplayNameSnapshot() != null ? follow.getDisplayNameSnapshot() : "Unknown Author")
+                        .id(follow.getTargetOpenAlexId())
+                        .name(follow.getDisplayNameSnapshot() != null ? follow.getDisplayNameSnapshot()
+                                : "Unknown Author")
                         .field("Researcher")
                         .build())
                 .toList();
@@ -81,10 +85,9 @@ public class FeedServiceImpl implements FeedService {
     @Override
     public List<SuggestedTopicResponse> getSuggestedTopics(UUID userId) {
         return List.of(
-                SuggestedTopicResponse.builder().name("Academic Publishing and Open Access").build(),
-                SuggestedTopicResponse.builder().name("AI Policy in Higher Education").build(),
-                SuggestedTopicResponse.builder().name("Large Language Models").build()
-        );
+                SuggestedTopicResponse.builder().id("T11116").name("Academic Publishing and Open Access").build(),
+                SuggestedTopicResponse.builder().id("T11224").name("AI Policy in Higher Education").build(),
+                SuggestedTopicResponse.builder().id("T10123").name("Large Language Models").build());
     }
 
     private FeedItemResponse mapToFeedItemResponse(ResearchFeed item) {
@@ -104,7 +107,8 @@ public class FeedServiceImpl implements FeedService {
                 .extraAuthors(0)
                 .venue(item.getSourceSnapshot() != null ? item.getSourceSnapshot() : "Unknown Publisher")
                 .citations(item.getCitationSnapshot() != null ? item.getCitationSnapshot() : 0)
-                .articleAbstract("Publication metadata references and full-text resources are accessible through the DOI publisher link.")
+                .articleAbstract(
+                        "Publication metadata references and full-text resources are accessible through the DOI publisher link.")
                 .reason(extractReason(item.getReasonJson()))
                 .tabMatches(extractTabMatches(item.getReasonJson()))
                 .tags(extractTags(item.getReasonJson()))
@@ -119,9 +123,11 @@ public class FeedServiceImpl implements FeedService {
         }
         try {
             if (authorsSnapshot.trim().startsWith("[")) {
-                return objectMapper.readValue(authorsSnapshot, new TypeReference<List<FeedAuthorResponse>>() {});
+                return objectMapper.readValue(authorsSnapshot, new TypeReference<List<FeedAuthorResponse>>() {
+                });
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         return Arrays.stream(authorsSnapshot.split(","))
                 .map(String::trim)
@@ -134,9 +140,12 @@ public class FeedServiceImpl implements FeedService {
         if (reasonJson != null && !reasonJson.isBlank()) {
             try {
                 JsonNode node = objectMapper.readTree(reasonJson);
-                if (node.has("explanation")) return node.get("explanation").asText();
-                if (node.has("reason")) return node.get("reason").asText();
-            } catch (Exception ignored) {}
+                if (node.has("explanation"))
+                    return node.get("explanation").asText();
+                if (node.has("reason"))
+                    return node.get("reason").asText();
+            } catch (Exception ignored) {
+            }
         }
         return "Recommended based on your followed profile filters.";
     }
@@ -150,7 +159,8 @@ public class FeedServiceImpl implements FeedService {
                     node.get("tags").forEach(tag -> tags.add(tag.asText()));
                     return tags;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return List.of("Research", "OpenAccess");
     }
@@ -162,10 +172,13 @@ public class FeedServiceImpl implements FeedService {
         if (reasonJson != null && !reasonJson.isBlank()) {
             boolean matchesTopic = reasonJson.contains("TOPIC");
             boolean matchesAuthor = reasonJson.contains("AUTHOR");
-            
-            if (matchesTopic) tabMatches.add("matched-topic");
-            if (matchesAuthor) tabKeyMatch(tabMatches, "matched-author");
-            if (matchesTopic && matchesAuthor) tabMatches.add("matched-both");
+
+            if (matchesTopic)
+                tabMatches.add("matched-topic");
+            if (matchesAuthor)
+                tabKeyMatch(tabMatches, "matched-author");
+            if (matchesTopic && matchesAuthor)
+                tabMatches.add("matched-both");
         }
 
         tabMatches.add("latest");
@@ -175,7 +188,8 @@ public class FeedServiceImpl implements FeedService {
     }
 
     private void tabKeyMatch(List<String> list, String val) {
-        if (!list.contains(val)) list.add(val);
+        if (!list.contains(val))
+            list.add(val);
     }
 
     private List<FeedBadgeResponse> extractBadges(String reasonJson, String source) {
@@ -196,7 +210,8 @@ public class FeedServiceImpl implements FeedService {
                         }
                     });
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         if (badges.isEmpty()) {
             badges.add(FeedBadgeResponse.builder().label("Relevant Option").tone("match").build());
