@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
+import com.brotherhood.scipubtts.dashboard.service.TopicService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,17 +33,14 @@ public class FeedServiceImpl implements FeedService {
 
     private final UserFollowRepository userFollowRepository;
     private final ResearchFeedJpaRepository researchFeedJpaRepository;
+    private final TopicService topicService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public FeedResponse getFeed(UUID userId, FeedTab feedTab, int page, int pageSize) {
-        // Sort keys must refer to database column names when executing native queries
-        Sort sort = switch (feedTab) {
-            case LATEST -> Sort.by(Sort.Direction.DESC, "publication_date", "generated_at");
-            case TRENDING -> Sort.by(Sort.Direction.DESC, "citation_snapshot");
-            case RELEVANT -> Sort.by(Sort.Direction.DESC, "relevance_score");
-            default -> Sort.by(Sort.Direction.DESC, "generated_at");
-        };
+        Sort sort = feedTab.equals(FeedTab.LATEST)
+                ? Sort.by(Sort.Direction.DESC, "publication_date", "generated_at")
+                : Sort.by(Sort.Direction.DESC, "generated_at");
 
         Pageable pageable = PageRequest.of(page, pageSize, sort);
         Page<ResearchFeed> feedPage = researchFeedJpaRepository.findUserFeed(userId, feedTab.name(), pageable);
@@ -64,7 +63,6 @@ public class FeedServiceImpl implements FeedService {
                         .id(follow.getTargetOpenAlexId())
                         .name(follow.getDisplayNameSnapshot() != null ? follow.getDisplayNameSnapshot()
                                 : "Unknown Topic")
-                        .status("Stable")
                         .build())
                 .toList();
     }
@@ -77,23 +75,16 @@ public class FeedServiceImpl implements FeedService {
                         .id(follow.getTargetOpenAlexId())
                         .name(follow.getDisplayNameSnapshot() != null ? follow.getDisplayNameSnapshot()
                                 : "Unknown Author")
-                        .field("Researcher")
                         .build())
                 .toList();
     }
 
     @Override
-    public List<SuggestedTopicResponse> getSuggestedTopics(UUID userId) {
-        return List.of(
-                SuggestedTopicResponse.builder().id("T11116").name("Academic Publishing and Open Access").build(),
-                SuggestedTopicResponse.builder().id("T11224").name("AI Policy in Higher Education").build(),
-                SuggestedTopicResponse.builder().id("T10123").name("Large Language Models").build());
+    public SuggestedTopicResponse getSuggestedTopics(TopicDataRequest request) {
+        return topicService.getSuggestTopic(request);
     }
 
     private FeedItemResponse mapToFeedItemResponse(ResearchFeed item) {
-        String doiUrl = item.getWorkOpenAlexId() != null ? item.getWorkOpenAlexId() : "";
-        String doiLabel = doiUrl.replace("https://doi.org/", "");
-
         Double score = item.getRelevanceScore() != null ? item.getRelevanceScore() : 0.85;
         int relevance = (int) (score > 1.0 ? score : score * 100);
 
@@ -109,13 +100,9 @@ public class FeedServiceImpl implements FeedService {
                 .extraAuthors(0)
                 .venue(item.getSourceSnapshot() != null ? item.getSourceSnapshot() : "Unknown Publisher")
                 .citations(item.getCitationSnapshot() != null ? item.getCitationSnapshot() : 0)
-                .articleAbstract(
-                        "Publication metadata references and full-text resources are accessible through the DOI publisher link.")
                 .reason(extractReason(reasonNode))
                 .tabMatches(extractTabMatches(reasonNode))
                 .tags(extractTags(reasonNode))
-                .doiUrl(doiUrl)
-                .doiLabel(doiLabel)
                 .build();
     }
 

@@ -15,10 +15,7 @@ public record FeedItemResponse(
         Integer extraAuthors,
         String venue,
         Integer citations,
-        @JsonProperty("abstract") String articleAbstract,
         String reason,
         List<String> tabMatches,
-        List<String> tags,
-        String doiUrl,
-        String doiLabel
+        List<String> tags
 ) {}

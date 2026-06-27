@@ -9,9 +9,5 @@ public enum FeedTab {
 
   MATCHED_BOTH,
 
-  LATEST,
-
-  TRENDING,
-
-  RELEVANT
+  LATEST
 }

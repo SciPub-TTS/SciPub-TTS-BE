@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.feed.controller;
 import java.util.List;
 import java.util.UUID;
 
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -72,9 +73,11 @@ public class FeedController {
     @GetMapping("/suggested-topics")
     @Operation(summary = "Get suggested trending topics", description = "Returns trending topic suggestions personalized for the user context.")
     public ResponseEntity<ResponseObject> suggestedTopics(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+            TopicDataRequest request
+    ) {
 
-        List<SuggestedTopicResponse> data = feedService.getSuggestedTopics(userId);
+        SuggestedTopicResponse data = feedService.getSuggestedTopics(request);
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded suggested topics", data));
