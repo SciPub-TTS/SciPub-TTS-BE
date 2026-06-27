@@ -38,10 +38,7 @@ public class FeedServiceImpl implements FeedService {
 
     @Override
     public FeedResponse getFeed(UUID userId, FeedTab feedTab, int page, int pageSize) {
-        Sort sort = feedTab.equals(FeedTab.LATEST)
-                ? Sort.by(Sort.Direction.DESC, "publication_date", "generated_at")
-                : Sort.by(Sort.Direction.DESC, "generated_at");
-
+        Sort sort = Sort.by(Sort.Direction.DESC, "generated_at");
         Pageable pageable = PageRequest.of(page, pageSize, sort);
         Page<ResearchFeed> feedPage = researchFeedJpaRepository.findUserFeed(userId, feedTab.name(), pageable);
 
@@ -188,11 +185,6 @@ public class FeedServiceImpl implements FeedService {
 
         if (matchesTopic) tabMatches.add("matched-topic");
         if (matchesAuthor) tabKeyMatch(tabMatches, "matched-author");
-        if (matchesTopic && matchesAuthor) tabMatches.add("matched-both");
-
-        tabMatches.add("latest");
-        tabMatches.add("trending");
-        tabMatches.add("most-relevant");
         return tabMatches;
     }
 
