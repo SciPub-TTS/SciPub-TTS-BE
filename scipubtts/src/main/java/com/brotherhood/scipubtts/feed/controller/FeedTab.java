@@ -5,9 +5,5 @@ public enum FeedTab {
 
   MATCHED_TOPIC,
 
-  MATCHED_AUTHOR,
-
-  MATCHED_BOTH,
-
-  LATEST
+  MATCHED_AUTHOR
 }

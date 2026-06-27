@@ -21,10 +21,6 @@ public interface ResearchFeedJpaRepository extends JpaRepository<ResearchFeed, U
                 :tabFilter = 'ALL'
                 OR (:tabFilter = 'MATCHED_TOPIC' AND r.reason_json::text LIKE '%"TOPIC"%')
                 OR (:tabFilter = 'MATCHED_AUTHOR' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'MATCHED_BOTH' AND r.reason_json::text LIKE '%"TOPIC"%' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'LATEST')
-                OR (:tabFilter = 'TRENDING')
-                OR (:tabFilter = 'RELEVANT')
               )
             """,
             countQuery = """
@@ -35,10 +31,6 @@ public interface ResearchFeedJpaRepository extends JpaRepository<ResearchFeed, U
                 :tabFilter = 'ALL'
                 OR (:tabFilter = 'MATCHED_TOPIC' AND r.reason_json::text LIKE '%"TOPIC"%')
                 OR (:tabFilter = 'MATCHED_AUTHOR' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'MATCHED_BOTH' AND r.reason_json::text LIKE '%"TOPIC"%' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'LATEST')
-                OR (:tabFilter = 'TRENDING')
-                OR (:tabFilter = 'RELEVANT')
               )
             """,
             nativeQuery = true)
