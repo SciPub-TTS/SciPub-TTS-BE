@@ -5,6 +5,6 @@ import lombok.Builder;
 @Builder
 public record FollowedAuthorResponse(
                 String id, // OpenAlex Target Identifier (e.g. A1001)
-                String name,
-                String field) {
+                String name)
+{
 }
