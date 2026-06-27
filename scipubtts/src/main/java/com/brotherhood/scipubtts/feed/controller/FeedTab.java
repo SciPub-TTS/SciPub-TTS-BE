@@ -3,11 +3,11 @@ package com.brotherhood.scipubtts.feed.controller;
 public enum FeedTab {
   ALL,
 
-  TOPICS,
+  MATCHED_TOPIC,
 
-  AUTHORS,
+  MATCHED_AUTHOR,
 
-  BOTH,
+  MATCHED_BOTH,
 
   LATEST,
 

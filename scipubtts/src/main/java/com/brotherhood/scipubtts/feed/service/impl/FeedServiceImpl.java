@@ -97,10 +97,12 @@ public class FeedServiceImpl implements FeedService {
         Double score = item.getRelevanceScore() != null ? item.getRelevanceScore() : 0.85;
         int relevance = (int) (score > 1.0 ? score : score * 100);
 
+        JsonNode reasonNode = parseReasonJson(item.getReasonJson());
+
         return FeedItemResponse.builder()
                 .id(item.getId().toString())
                 .relevance(relevance)
-                .badges(extractBadges(item.getReasonJson(), item.getSourceSnapshot()))
+                .badges(extractBadges(reasonNode, item.getSourceSnapshot()))
                 .year(item.getPublicationYear() != null ? item.getPublicationYear() : 2025)
                 .title(item.getTitleSnapshot())
                 .authors(parseAuthors(item.getAuthorsSnapshot()))
@@ -109,9 +111,9 @@ public class FeedServiceImpl implements FeedService {
                 .citations(item.getCitationSnapshot() != null ? item.getCitationSnapshot() : 0)
                 .articleAbstract(
                         "Publication metadata references and full-text resources are accessible through the DOI publisher link.")
-                .reason(extractReason(item.getReasonJson()))
-                .tabMatches(extractTabMatches(item.getReasonJson()))
-                .tags(extractTags(item.getReasonJson()))
+                .reason(extractReason(reasonNode))
+                .tabMatches(extractTabMatches(reasonNode))
+                .tags(extractTags(reasonNode))
                 .doiUrl(doiUrl)
                 .doiLabel(doiLabel)
                 .build();
@@ -136,50 +138,73 @@ public class FeedServiceImpl implements FeedService {
                 .toList();
     }
 
-    private String extractReason(String reasonJson) {
-        if (reasonJson != null && !reasonJson.isBlank()) {
-            try {
-                JsonNode node = objectMapper.readTree(reasonJson);
-                if (node.has("explanation"))
-                    return node.get("explanation").asText();
-                if (node.has("reason"))
-                    return node.get("reason").asText();
-            } catch (Exception ignored) {
+    private JsonNode parseReasonJson(String reasonJson) {
+        if (reasonJson == null || reasonJson.isBlank()) {
+            return objectMapper.missingNode();
+        }
+        try {
+            return objectMapper.readTree(reasonJson);
+        } catch (Exception e) {
+            return objectMapper.missingNode();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    private String extractReason(JsonNode reasonNode) {
+
+        JsonNode reasons = reasonNode.path("reasons");
+
+        List<String> names = new ArrayList<>();
+        for (JsonNode reason : reasons) {
+            String display = reason.path("displayName").asText();
+            if (!display.isBlank()) {
+                names.add(display);
             }
         }
+
+        if (!names.isEmpty()) {
+            return "Matched: " + String.join(", ", names);
+        }
+
         return "Recommended based on your followed profile filters.";
     }
 
-    private List<String> extractTags(String reasonJson) {
-        if (reasonJson != null && !reasonJson.isBlank()) {
-            try {
-                JsonNode node = objectMapper.readTree(reasonJson);
-                if (node.has("tags") && node.get("tags").isArray()) {
-                    List<String> tags = new ArrayList<>();
-                    node.get("tags").forEach(tag -> tags.add(tag.asText()));
-                    return tags;
+    private List<String> extractTags(JsonNode reasonNode) {
+
+        JsonNode reasons = reasonNode.path("reasons");
+        List<String> tags = new ArrayList<>();
+
+        if (reasons.isArray()) {
+            for (JsonNode reason : reasons) {
+                String display = reason.path("displayName").asText();
+                if (!display.isBlank()) {
+                    tags.add(display);
                 }
-            } catch (Exception ignored) {
             }
         }
-        return List.of("Research", "OpenAccess");
+
+        return tags;
     }
 
-    private List<String> extractTabMatches(String reasonJson) {
+    private List<String> extractTabMatches(JsonNode reasonNode) {
         List<String> tabMatches = new ArrayList<>();
         tabMatches.add("all");
 
-        if (reasonJson != null && !reasonJson.isBlank()) {
-            boolean matchesTopic = reasonJson.contains("TOPIC");
-            boolean matchesAuthor = reasonJson.contains("AUTHOR");
+        JsonNode reasons = reasonNode.path("reasons");
+        boolean matchesTopic = false;
+        boolean matchesAuthor = false;
 
-            if (matchesTopic)
-                tabMatches.add("matched-topic");
-            if (matchesAuthor)
-                tabKeyMatch(tabMatches, "matched-author");
-            if (matchesTopic && matchesAuthor)
-                tabMatches.add("matched-both");
+        if (reasons.isArray()) {
+            for (JsonNode reason : reasons) {
+                String type = reason.path("type").asText();
+                if ("TOPIC".equals(type)) matchesTopic = true;
+                if ("AUTHOR".equals(type)) matchesAuthor = true;
+            }
         }
+
+        if (matchesTopic) tabMatches.add("matched-topic");
+        if (matchesAuthor) tabKeyMatch(tabMatches, "matched-author");
+        if (matchesTopic && matchesAuthor) tabMatches.add("matched-both");
 
         tabMatches.add("latest");
         tabMatches.add("trending");
@@ -192,30 +217,30 @@ public class FeedServiceImpl implements FeedService {
             list.add(val);
     }
 
-    private List<FeedBadgeResponse> extractBadges(String reasonJson, String source) {
+    private List<FeedBadgeResponse> extractBadges(JsonNode reasonNode, String source) {
         List<FeedBadgeResponse> badges = new ArrayList<>();
+
         if (source != null && !source.isBlank()) {
             badges.add(FeedBadgeResponse.builder().label(source).tone("topic").build());
         }
-        if (reasonJson != null && !reasonJson.isBlank()) {
-            try {
-                JsonNode node = objectMapper.readTree(reasonJson);
-                if (node.has("reasons") && node.get("reasons").isArray()) {
-                    node.get("reasons").forEach(reason -> {
-                        String r = reason.asText().toUpperCase();
-                        if ("AUTHOR".equals(r)) {
-                            badges.add(FeedBadgeResponse.builder().label("Matched Author").tone("author").build());
-                        } else if ("TOPIC".equals(r)) {
-                            badges.add(FeedBadgeResponse.builder().label("Matched Topic").tone("topic").build());
-                        }
-                    });
+
+        JsonNode reasons = reasonNode.path("reasons");
+        if (reasons.isArray()) {
+            for (JsonNode reason : reasons) {
+                String type = reason.path("type").asText();
+
+                if ("AUTHOR".equals(type)) {
+                    badges.add(FeedBadgeResponse.builder().label("Matched Author").tone("author").build());
+                } else if ("TOPIC".equals(type)) {
+                    badges.add(FeedBadgeResponse.builder().label("Matched Topic").tone("topic").build());
                 }
-            } catch (Exception ignored) {
             }
         }
+
         if (badges.isEmpty()) {
             badges.add(FeedBadgeResponse.builder().label("Relevant Option").tone("match").build());
         }
+
         return badges;
     }
 }
