@@ -11,6 +11,8 @@ import com.brotherhood.scipubtts.feed.repository.ApiJobRepository;
 import com.brotherhood.scipubtts.feed.service.FeedPersistenceService;
 import com.brotherhood.scipubtts.feed.service.ResearchFeedSyncService;
 import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +40,7 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
     private final OpenAlexWorksClient openAlexWorksClient;
     private final FeedPersistenceService feedPersistenceService;
     private final ApiJobRepository apiJobRepository;
+    private final ObjectMapper objectMapper;
 
     @Value("${openalex.feed.default-lookback-days:7}")
     private long defaultLookbackDays;
@@ -190,9 +193,6 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                             )
                     );
 
-                    draft.setRelevanceScore(
-                            Math.max(draft.getRelevanceScore(), calculateRelevanceScore(group.getTargetType()))
-                    );
                 }
             }
 
@@ -220,7 +220,28 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
         draft.setPublicationDate(work.publicationDate());
         draft.setCitationSnapshot(work.citedByCount());
         draft.setGeneratedAt(OffsetDateTime.now());
-        draft.setRelevanceScore(0.0);
+
+        // ── 10 field mới ────────────────────────────────────────────────
+        draft.setAuthorOpenAlexIdsSnapshot(buildAuthorOpenAlexIdsSnapshot(work.authorships()));
+        draft.setWorkTypeSnapshot(work.type());
+        draft.setDoi(work.doi());
+        draft.setPdfUrl(extractPdfUrl(work.primaryLocation()));
+        draft.setAbstractText(decodeAbstract(work.abstractInvertedIndex()));
+
+        OpenAlexWorksResponse.Topic primaryTopic = extractPrimaryTopic(work.topics());
+        if (primaryTopic != null) {
+            draft.setTopicSnapshot(primaryTopic.displayName());
+            draft.setTopicOpenAlexIdSnapshot(normalizeOpenAlexId(primaryTopic.id()));
+
+            if (primaryTopic.field() != null) {
+                draft.setPrimaryFieldSnapshot(primaryTopic.field().displayName());
+            }
+            if (primaryTopic.subfield() != null) {
+                draft.setSubfieldSnapshot(primaryTopic.subfield().displayName());
+            }
+        }
+
+        draft.setKeywordsJson(buildKeywordsJson(work.keywords()));
 
         return draft;
     }
@@ -234,8 +255,21 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .filter(a -> a.author() != null)
                 .map(a -> a.author().displayName())
                 .filter(StringUtils::hasText)
-                .limit(3)
                 .collect(Collectors.joining(", "));
+    }
+
+    private String buildAuthorOpenAlexIdsSnapshot(List<OpenAlexWorksResponse.Authorship> authorships) {
+        if (authorships == null || authorships.isEmpty()) {
+            return null;
+        }
+
+        String joined = authorships.stream()
+                .filter(a -> a.author() != null)
+                .map(a -> normalizeOpenAlexId(a.author().id()))
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining(","));
+
+        return StringUtils.hasText(joined) ? joined : null;
     }
 
     private String extractSourceName(OpenAlexWorksResponse.PrimaryLocation primaryLocation) {
@@ -246,12 +280,59 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
         return primaryLocation.source().displayName();
     }
 
-    private double calculateRelevanceScore(String targetType) {
-        return switch (targetType) {
-            case "AUTHOR" -> 1.0;
-            case "TOPIC" -> 0.8;
-            default -> 0.5;
-        };
+    private String extractPdfUrl(OpenAlexWorksResponse.PrimaryLocation primaryLocation) {
+        if (primaryLocation == null) {
+            return null;
+        }
+        return primaryLocation.pdfUrl();
+    }
+
+    private OpenAlexWorksResponse.Topic extractPrimaryTopic(List<OpenAlexWorksResponse.Topic> topics) {
+        if (topics == null || topics.isEmpty()) {
+            return null;
+        }
+        return topics.stream()
+                .max(Comparator.comparingDouble(OpenAlexWorksResponse.Topic::score))
+                .orElse(null);
+    }
+
+    private String buildKeywordsJson(List<OpenAlexWorksResponse.Keyword> keywords) {
+        if (keywords == null || keywords.isEmpty()) {
+            return null;
+        }
+
+        List<String> keywordNames = keywords.stream()
+                .map(OpenAlexWorksResponse.Keyword::displayName)
+                .filter(StringUtils::hasText)
+                .toList();
+
+        if (keywordNames.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(keywordNames);
+        } catch (JsonProcessingException e) {
+            log.warn("Cannot serialize keywords into JSON, bỏ qua keywordsJson cho work này", e);
+            return null;
+        }
+    }
+
+    private String decodeAbstract(Map<String, List<Integer>> invertedIndex) {
+        if (invertedIndex == null || invertedIndex.isEmpty()) {
+            return null;
+        }
+
+        TreeMap<Integer, String> positionToWord = new TreeMap<>();
+        invertedIndex.forEach((word, positions) -> {
+            if (positions != null) {
+                for (Integer pos : positions) {
+                    positionToWord.put(pos, word);
+                }
+            }
+        });
+
+        return String.join(" ", positionToWord.values());
     }
 
     private List<UUID> parseUserIds(String userIds) {

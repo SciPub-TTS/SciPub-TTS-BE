@@ -85,14 +85,11 @@ public class FeedServiceImpl implements FeedService {
     }
 
     private FeedItemResponse mapToFeedItemResponse(ResearchFeed item) {
-        Double score = item.getRelevanceScore() != null ? item.getRelevanceScore() : 0.85;
-        int relevance = (int) (score > 1.0 ? score : score * 100);
 
         JsonNode reasonNode = parseReasonJson(item.getReasonJson());
 
         return FeedItemResponse.builder()
                 .id(item.getId().toString())
-                .relevance(relevance)
                 .badges(extractBadges(reasonNode, item.getSourceSnapshot()))
                 .year(item.getPublicationYear() != null ? item.getPublicationYear() : 2025)
                 .title(item.getTitleSnapshot())

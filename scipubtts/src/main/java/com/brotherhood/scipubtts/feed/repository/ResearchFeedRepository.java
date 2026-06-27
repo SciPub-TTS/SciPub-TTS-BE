@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -38,11 +39,22 @@ public class ResearchFeedRepository {
                     publication_date,
                     citation_snapshot,
                     reason_json,
-                    relevance_score,
                     generated_at,
-                    is_seen
+                    author_openalex_ids_snapshot,
+                    work_type_snapshot,
+                    topic_snapshot,
+                    topic_openalex_id_snapshot,
+                    abstract_text,
+                    doi,
+                    pdf_url,
+                    keywords_json,
+                    primary_fields_snapshot,
+                    subfield_snapshot
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, false)
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?
+                )
                 ON CONFLICT (user_id, work_openalex_id)
                 DO NOTHING
                 """;
@@ -87,8 +99,24 @@ public class ResearchFeedRepository {
                     }
 
                     ps.setString(10, reasonJson);
-                    ps.setDouble(11, draft.getRelevanceScore());
-                    ps.setTimestamp(12, Timestamp.from(draft.getGeneratedAt().toInstant()));
+                    ps.setTimestamp(11, Timestamp.from(draft.getGeneratedAt().toInstant()));
+
+                    ps.setString(12, draft.getAuthorOpenAlexIdsSnapshot());
+                    ps.setString(13, draft.getWorkTypeSnapshot());
+                    ps.setString(14, draft.getTopicSnapshot());
+                    ps.setString(15, draft.getTopicOpenAlexIdSnapshot());
+                    ps.setString(16, draft.getAbstractText());
+                    ps.setString(17, draft.getDoi());
+                    ps.setString(18, draft.getPdfUrl());
+
+                    if (StringUtils.hasText(draft.getKeywordsJson())) {
+                        ps.setString(19, draft.getKeywordsJson());
+                    } else {
+                        ps.setNull(19, java.sql.Types.OTHER);
+                    }
+
+                    ps.setString(20, draft.getPrimaryFieldSnapshot());
+                    ps.setString(21, draft.getSubfieldSnapshot());
                 }
         );
 
@@ -103,5 +131,4 @@ public class ResearchFeedRepository {
 
         return saved;
     }
-
 }
