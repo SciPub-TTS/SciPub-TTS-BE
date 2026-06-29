@@ -82,14 +82,12 @@ public class FeedServiceImpl implements FeedService {
     }
 
     private FeedItemResponse mapToFeedItemResponse(ResearchFeed item) {
-        Double score = item.getRelevanceScore() != null ? item.getRelevanceScore() : 0.85;
-        int relevance = (int) (score > 1.0 ? score : score * 100);
 
         JsonNode reasonNode = parseReasonJson(item.getReasonJson());
 
         return FeedItemResponse.builder()
                 .id(item.getWorkOpenAlexId())
-                .relevance(relevance)
+                .relevance(extractRelevance(reasonNode))
                 .badges(extractBadges(reasonNode, item.getSourceSnapshot()))
                 .year(item.getPublicationYear() != null ? item.getPublicationYear() : 2025)
                 .title(item.getTitleSnapshot())
@@ -101,6 +99,17 @@ public class FeedServiceImpl implements FeedService {
                 .tabMatches(extractTabMatches(reasonNode))
                 .tags(extractTags(reasonNode))
                 .build();
+    }
+
+    private int extractRelevance(JsonNode reasonNode) {
+        JsonNode reasons = reasonNode.path("reasons");
+
+        if (!reasons.isArray() || reasons.isEmpty()) {
+            return 75;
+        }
+
+        int reasonCount = reasons.size();
+        return Math.min(75 + (reasonCount * 10), 100);
     }
 
     private List<FeedAuthorResponse> parseAuthors(String authorsSnapshot) {

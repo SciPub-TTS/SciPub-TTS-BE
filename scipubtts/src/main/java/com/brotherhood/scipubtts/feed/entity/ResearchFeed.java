@@ -52,12 +52,36 @@ public class ResearchFeed {
   @Column(name = "reason_json", columnDefinition = "jsonb")
   private String reasonJson;
 
-  @Column(name = "relevance_score")
-  private Double relevanceScore;
-
-  @Column(name = "is_seen", nullable = false)
-  private Boolean isSeen;
-
   @Column(name = "dismissed_at")
   private OffsetDateTime dismissedAt;
+
+  @Column(name = "author_openalex_ids_snapshot", columnDefinition = "TEXT")
+  private String authorOpenAlexIdsSnapshot;
+
+  @Column(name = "work_type_snapshot", columnDefinition = "TEXT")
+  private String workTypeSnapshot;
+
+  @Column(name = "topic_snapshot", columnDefinition = "TEXT")
+  private String topicSnapshot;
+
+  @Column(name = "topic_openalex_id_snapshot", columnDefinition = "TEXT")
+  private String topicOpenAlexIdSnapshot;
+
+  @Column(name = "abstract_text", columnDefinition = "TEXT")
+  private String abstractText;
+
+  @Column(name = "doi", columnDefinition = "TEXT")
+  private String doi;
+
+  @Column(name = "pdf_url", columnDefinition = "TEXT")
+  private String pdfUrl;
+
+  @Column(name = "keywords_json", columnDefinition = "jsonb")
+  private String keywordsJson;
+
+  @Column(name = "primary_fields_snapshot")
+  private String primaryFieldSnapshot;
+
+  @Column(name="subfield_snapshot")
+  private String subfieldSnapshot;
 }

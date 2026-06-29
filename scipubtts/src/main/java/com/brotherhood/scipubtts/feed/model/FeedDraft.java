@@ -22,8 +22,18 @@ public class FeedDraft {
     private Integer publicationYear;
     private LocalDate publicationDate;
     private Integer citationSnapshot;
-    private double relevanceScore;
     private OffsetDateTime generatedAt;
+
+    private String authorOpenAlexIdsSnapshot;
+    private String workTypeSnapshot;
+    private String topicSnapshot;
+    private String topicOpenAlexIdSnapshot;
+    private String abstractText;
+    private String doi;
+    private String pdfUrl;
+    private String keywordsJson;
+    private String primaryFieldSnapshot;
+    private String subfieldSnapshot;
 
     private final Set<FeedReason> reasons = new LinkedHashSet<>();
 }
