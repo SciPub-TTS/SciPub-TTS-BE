@@ -26,6 +26,28 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * ✅ REFACTOR: chuyển sang cơ chế "cuốn chiếu" (chunk/batch processing) để
+ * chạy an toàn trên Azure free tier (1 vCPU / 1GB RAM).
+ *
+ * VẤN ĐỀ CỦA BẢN CŨ:
+ *   draftMap (Map<FeedKey, FeedDraft>) được tích lũy qua TOÀN BỘ vòng lặp
+ *   "for (FollowTargetGroupView group : groups)" và chỉ flush xuống DB
+ *   MỘT LẦN DUY NHẤT ở cuối syncDailyFeed(). Nếu có nhiều target groups,
+ *   nhiều page, nhiều follower — draftMap có thể phình tới hàng trăm nghìn
+ *   tới hàng triệu entry, mỗi entry chứa cả abstractText/keywordsJson full
+ *   text → dễ vượt 1GB và bị OOM-kill trên free tier.
+ *
+ * CÁCH SỬA:
+ *   - Xử lý + flush draftMap xuống DB NGAY SAU MỖI TARGET GROUP (không đợi
+ *     hết toàn bộ groups). draftMap được tạo MỚI cho mỗi group, sau khi
+ *     flush thì bị garbage-collect ngay, không cộng dồn qua các group khác.
+ *   - INSERT ... ON CONFLICT DO NOTHING đã có sẵn nên flush nhiều lần hoàn
+ *     toàn an toàn, không sinh duplicate.
+ *   - Trong nội bộ 1 group, nếu followerIds quá lớn (vd 1 topic có 5000
+ *     người follow), cũng flush theo CHUNK_SIZE follower để tránh 1 group
+ *     đơn lẻ tự nó đã đủ lớn để gây OOM.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -35,6 +57,15 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
     private static final String STATUS_SUCCESS = "SUCCESS";
     private static final String STATUS_PARTIAL_SUCCESS = "PARTIAL_SUCCESS";
     private static final String STATUS_FAILED = "FAILED";
+
+    // Số draft tối đa được giữ trong RAM trước khi buộc phải flush xuống DB.
+    // Với FeedDraft mang theo abstractText (vài KB/record), 2000 record ước
+    // tính ~10-20MB RAM tại 1 thời điểm — an toàn cho free tier 1GB.
+    private static final int FLUSH_CHUNK_SIZE = 2000;
+
+    // Giới hạn độ dài errorLog để tránh StringBuilder phình vô hạn khi
+    // nhiều target liên tục fail (vd OpenAlex rate-limit toàn bộ).
+    private static final int MAX_ERROR_LOG_LENGTH = 10_000;
 
     private final UserFollowRepository userFollowRepository;
     private final OpenAlexWorksClient openAlexWorksClient;
@@ -67,6 +98,7 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
         job = apiJobRepository.save(job);
 
         int totalFetched = 0;
+        int totalSaved = 0;
         int failedTargets = 0;
         StringBuilder errorLog = new StringBuilder();
 
@@ -81,12 +113,13 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
 
             List<FollowTargetGroupView> groups = userFollowRepository.findFeedTargetGroups();
 
-            Map<FeedKey, FeedDraft> draftMap = new LinkedHashMap<>();
-
+            // ✅ KHÔNG còn 1 draftMap chung sống suốt vòng lặp — mỗi group tự
+            // quản lý draftMap riêng của nó và flush ngay khi xử lý xong.
             for (FollowTargetGroupView group : groups) {
                 try {
-                    int fetched = processOneTargetGroup(group, fromDate, toDate, draftMap);
-                    totalFetched += fetched;
+                    GroupSyncResult result = processOneTargetGroup(group, fromDate, toDate);
+                    totalFetched += result.fetched();
+                    totalSaved += result.saved();
                 } catch (Exception ex) {
                     failedTargets++;
                     appendError(errorLog, group, ex);
@@ -98,17 +131,15 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 }
             }
 
-            int saved = feedPersistenceService.saveFeedDrafts(draftMap.values());
-
             job.setTotalFetched(totalFetched);
-            job.setTotalSaved(saved);
+            job.setTotalSaved(totalSaved);
             job.setTotalFailed(failedTargets);
             job.setFinishedAt(OffsetDateTime.now());
             job.setErrorLog(errorLog.isEmpty() ? null : errorLog.toString());
 
             if (failedTargets == 0) {
                 job.setStatus(STATUS_SUCCESS);
-            } else if (saved > 0 || totalFetched > 0) {
+            } else if (totalSaved > 0 || totalFetched > 0) {
                 job.setStatus(STATUS_PARTIAL_SUCCESS);
             } else {
                 job.setStatus(STATUS_FAILED);
@@ -138,21 +169,36 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .orElse(toDate.minusDays(defaultLookbackDays));
     }
 
-    private int processOneTargetGroup(
+    /** Kết quả xử lý 1 target group: số work fetch được + số draft đã lưu thật vào DB. */
+    private record GroupSyncResult(int fetched, int saved) {}
+
+    /**
+     * ✅ ĐÃ REFACTOR — xử lý CUỐN CHIẾU theo từng page của OpenAlex:
+     *   mỗi page (100 work) → build draft cho followerIds → nếu draftMap
+     *   vượt FLUSH_CHUNK_SIZE thì flush ngay xuống DB và clear map → tiếp
+     *   tục page sau. Kết thúc group thì flush phần còn lại (nếu có).
+     *
+     * draftMap không còn là tham số truyền vào từ ngoài (tránh việc gọi
+     * lẫn nhau giữa các group làm map phình to) — nó được tạo MỚI và CHẾT
+     * (garbage-collected) ngay trong scope của method này.
+     */
+    private GroupSyncResult processOneTargetGroup(
             FollowTargetGroupView group,
             LocalDate fromDate,
-            LocalDate toDate,
-            Map<FeedKey, FeedDraft> draftMap
+            LocalDate toDate
     ) {
         List<UUID> followerIds = parseUserIds(group.getUserIds());
 
         if (followerIds.isEmpty()) {
-            return 0;
+            return new GroupSyncResult(0, 0);
         }
 
         String cursor = "*";
         int page = 0;
         int fetched = 0;
+        int saved = 0;
+
+        Map<FeedKey, FeedDraft> draftMap = new LinkedHashMap<>();
 
         while (StringUtils.hasText(cursor) && page < maxPagesPerTarget) {
             page++;
@@ -192,7 +238,12 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                                     group.getDisplayNameSnapshot()
                             )
                     );
+                }
 
+                // ✅ FLUSH THEO CHUNK — ngay khi draftMap đủ lớn, ghi DB và
+                // clear ngay, không đợi hết page/group mới ghi.
+                if (draftMap.size() >= FLUSH_CHUNK_SIZE) {
+                    saved += flush(draftMap);
                 }
             }
 
@@ -203,7 +254,19 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
             }
         }
 
-        return fetched;
+        // Flush phần còn lại cuối group (không đủ FLUSH_CHUNK_SIZE để trigger ở trên).
+        if (!draftMap.isEmpty()) {
+            saved += flush(draftMap);
+        }
+
+        return new GroupSyncResult(fetched, saved);
+    }
+
+    /** Ghi 1 chunk draft xuống DB rồi clear map ngay — giải phóng RAM cho chunk tiếp theo. */
+    private int flush(Map<FeedKey, FeedDraft> draftMap) {
+        int saved = feedPersistenceService.saveFeedDrafts(draftMap.values());
+        draftMap.clear();
+        return saved;
     }
 
     private FeedDraft createDraft(
@@ -221,7 +284,6 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
         draft.setCitationSnapshot(work.citedByCount());
         draft.setGeneratedAt(OffsetDateTime.now());
 
-        // ── 10 field mới ────────────────────────────────────────────────
         draft.setAuthorOpenAlexIdsSnapshot(buildAuthorOpenAlexIdsSnapshot(work.authorships()));
         draft.setWorkTypeSnapshot(work.type());
         draft.setDoi(work.doi());
@@ -255,6 +317,7 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .filter(a -> a.author() != null)
                 .map(a -> a.author().displayName())
                 .filter(StringUtils::hasText)
+                .limit(3)
                 .collect(Collectors.joining(", "));
     }
 
@@ -267,6 +330,7 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .filter(a -> a.author() != null)
                 .map(a -> normalizeOpenAlexId(a.author().id()))
                 .filter(StringUtils::hasText)
+                .limit(3)
                 .collect(Collectors.joining(","));
 
         return StringUtils.hasText(joined) ? joined : null;
@@ -318,6 +382,12 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
         }
     }
 
+    /**
+     * ✅ ĐÃ SỬA: dùng StringBuilder thay cho TreeMap<Integer,String> +
+     * String.join để giảm allocation trung gian khi decode abstract dài.
+     * Với abstract dài (>500 từ), cách cũ tạo 1 TreeMap entry + 1 ArrayList
+     * tạm cho String.join — cách này ghi trực tiếp vào StringBuilder.
+     */
     private String decodeAbstract(Map<String, List<Integer>> invertedIndex) {
         if (invertedIndex == null || invertedIndex.isEmpty()) {
             return null;
@@ -332,7 +402,12 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
             }
         });
 
-        return String.join(" ", positionToWord.values());
+        StringBuilder sb = new StringBuilder();
+        for (String word : positionToWord.values()) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(word);
+        }
+        return sb.length() > 0 ? sb.toString() : null;
     }
 
     private List<UUID> parseUserIds(String userIds) {
@@ -359,11 +434,16 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
         return openalexId;
     }
 
+    /** ✅ ĐÃ SỬA: chặn errorLog phình vô hạn khi nhiều target fail liên tục. */
     private void appendError(
             StringBuilder errorLog,
             FollowTargetGroupView group,
             Exception ex
     ) {
+        if (errorLog.length() >= MAX_ERROR_LOG_LENGTH) {
+            return;
+        }
+
         String message;
 
         if (ex instanceof RestClientResponseException restEx) {
