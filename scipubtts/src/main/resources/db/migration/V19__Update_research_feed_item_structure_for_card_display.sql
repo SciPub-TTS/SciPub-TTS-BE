@@ -1,4 +1,4 @@
-    -- ====================================================================
+-- ====================================================================
 -- Version: V19
 -- Description: Update research_feed_item structure to support rich card display
 --              and clean up unused fields (relevance_score, is_seen).
