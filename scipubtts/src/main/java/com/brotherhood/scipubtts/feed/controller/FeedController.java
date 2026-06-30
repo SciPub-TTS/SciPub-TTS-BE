@@ -40,9 +40,20 @@ public class FeedController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam FeedTab feedTab,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String exactMatchType,
+            @RequestParam(required = false) String exactMatchId,
+            @RequestParam(required = false) String exactMatchName) {
 
-        FeedResponse data = feedService.getFeed(userId, feedTab, page, pageSize);
+        FeedResponse data = feedService.getFeed(
+                userId,
+                feedTab,
+                page,
+                pageSize,
+                exactMatchType,
+                exactMatchId,
+                exactMatchName
+        );
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded feed publications", data));

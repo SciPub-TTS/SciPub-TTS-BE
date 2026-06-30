@@ -19,6 +19,6 @@ public class FeedPersistenceServiceImpl implements FeedPersistenceService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int saveFeedDrafts(Collection<FeedDraft> drafts) {
-        return researchFeedRepository.batchInsertDoNothing(drafts);
+        return researchFeedRepository.batchUpsertAndBackfillSnapshots(drafts);
     }
 }

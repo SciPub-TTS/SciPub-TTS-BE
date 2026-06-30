@@ -11,7 +11,15 @@ import com.brotherhood.scipubtts.feed.dto.response.FollowedAuthorResponse;
 import com.brotherhood.scipubtts.feed.dto.response.SuggestedTopicResponse;
 
 public interface FeedService {
-    FeedResponse getFeed(UUID userId, FeedTab feedTab, int page, int pageSize);
+    FeedResponse getFeed(
+            UUID userId,
+            FeedTab feedTab,
+            int page,
+            int pageSize,
+            String exactMatchType,
+            String exactMatchId,
+            String exactMatchName
+    );
 
     List<FollowedTopicResponse> getFollowedTopics(UUID userId);
 

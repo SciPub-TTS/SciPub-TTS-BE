@@ -21,11 +21,13 @@ import com.brotherhood.scipubtts.feed.service.FeedService;
 import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
 import com.brotherhood.scipubtts.follow.entity.UserFollow;
 import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
+import com.brotherhood.scipubtts.feed.dto.response.FeedEntityRefResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -37,10 +39,25 @@ public class FeedServiceImpl implements FeedService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public FeedResponse getFeed(UUID userId, FeedTab feedTab, int page, int pageSize) {
+    public FeedResponse getFeed(
+            UUID userId,
+            FeedTab feedTab,
+            int page,
+            int pageSize,
+            String exactMatchType,
+            String exactMatchId,
+            String exactMatchName
+    ) {
         Sort sort = Sort.by(Sort.Direction.DESC, "generated_at");
         Pageable pageable = PageRequest.of(page, pageSize, sort);
-        Page<ResearchFeed> feedPage = researchFeedJpaRepository.findUserFeed(userId, feedTab.name(), pageable);
+        Page<ResearchFeed> feedPage = researchFeedJpaRepository.findUserFeed(
+                userId,
+                feedTab.name(),
+                normalizeExactMatchType(exactMatchType),
+                normalizeOpenAlexId(exactMatchId),
+                normalizeExactMatchName(exactMatchName),
+                pageable
+        );
 
         List<FeedItemResponse> items = feedPage.getContent().stream()
                 .map(this::mapToFeedItemResponse)
@@ -82,23 +99,81 @@ public class FeedServiceImpl implements FeedService {
     }
 
     private FeedItemResponse mapToFeedItemResponse(ResearchFeed item) {
-
         JsonNode reasonNode = parseReasonJson(item.getReasonJson());
+        List<String> authorNames = parseAuthorNames(item.getAuthorsSnapshot());
+        List<FeedEntityRefResponse> authorRefs = parseAuthorRefs(
+                item.getAuthorsSnapshot(),
+                item.getAuthorOpenAlexIdsSnapshot()
+        );
+        List<String> keywords = parseKeywords(item.getKeywordsJson());
+        FeedEntityRefResponse topicRef = mapTopicRef(
+                item.getTopicOpenAlexIdSnapshot(),
+                item.getTopicSnapshot()
+        );
 
         return FeedItemResponse.builder()
                 .id(item.getWorkOpenAlexId())
-                .relevance(extractRelevance(reasonNode))
-                .badges(extractBadges(reasonNode, item.getSourceSnapshot()))
-                .year(item.getPublicationYear() != null ? item.getPublicationYear() : 2025)
                 .title(item.getTitleSnapshot())
-                .authors(parseAuthors(item.getAuthorsSnapshot()))
-                .extraAuthors(0)
-                .venue(item.getSourceSnapshot() != null ? item.getSourceSnapshot() : "Unknown Publisher")
-                .citations(item.getCitationSnapshot() != null ? item.getCitationSnapshot() : 0)
+                .abstractText(item.getAbstractText())
+                .doi(item.getDoi())
+                .publicationYear(item.getPublicationYear())
+                .citedByCount(item.getCitationSnapshot() != null ? item.getCitationSnapshot() : 0)
+                .openAccess(null)
+                .hasPdf(StringUtils.hasText(item.getPdfUrl()))
+                .pdfUrl(item.getPdfUrl())
+                .hasOrcid(null)
+                .type(item.getWorkTypeSnapshot())
+                .topic(item.getTopicSnapshot())
+                .subFieldName(item.getSubfieldSnapshot())
+                .sourceId(null)
+                .sourceName(item.getSourceSnapshot())
+                .authors(authorNames)
+                .authorRefs(authorRefs)
+                .keywords(keywords)
+                .topicRef(topicRef)
+                .matchesTrendingKeyword(false)
+                .matchesTrendingTopic(false)
+                .trendingScore(0.0)
+                .relevance(extractRelevance(reasonNode))
                 .reason(extractReason(reasonNode))
                 .tabMatches(extractTabMatches(reasonNode))
-                .tags(extractTags(reasonNode))
                 .build();
+    }
+
+    private String normalizeExactMatchType(String exactMatchType) {
+        if (!StringUtils.hasText(exactMatchType)) {
+            return null;
+        }
+
+        String normalizedType = exactMatchType.trim().toUpperCase();
+        if (!"AUTHOR".equals(normalizedType) && !"TOPIC".equals(normalizedType)) {
+            return null;
+        }
+
+        return normalizedType;
+    }
+
+    private String normalizeOpenAlexId(String openAlexId) {
+        if (!StringUtils.hasText(openAlexId)) {
+            return null;
+        }
+
+        String normalizedId = openAlexId.trim();
+        int lastSlash = normalizedId.lastIndexOf("/");
+        if (lastSlash >= 0) {
+            normalizedId = normalizedId.substring(lastSlash + 1);
+        }
+
+        return StringUtils.hasText(normalizedId) ? normalizedId : null;
+    }
+
+    private String normalizeExactMatchName(String exactMatchName) {
+        if (!StringUtils.hasText(exactMatchName)) {
+            return null;
+        }
+
+        String normalizedName = exactMatchName.trim();
+        return StringUtils.hasText(normalizedName) ? normalizedName : null;
     }
 
     private int extractRelevance(JsonNode reasonNode) {
@@ -112,22 +187,61 @@ public class FeedServiceImpl implements FeedService {
         return Math.min(75 + (reasonCount * 10), 100);
     }
 
-    private List<FeedAuthorResponse> parseAuthors(String authorsSnapshot) {
-        if (authorsSnapshot == null || authorsSnapshot.isBlank()) {
-            return List.of();
-        }
-        try {
-            if (authorsSnapshot.trim().startsWith("[")) {
-                return objectMapper.readValue(authorsSnapshot, new TypeReference<List<FeedAuthorResponse>>() {
-                });
-            }
-        } catch (Exception ignored) {
+    private List<String> parseAuthorNames(String authorsSnapshot) {
+        return splitCommaSeparatedValues(authorsSnapshot);
+    }
+
+    private List<FeedEntityRefResponse> parseAuthorRefs(
+            String authorsSnapshot,
+            String authorOpenAlexIdsSnapshot
+    ) {
+        List<String> authorNames = splitCommaSeparatedValues(authorsSnapshot);
+        List<String> authorIds = splitCommaSeparatedValues(authorOpenAlexIdsSnapshot);
+        List<FeedEntityRefResponse> authorRefs = new ArrayList<>();
+
+        for (int index = 0; index < authorNames.size(); index++) {
+            String authorId = index < authorIds.size() ? authorIds.get(index) : null;
+            authorRefs.add(FeedEntityRefResponse.builder()
+                    .id(StringUtils.hasText(authorId) ? authorId : null)
+                    .displayName(authorNames.get(index))
+                    .build());
         }
 
-        return Arrays.stream(authorsSnapshot.split(","))
+        return authorRefs;
+    }
+
+    private List<String> parseKeywords(String keywordsJson) {
+        if (!StringUtils.hasText(keywordsJson)) {
+            return List.of();
+        }
+
+        try {
+            return objectMapper.readValue(keywordsJson, new TypeReference<List<String>>() {
+            });
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private FeedEntityRefResponse mapTopicRef(String topicId, String topicName) {
+        if (!StringUtils.hasText(topicName)) {
+            return null;
+        }
+
+        return FeedEntityRefResponse.builder()
+                .id(StringUtils.hasText(topicId) ? topicId : null)
+                .displayName(topicName)
+                .build();
+    }
+
+    private List<String> splitCommaSeparatedValues(String rawValue) {
+        if (!StringUtils.hasText(rawValue)) {
+            return List.of();
+        }
+
+        return Arrays.stream(rawValue.split(","))
                 .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .map(name -> FeedAuthorResponse.builder().name(name).following(false).build())
+                .filter(StringUtils::hasText)
                 .toList();
     }
 
@@ -162,23 +276,6 @@ public class FeedServiceImpl implements FeedService {
         return "Recommended based on your followed profile filters.";
     }
 
-    private List<String> extractTags(JsonNode reasonNode) {
-
-        JsonNode reasons = reasonNode.path("reasons");
-        List<String> tags = new ArrayList<>();
-
-        if (reasons.isArray()) {
-            for (JsonNode reason : reasons) {
-                String display = reason.path("displayName").asText();
-                if (!display.isBlank()) {
-                    tags.add(display);
-                }
-            }
-        }
-
-        return tags;
-    }
-
     private List<String> extractTabMatches(JsonNode reasonNode) {
         List<String> tabMatches = new ArrayList<>();
         tabMatches.add("all");
@@ -203,32 +300,5 @@ public class FeedServiceImpl implements FeedService {
     private void tabKeyMatch(List<String> list, String val) {
         if (!list.contains(val))
             list.add(val);
-    }
-
-    private List<FeedBadgeResponse> extractBadges(JsonNode reasonNode, String source) {
-        List<FeedBadgeResponse> badges = new ArrayList<>();
-
-        if (source != null && !source.isBlank()) {
-            badges.add(FeedBadgeResponse.builder().label(source).tone("topic").build());
-        }
-
-        JsonNode reasons = reasonNode.path("reasons");
-        if (reasons.isArray()) {
-            for (JsonNode reason : reasons) {
-                String type = reason.path("type").asText();
-
-                if ("AUTHOR".equals(type)) {
-                    badges.add(FeedBadgeResponse.builder().label("Matched Author").tone("author").build());
-                } else if ("TOPIC".equals(type)) {
-                    badges.add(FeedBadgeResponse.builder().label("Matched Topic").tone("topic").build());
-                }
-            }
-        }
-
-        if (badges.isEmpty()) {
-            badges.add(FeedBadgeResponse.builder().label("Relevant Option").tone("match").build());
-        }
-
-        return badges;
     }
 }

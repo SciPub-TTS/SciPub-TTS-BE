@@ -317,7 +317,6 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .filter(a -> a.author() != null)
                 .map(a -> a.author().displayName())
                 .filter(StringUtils::hasText)
-                .limit(3)
                 .collect(Collectors.joining(", "));
     }
 
@@ -330,7 +329,6 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .filter(a -> a.author() != null)
                 .map(a -> normalizeOpenAlexId(a.author().id()))
                 .filter(StringUtils::hasText)
-                .limit(3)
                 .collect(Collectors.joining(","));
 
         return StringUtils.hasText(joined) ? joined : null;
