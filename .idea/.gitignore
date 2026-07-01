@@ -8,5 +8,6 @@
 /dataSources.xml
 /dataSources.local.xml
 /dbnavigator.xml
+/compiler.xml
 # Editor-based HTTP Client requests
 /httpRequests/
