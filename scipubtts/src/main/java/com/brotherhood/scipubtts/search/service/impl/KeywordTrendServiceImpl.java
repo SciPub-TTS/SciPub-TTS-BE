@@ -1,7 +1,7 @@
 package com.brotherhood.scipubtts.search.service.impl;
 
-import com.brotherhood.scipubtts.search.dto.HotKeywordItemResponse;
-import com.brotherhood.scipubtts.search.dto.HotKeywordResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotKeywordItemResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotKeywordResponse;
 import com.brotherhood.scipubtts.search.repository.KeywordTrendReadRepository;
 import com.brotherhood.scipubtts.search.service.KeywordTrendService;
 import org.springframework.data.domain.PageRequest;

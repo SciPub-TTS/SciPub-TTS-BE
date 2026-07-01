@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.search.dto;
+package com.brotherhood.scipubtts.search.dto.response;
 
 public record HotKeywordItemResponse(
         String keywordId,

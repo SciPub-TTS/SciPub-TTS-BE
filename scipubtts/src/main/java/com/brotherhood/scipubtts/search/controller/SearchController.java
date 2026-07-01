@@ -2,11 +2,11 @@ package com.brotherhood.scipubtts.search.controller;
 
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.search.dto.HotTopicResponse;
-import com.brotherhood.scipubtts.search.dto.HotKeywordResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchEntitiesResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotKeywordResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotTopicResponse;
 import com.brotherhood.scipubtts.search.dto.request.SearchEntityQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchEntityType;
 import com.brotherhood.scipubtts.search.dto.response.SearchHistoryItemResponse;
