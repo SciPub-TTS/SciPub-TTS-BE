@@ -42,7 +42,7 @@ public interface CollectionBookmarkRepository extends JpaRepository<CollectionBo
             JOIN BookmarkCollection c ON c.id = cb.collectionId
             WHERE c.userId = :userId
               AND cb.bookmarkId IN :bookmarkIds
-            ORDER BY LOWER(c.name) ASC, c.createdAt ASC
+            ORDER BY cb.bookmarkId ASC, cb.createdAt ASC, c.createdAt ASC
             """)
     List<BookmarkCollectionMembershipRow> findMembershipRowsByUserIdAndBookmarkIds(
             @Param("userId") UUID userId,
