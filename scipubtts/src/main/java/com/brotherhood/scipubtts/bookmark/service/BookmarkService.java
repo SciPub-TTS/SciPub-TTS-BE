@@ -42,6 +42,8 @@ public interface BookmarkService {
 
     BookmarkCollectionResponse createCollection(UUID userId, CreateBookmarkCollectionRequest request);
 
+    void deleteCollection(UUID userId, UUID collectionId);
+
     void addBookmarksToCollection(UUID userId, UUID collectionId, UpdateBookmarkCollectionItemsRequest request);
 
     void removeBookmarkFromCollection(UUID userId, UUID collectionId, UUID bookmarkId);

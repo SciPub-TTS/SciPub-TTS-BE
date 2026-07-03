@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.bookmark.repository;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.entity.BookmarkCollection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +16,14 @@ public interface BookmarkCollectionRepository extends JpaRepository<BookmarkColl
     boolean existsByUserIdAndNameIgnoreCase(UUID userId, String name);
 
     Optional<BookmarkCollection> findByIdAndUserId(UUID id, UUID userId);
+
+    @Modifying
+    @Query("""
+            DELETE FROM BookmarkCollection c
+            WHERE c.id = :id
+              AND c.userId = :userId
+            """)
+    int deleteOwnedCollectionById(@Param("id") UUID id, @Param("userId") UUID userId);
 
     @Query("""
             SELECT new com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse(
