@@ -113,6 +113,9 @@ public class BookmarkController {
         );
     }
 
+    // ==========================================
+    // 6. COLLECTIONS
+    // ==========================================
     @GetMapping("/collections")
     public ResponseEntity<ResponseObject> getCollections(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
@@ -133,6 +136,18 @@ public class BookmarkController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ResponseObject(201, "Bookmark collection created successfully", data));
+    }
+
+    @DeleteMapping("/collections/{collectionId}")
+    public ResponseEntity<ResponseObject> deleteCollection(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+            @PathVariable UUID collectionId) {
+
+        bookmarkService.deleteCollection(userId, collectionId);
+
+        return ResponseEntity.ok(
+                new ResponseObject(200, "Bookmark collection deleted successfully", null)
+        );
     }
 
     @PostMapping("/collections/{collectionId}/items")
@@ -162,7 +177,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 6. DELETE BOOKMARK BY ID
+    // 7. DELETE BOOKMARK BY ID
     // ==========================================
     @DeleteMapping("/{bookmarkId}")
     public ResponseEntity<ResponseObject> deleteBookmark(
@@ -177,7 +192,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 7. DELETE BOOKMARK BY OPENALEX ID
+    // 8. DELETE BOOKMARK BY OPENALEX ID
     // ==========================================
     @DeleteMapping("/by-openalex/{openAlexId}")
     public ResponseEntity<ResponseObject> deleteByOpenAlexId(

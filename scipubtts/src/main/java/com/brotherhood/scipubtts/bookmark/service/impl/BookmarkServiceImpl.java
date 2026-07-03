@@ -219,6 +219,17 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     @Override
     @Transactional
+    public void deleteCollection(UUID userId, UUID collectionId) {
+        requireCollection(userId, collectionId);
+        int deletedRows = bookmarkCollectionRepository.deleteOwnedCollectionById(collectionId, userId);
+
+        if (deletedRows == 0) {
+            throw new BusinessException(ErrorCode.BOOKMARK_COLLECTION_NOT_FOUND);
+        }
+    }
+
+    @Override
+    @Transactional
     public void addBookmarksToCollection(
             UUID userId,
             UUID collectionId,
