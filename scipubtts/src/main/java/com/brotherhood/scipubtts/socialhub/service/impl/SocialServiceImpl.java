@@ -273,7 +273,11 @@ public class SocialServiceImpl implements SocialService {
                 references.stream().map(this::toSummaryReferenceInfo).toList(),
                 post.getLikeCount(),
                 liked,
-                new SocialPostSummaryResponse.AuthorInfo(author.getId(), buildAuthorName(author)),
+                new SocialPostSummaryResponse.AuthorInfo(
+                        author.getId(),
+                        buildAuthorName(author),
+                        author.getAvatarUrl()
+                ),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
@@ -297,7 +301,11 @@ public class SocialServiceImpl implements SocialService {
                 extractTopicTags(post.getTopicTag()),
                 post.getLikeCount(),
                 liked,
-                new SocialPostDetailResponse.AuthorInfo(author.getId(), buildAuthorName(author)),
+                new SocialPostDetailResponse.AuthorInfo(
+                        author.getId(),
+                        buildAuthorName(author),
+                        author.getAvatarUrl()
+                ),
                 references.stream().map(this::toDetailReferenceInfo).toList(),
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
