@@ -30,9 +30,9 @@ public class OpenAPIConfig {
         return new OpenAPI()
                 // 1. Thiết lập thông tin cơ bản hiển thị ở đầu trang Swagger UI
                 .info(new Info()
-                        .title("SciPub-TTS API Documentation")
-                        .version("v1.0")
-                        .description("Tài liệu cấu hình và thử nghiệm API cho hệ thống SciPub-TTS"))
+                        .title("Owlreka API Documentation")
+                        .version("v3.6")
+                        .description("Tài liệu cấu hình và thử nghiệm API cho Owlreka"))
 
                 // 2. Ép tất cả các Endpoint mặc định đều có thể đính kèm Token này.
                 // Nếu không có dòng này, các API cá nhân sẽ không có biểu tượng ổ khóa nhỏ bên cạnh.
