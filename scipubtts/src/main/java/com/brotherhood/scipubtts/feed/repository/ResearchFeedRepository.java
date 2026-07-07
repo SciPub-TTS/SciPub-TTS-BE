@@ -21,7 +21,6 @@ public class ResearchFeedRepository {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
-
     public int batchUpsertAndBackfillSnapshots(Collection<FeedDraft> drafts) {
         if (drafts == null || drafts.isEmpty()) {
             return 0;

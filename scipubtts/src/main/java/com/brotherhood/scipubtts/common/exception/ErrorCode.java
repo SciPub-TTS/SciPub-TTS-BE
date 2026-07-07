@@ -134,7 +134,10 @@ public enum ErrorCode {
     SOCIAL_POST_TITLE_OR_BODY_BLANK(HttpStatus.BAD_REQUEST,
             "The post title and body cannot be blank."),
     SOCIAL_POST_REFERENCE_NOT_IN_BOOKMARK(HttpStatus.BAD_REQUEST,
-        "One or more referenced papers could not be found in your bookmarks.");
+        "One or more referenced papers could not be found in your bookmarks."),
+
+    // ===== SYSTEM / CONFIGURATION =====
+    CONFIGURATION_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "Required system configuration key is missing.");
 
     private final HttpStatus status;
     private final String message;

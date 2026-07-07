@@ -76,7 +76,7 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
     @Value("${openalex.feed.default-lookback-days:7}")
     private long defaultLookbackDays;
 
-    @Value("${openalex.feed.overlap-days:2}")
+    @Value("${openalex.feed.overlap-days:30}")
     private long overlapDays;
 
     @Value("${openalex.feed.max-pages-per-target:10}")
