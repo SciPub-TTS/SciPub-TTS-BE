@@ -31,6 +31,27 @@ public interface KeywordTrendReadRepository extends JpaRepository<Keyword, Long>
                     WITH latest_weekly_keywords AS (
                         SELECT
                             id,
+                            keyword,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY LOWER(keyword)
+                                ORDER BY cagr DESC, pgr DESC, ps DESC, cited_by_count DESC, works_count DESC, end_time DESC, start_time DESC, created_at DESC, id DESC
+                            ) AS row_rank
+                        FROM keywords
+                        WHERE end_time = :snapshotDate
+                    )
+                    SELECT COUNT(*)
+                    FROM latest_weekly_keywords
+                    WHERE row_rank = 1
+                    """,
+            nativeQuery = true
+    )
+    long countTrendingKeywords(@Param("snapshotDate") LocalDate snapshotDate);
+
+    @Query(
+            value = """
+                    WITH latest_weekly_keywords AS (
+                        SELECT
+                            id,
                             keyword_id,
                             keyword,
                             field_id,
