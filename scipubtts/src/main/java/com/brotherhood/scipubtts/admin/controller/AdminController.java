@@ -11,6 +11,8 @@ import com.brotherhood.scipubtts.admin.dto.AdminUserSearchHistoryPageResponse;
 import com.brotherhood.scipubtts.admin.service.AdminService;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
+import com.brotherhood.scipubtts.system.dto.CronConfigResponse;
+import com.brotherhood.scipubtts.system.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ import java.util.UUID;
 public class AdminController {
 
     private final AdminService adminService;
+    private final ScheduleService  scheduleService;
 
     @GetMapping("/users")
     public ResponseEntity<ResponseObject> getAllUsers(
@@ -160,6 +163,30 @@ public class AdminController {
                 new ResponseObject(
                         HttpStatus.OK.value(),
                         "API usage over time fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("config/feed-sync-cron")
+    public ResponseEntity<ResponseObject> getConfigFeedSyncCron() {
+        CronConfigResponse data = scheduleService.getDailySyncSchedule();
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Feed sync cron config fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("config/dashboard-sync-cron")
+    public ResponseEntity<ResponseObject> getConfigDashboardSyncCron() {
+        CronConfigResponse data = scheduleService.getWeeklyStatisticSchedule();
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Dashboard sync cron config fetched successfully",
                         data
                 )
         );

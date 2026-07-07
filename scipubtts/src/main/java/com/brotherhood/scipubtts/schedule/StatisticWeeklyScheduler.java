@@ -30,7 +30,6 @@ public class StatisticWeeklyScheduler {
   private final TopicServiceImpl topicService;
   private final KeywordServiceImpl keywordService;
 
-  @Scheduled(cron = "0 30 0 * * MON")
   public void runWeeklyStatisticJob() {
     log.info("Bắt đầu job thống kê hàng tuần lúc 0h30 thứ 2");
 

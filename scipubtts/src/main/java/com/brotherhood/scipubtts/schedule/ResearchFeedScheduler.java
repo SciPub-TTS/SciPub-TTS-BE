@@ -11,7 +11,6 @@ public class ResearchFeedScheduler {
 
     private final ResearchFeedSyncService researchFeedSyncService;
 
-    @Scheduled(cron = "0 0 2 * * *")
     public void syncResearchFeedDaily() {
         researchFeedSyncService.syncDailyFeed();
     }
