@@ -12,11 +12,19 @@ public class OpenAlexConfig {
   @Value("${openalex.base-url:https://api.openalex.org}")
   private String openAlexBaseUrl;
 
+  @Value("${openalex.api-key:}")
+  private String openAlexApiKey;
+
   @Bean
   public RestClient openAlexRestClient() {
-    return RestClient.builder()
+    var builder = RestClient.builder()
             .baseUrl(openAlexBaseUrl)
-            .defaultHeader(HttpHeaders.USER_AGENT, "ScipubTTS")
-            .build();
+            .defaultHeader(HttpHeaders.USER_AGENT, "ScipubTTS");
+
+    if (openAlexApiKey != null && !openAlexApiKey.isBlank()) {
+      builder = builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + openAlexApiKey);
+    }
+
+    return builder.build();
   }
 }

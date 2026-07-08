@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.dashboard.service.impl;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.common.openalex.OpenAlexCursorSupport;
+import com.brotherhood.scipubtts.dashboard.constant.OpenAlexEntity;
 import com.brotherhood.scipubtts.dashboard.dto.request.*;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsInPeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.openalex.OpenAlexMetricsToPeriodRequest;
@@ -18,6 +19,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class OpenAlexServiceImpl implements OpenAlexService {
@@ -56,12 +58,23 @@ public class OpenAlexServiceImpl implements OpenAlexService {
 
   // Service for metric
   public OpenAlexMetricsResponse takeMetricsInPeriod(OpenAlexMetricsInPeriodRequest request){
-    if(request.endTime().isEmpty() || request.startTime().isEmpty()){
+    if(request.endTime() == null || request.startTime() == null
+            || request.endTime().isEmpty() || request.startTime().isEmpty()){
       return null;
     }
 
-    var queryPeriod = String.format("from_publication_date:%s,to_publication_date:%s",
-            request.startTime(), request.endTime());
+    List<String> filters = new ArrayList<>();
+    filters.add("from_publication_date:" + request.startTime());
+    filters.add("to_publication_date:" + request.endTime());
+
+    if (request.fieldIds() != null && !request.fieldIds().isEmpty()) {
+      String fieldValues = request.fieldIds().stream()
+              .map(String::valueOf)
+              .collect(Collectors.joining("|"));
+      filters.add("primary_topic.field.id:" + fieldValues);
+    }
+
+    var queryPeriod = String.join(",", filters);
 
     return restClient.get()
             .uri(uriBuilder ->
@@ -79,7 +92,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     1
                             ).queryParam(
                                     "select",
-                                  "id"
+                                    "id"
                             )
                             .build())
             .retrieve()
@@ -91,20 +104,44 @@ public class OpenAlexServiceImpl implements OpenAlexService {
     var path = String.format(("/%s"), request.entity().getPath());
 
     return restClient.get()
-            .uri(uriBuilder ->
-                    uriBuilder
-                            .path(path)
-                            .queryParam(
-                                    "cursor",
-                                    OpenAlexCursorSupport.INITIAL_CURSOR
-                            ).queryParam(
-                                    "per_page",
-                                    1
-                            ).queryParam(
-                                    "select",
-                                    "id"
-                            )
-                            .build())
+            .uri(uriBuilder -> {
+              var builder = uriBuilder
+                      .path(path)
+                      .queryParam("cursor", OpenAlexCursorSupport.INITIAL_CURSOR)
+                      .queryParam("per_page", 1)
+                      .queryParam("select", "id");
+
+              List<String> filters = new ArrayList<>();
+
+              boolean canFilterByField = request.fieldIds() != null
+                      && !request.fieldIds().isEmpty()
+                      && request.entity() != OpenAlexEntity.KEYWORDS;
+
+              if (canFilterByField) {
+                String filterKey = request.entity() == OpenAlexEntity.TOPICS
+                        ? "field.id"
+                        : "primary_topic.field.id";
+
+                String fieldValues = request.fieldIds().stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining("|"));
+
+                filters.add(filterKey + ":" + fieldValues);
+              }
+
+              boolean canFilterByDate = request.entity() == OpenAlexEntity.WORKS
+                      && request.endTime() != null;
+
+              if (canFilterByDate) {
+                filters.add("to_publication_date:" + request.endTime());
+              }
+
+              if (!filters.isEmpty()) {
+                builder.queryParam("filter", String.join(",", filters));
+              }
+
+              return builder.build();
+            })
             .retrieve()
             .body(OpenAlexMetricsResponse.class);
   }
@@ -158,7 +195,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
                                     "id,display_name,works_count,cited_by_count"
                             ).queryParam(
                                     "sort",
-                                  "cited_by_count:desc"
+                                    "cited_by_count:desc"
                             )
                             .build())
             .retrieve()
@@ -566,12 +603,6 @@ public class OpenAlexServiceImpl implements OpenAlexService {
             keywordId, start, end
     );
 
-    System.out.println("========== KEYWORD QUERY ==========");
-    System.out.println("keywordId = " + keywordId);
-    System.out.println("start     = " + start);
-    System.out.println("end       = " + end);
-    System.out.println("filter    = " + filter);
-
     long total = 0L;
     String cursor = OpenAlexCursorSupport.INITIAL_CURSOR;
 
@@ -602,12 +633,7 @@ public class OpenAlexServiceImpl implements OpenAlexService {
               : null;
     }
 
-    long result = total;
-
-    System.out.println("result = " + result);
-    System.out.println("===================================");
-
-    return result;
+    return total;
   }
 
   public long numOfWorksInPeriodByField(
