@@ -1,6 +1,6 @@
 package com.brotherhood.scipubtts.search.service;
 
-import com.brotherhood.scipubtts.search.dto.HotTopicResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotTopicResponse;
 
 import java.time.LocalDate;
 

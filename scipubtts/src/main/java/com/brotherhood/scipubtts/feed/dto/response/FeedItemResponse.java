@@ -1,24 +1,33 @@
 package com.brotherhood.scipubtts.feed.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Builder;
 import java.util.List;
+import lombok.Builder;
 
 @Builder
 public record FeedItemResponse(
         String id,
-        Integer relevance,
-        List<FeedBadgeResponse> badges,
-        Integer year,
         String title,
-        List<FeedAuthorResponse> authors,
-        Integer extraAuthors,
-        String venue,
-        Integer citations,
-        @JsonProperty("abstract") String articleAbstract,
+        String abstractText,
+        String doi,
+        Integer publicationYear,
+        Integer citedByCount,
+        Boolean openAccess,
+        Boolean hasPdf,
+        String pdfUrl,
+        Boolean hasOrcid,
+        String type,
+        String topic,
+        String subFieldName,
+        String sourceId,
+        String sourceName,
+        List<String> authors,
+        List<FeedEntityRefResponse> authorRefs,
+        List<String> keywords,
+        FeedEntityRefResponse topicRef,
+        Boolean matchesTrendingKeyword,
+        Boolean matchesTrendingTopic,
+        Double trendingScore,
+        Integer relevance,
         String reason,
-        List<String> tabMatches,
-        List<String> tags,
-        String doiUrl,
-        String doiLabel
+        List<String> tabMatches
 ) {}

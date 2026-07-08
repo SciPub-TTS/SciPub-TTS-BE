@@ -17,6 +17,21 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OpenAlexWorksClient {
 
+    private static final String SELECT_FIELDS = String.join(",",
+            "id",
+            "display_name",
+            "publication_year",
+            "publication_date",
+            "cited_by_count",
+            "authorships",
+            "primary_location",
+            "doi",
+            "type",
+            "topics",
+            "keywords",
+            "abstract_inverted_index"
+    );
+
     private final RestClient openAlexRestClient;
 
     public OpenAlexWorksResponse fetchWorksPage(
@@ -39,7 +54,7 @@ public class OpenAlexWorksClient {
                             .queryParam("sort", "publication_date:desc")
                             .queryParam("per_page", 100)
                             .queryParam("cursor", cursor)
-                            .queryParam("select", "id,display_name,publication_year,publication_date,cited_by_count,authorships,primary_location")
+                            .queryParam("select", SELECT_FIELDS)
                             .build())
                     .retrieve()
                     .body(OpenAlexWorksResponse.class);

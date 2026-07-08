@@ -23,7 +23,7 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
             select sh.content as content, max(sh.createdAt) as latestCreatedAt
             from SearchHistory sh
             where (:userId is null or sh.userId = :userId)
-              and (:keyword = '' or lower(sh.content) like concat(lower(:keyword), '%'))
+              and (:keyword = '' or lower(sh.content) like concat('%', lower(:keyword), '%'))
             group by sh.content
             order by max(sh.createdAt) desc
             """)

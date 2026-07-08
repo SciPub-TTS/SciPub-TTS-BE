@@ -15,7 +15,7 @@ import java.util.List;
  */
 @Getter
 @Builder
-public class PaperExportData {
+public class  PaperExportData {
 
     private String openalexId;
     private String title;

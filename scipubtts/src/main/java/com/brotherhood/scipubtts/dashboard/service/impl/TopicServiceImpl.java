@@ -15,6 +15,7 @@ import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import com.brotherhood.scipubtts.dashboard.repository.TopicRepository;
 import com.brotherhood.scipubtts.dashboard.service.CalculationService;
 import com.brotherhood.scipubtts.dashboard.service.TopicService;
+import com.brotherhood.scipubtts.feed.dto.response.SuggestedTopicResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -553,6 +554,47 @@ public class TopicServiceImpl implements TopicService {
             .toList();
 
     return new TopicRankingResponse(topicDataList);
+  }
+
+  @Override
+  public SuggestedTopicResponse getSuggestTopic(TopicDataRequest request) {
+    LocalDate startDate = (request.startTime() != null && !request.startTime().isBlank())
+            ? LocalDate.parse(request.startTime())
+            : LocalDate.parse("2026-06-22");
+
+    LocalDate endDate = (request.endTime() != null && !request.endTime().isBlank())
+            ? LocalDate.parse(request.endTime())
+            : LocalDate.parse("2021-06-22");
+
+    Integer fieldId = (request.fieldId() != null && !request.fieldId().isBlank())
+            ? Integer.parseInt(request.fieldId())
+            : 17;
+
+    String formula = (request.formula() != null && !request.formula().isBlank())
+            ? request.formula()
+            : "TRENDING";
+
+    List<Topic> topics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+            startDate, endDate, fieldId
+    );
+
+    if (topics.isEmpty()) {
+      return new SuggestedTopicResponse(java.util.Collections.emptyList());
+    }
+
+    List<TopicScore> scores = calculationService.calculateTopicsFinalScore(
+            formula, topics
+    );
+
+    // 5. Stream và map sang cấu trúc TopicData rút gọn (chỉ còn name và topicId)
+    List<SuggestedTopicResponse.TopicData> topicDataList = scores.stream()
+            .map(ts -> new SuggestedTopicResponse.TopicData(
+                    ts.topic().getName(),
+                    ts.topic().getTopicId()
+            ))
+            .toList();
+
+    return new SuggestedTopicResponse(topicDataList);
   }
 
   private Topic createTopicSnapshot(Topic source) {

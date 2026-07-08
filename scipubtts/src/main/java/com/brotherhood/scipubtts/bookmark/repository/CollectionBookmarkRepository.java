@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.bookmark.repository;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.entity.CollectionBookmark;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -13,7 +14,16 @@ import java.util.UUID;
 
 public interface CollectionBookmarkRepository extends JpaRepository<CollectionBookmark, UUID> {
 
-    int deleteByCollectionIdAndBookmarkId(UUID collectionId, UUID bookmarkId);
+    @Modifying
+    @Query("""
+            DELETE FROM CollectionBookmark cb
+            WHERE cb.collectionId = :collectionId
+              AND cb.bookmarkId = :bookmarkId
+            """)
+    int deleteByCollectionIdAndBookmarkId(
+            @Param("collectionId") UUID collectionId,
+            @Param("bookmarkId") UUID bookmarkId
+    );
 
     List<CollectionBookmark> findByCollectionId(UUID collectionId);
 
@@ -42,7 +52,7 @@ public interface CollectionBookmarkRepository extends JpaRepository<CollectionBo
             JOIN BookmarkCollection c ON c.id = cb.collectionId
             WHERE c.userId = :userId
               AND cb.bookmarkId IN :bookmarkIds
-            ORDER BY LOWER(c.name) ASC, c.createdAt ASC
+            ORDER BY cb.bookmarkId ASC, cb.createdAt ASC, c.createdAt ASC
             """)
     List<BookmarkCollectionMembershipRow> findMembershipRowsByUserIdAndBookmarkIds(
             @Param("userId") UUID userId,

@@ -37,5 +37,6 @@ app.docs.public-enabled=true
 springdoc.api-docs.enabled=true
 springdoc.swagger-ui.enabled=true
 
+
 logging.level.org.springframework.security=DEBUG
 spring.devtools.restart.enabled=false

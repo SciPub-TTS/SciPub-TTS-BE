@@ -2,11 +2,11 @@ package com.brotherhood.scipubtts.search.controller;
 
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
-import com.brotherhood.scipubtts.search.dto.HotTopicResponse;
-import com.brotherhood.scipubtts.search.dto.HotKeywordResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchEntitiesResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotKeywordResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotTopicResponse;
 import com.brotherhood.scipubtts.search.dto.request.SearchEntityQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchEntityType;
 import com.brotherhood.scipubtts.search.dto.response.SearchHistoryItemResponse;
@@ -59,7 +59,6 @@ public class SearchController {
     @Operation(summary = "Get search summary")
     public ResponseEntity<ResponseObject> getSummary(
             @Parameter(
-                    example = "works",
                     schema = @Schema(allowableValues = {
                             "works",
                             "authors",
@@ -78,11 +77,8 @@ public class SearchController {
     @GetMapping("/filters/options")
     @Operation(summary = "Get search filter options")
     public ResponseEntity<ResponseObject> getFilterOptions(
-            @Parameter(example = "machine learning")
             @RequestParam(defaultValue = "") String keyword,
-            @Parameter(example = "10")
             @RequestParam(defaultValue = "10") int limit,
-            @Parameter(example = "1")
             @RequestParam(defaultValue = "1") int page
     ) {
         SearchFilterOptionsResponse data = searchService.getFilterOptions(keyword, limit, page);
@@ -94,7 +90,6 @@ public class SearchController {
     @Operation(summary = "Get one filter option list")
     public ResponseEntity<ResponseObject> getFilterOptionPage(
             @Parameter(
-                    example = "author",
                     schema = @Schema(allowableValues = {
                             "type",
                             "subField",
@@ -109,7 +104,6 @@ public class SearchController {
             )
             @PathVariable String filterKey,
             @Parameter(
-                    example = "works",
                     schema = @Schema(allowableValues = {
                             "works",
                             "authors",
@@ -117,11 +111,8 @@ public class SearchController {
                     })
             )
             @RequestParam(defaultValue = "works") String entityType,
-            @Parameter(example = "machine learning")
             @RequestParam(defaultValue = "") String keyword,
-            @Parameter(example = "10")
             @RequestParam(defaultValue = "10") int limit,
-            @Parameter(example = "1")
             @RequestParam(defaultValue = "1") int page
     ) {
         SearchFilterOptionListResponse data = searchService.getFilterOptionPage(
@@ -149,7 +140,6 @@ public class SearchController {
     @Operation(summary = "Search entities")
     public ResponseEntity<ResponseObject> searchEntities(
             @Parameter(
-                    example = "authors",
                     schema = @Schema(allowableValues = {
                             "authors",
                             "topics"
@@ -166,12 +156,10 @@ public class SearchController {
         return ok("Search entities successfully", data);
     }
 
-    @GetMapping({"/trending-topics", "/hot-topics"})
+    @GetMapping("/trending-topics")
     @Operation(summary = "Load weekly trending topics from the internal topic trend table")
     public ResponseEntity<ResponseObject> getTrendingTopics(
-            @Parameter(example = "2026-06-15")
             @RequestParam(required = false) LocalDate snapshotDate,
-            @Parameter(example = "8")
             @RequestParam(defaultValue = "8") int limit
     ) {
         HotTopicResponse data = topicTrendService.getWeeklyHotTopics(snapshotDate, limit);
@@ -179,12 +167,10 @@ public class SearchController {
         return ok("Loaded weekly trending topics", data);
     }
 
-    @GetMapping({"/trending-keywords", "/hot-keywords"})
+    @GetMapping("/trending-keywords")
     @Operation(summary = "Load weekly trending keywords from the internal keyword trend table")
     public ResponseEntity<ResponseObject> getTrendingKeywords(
-            @Parameter(example = "2026-06-15")
             @RequestParam(required = false) LocalDate snapshotDate,
-            @Parameter(example = "8")
             @RequestParam(defaultValue = "8") int limit
     ) {
         HotKeywordResponse data = keywordTrendService.getWeeklyHotKeywords(snapshotDate, limit);
@@ -196,9 +182,7 @@ public class SearchController {
     @Operation(summary = "Get recent search suggestions")
     public ResponseEntity<ResponseObject> getRecentSearches(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @Parameter(example = "AI")
             @RequestParam(defaultValue = "") String keyword,
-            @Parameter(example = "7")
             @RequestParam(defaultValue = "7") int limit
     ) {
         List<SearchHistoryItemResponse> data = searchService.getRecentSearches(userId, keyword, limit);
@@ -221,7 +205,6 @@ public class SearchController {
     @Operation(summary = "Delete one search history item")
     public ResponseEntity<ResponseObject> deleteSearchHistory(
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
-            @Parameter(example = "AI in education")
             @RequestParam String query
     ) {
         searchService.deleteSearchHistory(userId, query);

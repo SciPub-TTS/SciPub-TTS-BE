@@ -1,7 +1,7 @@
 package com.brotherhood.scipubtts.search.service.impl;
 
-import com.brotherhood.scipubtts.search.dto.HotTopicItemResponse;
-import com.brotherhood.scipubtts.search.dto.HotTopicResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotTopicItemResponse;
+import com.brotherhood.scipubtts.search.dto.response.HotTopicResponse;
 import com.brotherhood.scipubtts.search.repository.TopicTrendReadRepository;
 import com.brotherhood.scipubtts.search.service.TopicTrendService;
 import org.springframework.data.domain.PageRequest;

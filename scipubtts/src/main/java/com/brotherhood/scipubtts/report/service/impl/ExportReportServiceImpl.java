@@ -94,7 +94,8 @@ public class ExportReportServiceImpl implements ExportReportService {
                 writer.write("# Export Date: " + metadata.exportDate() + "\n");
                 writer.write("# Search Query: " + escapeForCommentLine(metadata.searchQuery()) + "\n");
                 writer.write("# Total Selected Papers: " + metadata.selectedPaperCount() + "\n");
-                writer.write("# Selected Fields: " + String.join(", ", metadata.selectedFields()) + "\n");
+                String fieldsString = String.join(", ", metadata.selectedFields());
+                writer.write("\"# Selected Fields: " + fieldsString + "\"\n");
                 writer.write("# Format: " + metadata.format() + "\n");
                 writer.write("\n");
             }

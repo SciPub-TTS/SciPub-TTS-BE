@@ -21,10 +21,27 @@ public interface ResearchFeedJpaRepository extends JpaRepository<ResearchFeed, U
                 :tabFilter = 'ALL'
                 OR (:tabFilter = 'MATCHED_TOPIC' AND r.reason_json::text LIKE '%"TOPIC"%')
                 OR (:tabFilter = 'MATCHED_AUTHOR' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'MATCHED_BOTH' AND r.reason_json::text LIKE '%"TOPIC"%' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'LATEST')
-                OR (:tabFilter = 'TRENDING')
-                OR (:tabFilter = 'RELEVANT')
+              )
+              AND (
+                :exactMatchType IS NULL
+                OR EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements(COALESCE(r.reason_json->'reasons', '[]'::jsonb)) reason
+                    WHERE reason->>'type' = :exactMatchType
+                      AND (
+                        (
+                          :exactMatchId IS NOT NULL
+                          AND (
+                            reason->>'targetOpenalexId' = :exactMatchId
+                            OR regexp_replace(reason->>'targetOpenalexId', '^.*/', '') = :exactMatchId
+                          )
+                        )
+                        OR (
+                          :exactMatchName IS NOT NULL
+                          AND LOWER(reason->>'displayName') = LOWER(:exactMatchName)
+                        )
+                      )
+                )
               )
             """,
             countQuery = """
@@ -35,16 +52,36 @@ public interface ResearchFeedJpaRepository extends JpaRepository<ResearchFeed, U
                 :tabFilter = 'ALL'
                 OR (:tabFilter = 'MATCHED_TOPIC' AND r.reason_json::text LIKE '%"TOPIC"%')
                 OR (:tabFilter = 'MATCHED_AUTHOR' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'MATCHED_BOTH' AND r.reason_json::text LIKE '%"TOPIC"%' AND r.reason_json::text LIKE '%"AUTHOR"%')
-                OR (:tabFilter = 'LATEST')
-                OR (:tabFilter = 'TRENDING')
-                OR (:tabFilter = 'RELEVANT')
+              )
+              AND (
+                :exactMatchType IS NULL
+                OR EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements(COALESCE(r.reason_json->'reasons', '[]'::jsonb)) reason
+                    WHERE reason->>'type' = :exactMatchType
+                      AND (
+                        (
+                          :exactMatchId IS NOT NULL
+                          AND (
+                            reason->>'targetOpenalexId' = :exactMatchId
+                            OR regexp_replace(reason->>'targetOpenalexId', '^.*/', '') = :exactMatchId
+                          )
+                        )
+                        OR (
+                          :exactMatchName IS NOT NULL
+                          AND LOWER(reason->>'displayName') = LOWER(:exactMatchName)
+                        )
+                      )
+                )
               )
             """,
             nativeQuery = true)
     Page<ResearchFeed> findUserFeed(
             @Param("userId") UUID userId,
             @Param("tabFilter") String tabFilter,
+            @Param("exactMatchType") String exactMatchType,
+            @Param("exactMatchId") String exactMatchId,
+            @Param("exactMatchName") String exactMatchName,
             Pageable pageable
     );
 }

@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.feed.controller;
 import java.util.List;
 import java.util.UUID;
 
+import com.brotherhood.scipubtts.dashboard.dto.request.TopicDataRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -39,9 +40,20 @@ public class FeedController {
             @Parameter(hidden = true) @CurrentUserUUID UUID userId,
             @RequestParam FeedTab feedTab,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String exactMatchType,
+            @RequestParam(required = false) String exactMatchId,
+            @RequestParam(required = false) String exactMatchName) {
 
-        FeedResponse data = feedService.getFeed(userId, feedTab, page, pageSize);
+        FeedResponse data = feedService.getFeed(
+                userId,
+                feedTab,
+                page,
+                pageSize,
+                exactMatchType,
+                exactMatchId,
+                exactMatchName
+        );
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded feed publications", data));
@@ -72,9 +84,11 @@ public class FeedController {
     @GetMapping("/suggested-topics")
     @Operation(summary = "Get suggested trending topics", description = "Returns trending topic suggestions personalized for the user context.")
     public ResponseEntity<ResponseObject> suggestedTopics(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
+            @Parameter(hidden = true) @CurrentUserUUID UUID userId,
+            TopicDataRequest request
+    ) {
 
-        List<SuggestedTopicResponse> data = feedService.getSuggestedTopics(userId);
+        SuggestedTopicResponse data = feedService.getSuggestedTopics(request);
 
         return ResponseEntity.ok(
                 new ResponseObject(HttpStatus.OK.value(), "Loaded suggested topics", data));

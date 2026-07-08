@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -20,8 +21,7 @@ public class ResearchFeedRepository {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
-
-    public int batchInsertDoNothing(Collection<FeedDraft> drafts) {
+    public int batchUpsertAndBackfillSnapshots(Collection<FeedDraft> drafts) {
         if (drafts == null || drafts.isEmpty()) {
             return 0;
         }
@@ -38,13 +38,46 @@ public class ResearchFeedRepository {
                     publication_date,
                     citation_snapshot,
                     reason_json,
-                    relevance_score,
                     generated_at,
-                    is_seen
+                    author_openalex_ids_snapshot,
+                    work_type_snapshot,
+                    topic_snapshot,
+                    topic_openalex_id_snapshot,
+                    abstract_text,
+                    doi,
+                    pdf_url,
+                    keywords_json,
+                    primary_fields_snapshot,
+                    subfield_snapshot
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, false)
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?
+                )
                 ON CONFLICT (user_id, work_openalex_id)
-                DO NOTHING
+                DO UPDATE SET
+                    title_snapshot = COALESCE(NULLIF(research_feed_item.title_snapshot, ''), EXCLUDED.title_snapshot),
+                    authors_snapshot = COALESCE(NULLIF(EXCLUDED.authors_snapshot, ''), research_feed_item.authors_snapshot),
+                    source_snapshot = COALESCE(NULLIF(research_feed_item.source_snapshot, ''), EXCLUDED.source_snapshot),
+                    publication_year = COALESCE(research_feed_item.publication_year, EXCLUDED.publication_year),
+                    publication_date = COALESCE(research_feed_item.publication_date, EXCLUDED.publication_date),
+                    citation_snapshot = COALESCE(research_feed_item.citation_snapshot, EXCLUDED.citation_snapshot),
+                    reason_json = CASE
+                        WHEN research_feed_item.reason_json IS NULL
+                            OR research_feed_item.reason_json = '{"reasons": []}'::jsonb
+                        THEN EXCLUDED.reason_json
+                        ELSE research_feed_item.reason_json
+                    END,
+                    author_openalex_ids_snapshot = COALESCE(NULLIF(EXCLUDED.author_openalex_ids_snapshot, ''), research_feed_item.author_openalex_ids_snapshot),
+                    work_type_snapshot = COALESCE(NULLIF(research_feed_item.work_type_snapshot, ''), EXCLUDED.work_type_snapshot),
+                    topic_snapshot = COALESCE(NULLIF(research_feed_item.topic_snapshot, ''), EXCLUDED.topic_snapshot),
+                    topic_openalex_id_snapshot = COALESCE(NULLIF(research_feed_item.topic_openalex_id_snapshot, ''), EXCLUDED.topic_openalex_id_snapshot),
+                    abstract_text = COALESCE(NULLIF(research_feed_item.abstract_text, ''), EXCLUDED.abstract_text),
+                    doi = COALESCE(NULLIF(research_feed_item.doi, ''), EXCLUDED.doi),
+                    pdf_url = COALESCE(NULLIF(research_feed_item.pdf_url, ''), EXCLUDED.pdf_url),
+                    keywords_json = COALESCE(research_feed_item.keywords_json, EXCLUDED.keywords_json),
+                    primary_fields_snapshot = COALESCE(NULLIF(research_feed_item.primary_fields_snapshot, ''), EXCLUDED.primary_fields_snapshot),
+                    subfield_snapshot = COALESCE(NULLIF(research_feed_item.subfield_snapshot, ''), EXCLUDED.subfield_snapshot)
                 """;
 
         int[][] result = jdbcTemplate.batchUpdate(
@@ -87,8 +120,24 @@ public class ResearchFeedRepository {
                     }
 
                     ps.setString(10, reasonJson);
-                    ps.setDouble(11, draft.getRelevanceScore());
-                    ps.setTimestamp(12, Timestamp.from(draft.getGeneratedAt().toInstant()));
+                    ps.setTimestamp(11, Timestamp.from(draft.getGeneratedAt().toInstant()));
+
+                    ps.setString(12, draft.getAuthorOpenAlexIdsSnapshot());
+                    ps.setString(13, draft.getWorkTypeSnapshot());
+                    ps.setString(14, draft.getTopicSnapshot());
+                    ps.setString(15, draft.getTopicOpenAlexIdSnapshot());
+                    ps.setString(16, draft.getAbstractText());
+                    ps.setString(17, draft.getDoi());
+                    ps.setString(18, draft.getPdfUrl());
+
+                    if (StringUtils.hasText(draft.getKeywordsJson())) {
+                        ps.setString(19, draft.getKeywordsJson());
+                    } else {
+                        ps.setNull(19, java.sql.Types.OTHER);
+                    }
+
+                    ps.setString(20, draft.getPrimaryFieldSnapshot());
+                    ps.setString(21, draft.getSubfieldSnapshot());
                 }
         );
 
@@ -103,5 +152,4 @@ public class ResearchFeedRepository {
 
         return saved;
     }
-
 }

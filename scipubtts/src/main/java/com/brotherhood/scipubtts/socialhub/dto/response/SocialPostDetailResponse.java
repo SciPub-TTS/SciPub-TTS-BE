@@ -17,7 +17,7 @@ public record SocialPostDetailResponse(
         OffsetDateTime updatedAt,
         boolean likesReset
 ) {
-    public record AuthorInfo(UUID id, String fullName) {}
+    public record AuthorInfo(UUID id, String fullName, String avatarUrl) {}
 
     public record ReferenceInfo(
             UUID id,

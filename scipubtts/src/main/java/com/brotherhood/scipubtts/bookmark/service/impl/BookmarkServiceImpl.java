@@ -131,19 +131,27 @@ public class BookmarkServiceImpl implements BookmarkService {
         String normalizedOpenAlexId = normalizeOpenAlexId(openAlexId);
 
         if (!StringUtils.hasText(normalizedOpenAlexId)) {
-            return new BookmarkStatusResponse(false, null, openAlexId);
+            return new BookmarkStatusResponse(false, null, openAlexId, List.of());
         }
 
         return userBookmarkRepository.findByUserIdAndOpenAlexId(userId, normalizedOpenAlexId)
-                .map(bookmark -> new BookmarkStatusResponse(
-                        true,
-                        bookmark.getId(),
-                        bookmark.getOpenAlexId()
-                ))
+                .map(bookmark -> {
+                    List<BookmarkCollectionSummaryResponse> collections =
+                            loadCollectionsByBookmarkId(userId, List.of(bookmark))
+                                    .getOrDefault(bookmark.getId(), List.of());
+
+                    return new BookmarkStatusResponse(
+                            true,
+                            bookmark.getId(),
+                            bookmark.getOpenAlexId(),
+                            collections
+                    );
+                })
                 .orElseGet(() -> new BookmarkStatusResponse(
                         false,
                         null,
-                        normalizedOpenAlexId
+                        normalizedOpenAlexId,
+                        List.of()
                 ));
     }
 
@@ -214,6 +222,17 @@ public class BookmarkServiceImpl implements BookmarkService {
             );
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(ErrorCode.BOOKMARK_COLLECTION_ALREADY_EXISTS);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteCollection(UUID userId, UUID collectionId) {
+        requireCollection(userId, collectionId);
+        int deletedRows = bookmarkCollectionRepository.deleteOwnedCollectionById(collectionId, userId);
+
+        if (deletedRows == 0) {
+            throw new BusinessException(ErrorCode.BOOKMARK_COLLECTION_NOT_FOUND);
         }
     }
 

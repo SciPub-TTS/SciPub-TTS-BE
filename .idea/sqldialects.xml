@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/scipubtts/src/main/resources/db/migration/V19__Update_research_feed_item_structure_for_card_display.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/scipubtts/src/main/resources/db/migration/V20__add_feed_upsert_function_and_indexes.sql" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/scipubtts/src/main/resources/db/migration/V8__google_signup_token.sql" dialect="GenericSQL" />
   </component>
 </project>
