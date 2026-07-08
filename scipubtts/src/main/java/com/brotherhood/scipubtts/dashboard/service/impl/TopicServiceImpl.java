@@ -37,7 +37,7 @@ public class TopicServiceImpl implements TopicService {
   private static final long PERIOD_DAYS = 7;
   private static final int PREVIOUS_PERIODS_COUNT = 4;
   private static final double CITATION_LAMBDA = Math.log(2);
-  private static final long FAKE_TOPIC_CALCULATION_MS = 5_000 * 100;
+  private static final long FAKE_TOPIC_CALCULATION_MS = 100;
 
   private static final Random RANDOM = new Random();
 
