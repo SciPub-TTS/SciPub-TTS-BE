@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.report.service.impl;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
 import com.brotherhood.scipubtts.report.dto.response.PaperExportData;
 import com.brotherhood.scipubtts.report.service.PaperExportDataService;
@@ -71,13 +72,18 @@ public class PaperExportDataServiceImpl implements PaperExportDataService {
                     }
                 }
             }
+
         } catch (BusinessException e) {
-            // Bắt các exception đã được phân loại chuẩn (Ví dụ: 404 -> OPENALEX_ENTITY_NOT_FOUND)
-            log.error("Lỗi nghiệp vụ từ OpenAlex khi export data cho ID {}: {}", filterValue, e.getErrorCode());
-            // Tùy chọn: ném tiếp hoặc bỏ qua để không sập toàn bộ luồng export của các bài khác
+            log.error("OpenAlex business error while exporting papers {}: {}",
+                    filterValue, e.getErrorCode(), e);
+
+            throw e;
+
         } catch (Exception e) {
-            // Bắt các lỗi hệ thống không lường trước được
-            log.error("Lỗi không xác định khi gọi OpenAlex cho ID {}", filterValue, e);
+            log.error("Unexpected error while calling OpenAlex for papers {}",
+                    filterValue, e);
+
+            throw new BusinessException(ErrorCode.OPENALEX_SERVICE_UNAVAILABLE);
         }
 
         // Giữ đúng thứ tự paperIds người dùng đã chọn; bỏ qua paper không tìm thấy
@@ -87,7 +93,7 @@ public class PaperExportDataServiceImpl implements PaperExportDataService {
             if (data != null) {
                 ordered.add(data);
             } else {
-                log.warn("Không tìm thấy dữ liệu OpenAlex cho paperId={}, bỏ qua khỏi report export", id);
+                log.warn("Cannot found OpenAlex data for paperId={}, skipping from report export", id);
             }
         }
 
@@ -192,7 +198,7 @@ public class PaperExportDataServiceImpl implements PaperExportDataService {
      * OpenAlex trả "abstract_inverted_index" — cần decode ngược lại thành câu văn bình thường.
      */
     private String decodeAbstract(JsonNode invertedIndex) {
-        if (invertedIndex == null || !invertedIndex.isEmpty()) {
+        if (invertedIndex == null || invertedIndex.isEmpty()) {
             return null;
         }
 

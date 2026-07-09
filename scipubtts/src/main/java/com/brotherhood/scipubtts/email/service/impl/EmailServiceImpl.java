@@ -76,7 +76,7 @@ public class EmailServiceImpl implements EmailService {
                     "image/png"
             );
         } catch (MessagingException exception) {
-            throw new IllegalStateException("Failed to create email from template: " + templateName, exception);
+            throw new BusinessException(ErrorCode.EMAIL_TEMPLATE_PROCESSING_FAILED, templateName, exception);
         }
 
         mailSender.send(message);

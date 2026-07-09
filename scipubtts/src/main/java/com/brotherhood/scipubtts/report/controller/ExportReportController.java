@@ -1,8 +1,10 @@
 package com.brotherhood.scipubtts.report.controller;
 
+import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.report.dto.request.ExportReportRequest;
 import com.brotherhood.scipubtts.report.dto.response.ExportReportResult;
 import com.brotherhood.scipubtts.report.service.ExportReportService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/export")
@@ -29,7 +32,10 @@ public class ExportReportController {
      * Trả về file CSV/JSON dưới dạng attachment để FE trigger download trực tiếp.
      */
     @PostMapping("/report")
-    public ResponseEntity<byte[]> exportReport(@Valid @RequestBody ExportReportRequest request) {
+    public ResponseEntity<byte[]> exportReport(
+            @Parameter(hidden = true) @CurrentUserUUID UUID userUUID,
+            @Valid @RequestBody ExportReportRequest request
+    ) {
 
         ExportReportResult result = exportReportService.exportReport(request);
 

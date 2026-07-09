@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.dashboard.constant;
 
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import lombok.Getter;
 
 @Getter
@@ -26,6 +28,6 @@ public enum MetricTitle {
         return metric;
       }
     }
-    throw new IllegalArgumentException("Unknown metric title: " + title);
+    throw new BusinessException(ErrorCode.UNKNOWN_METRIC_TITLE, title);
   }
 }
