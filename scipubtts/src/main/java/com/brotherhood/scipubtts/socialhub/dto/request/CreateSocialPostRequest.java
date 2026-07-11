@@ -11,8 +11,6 @@ public record CreateSocialPostRequest(
 @Size(min = 10, max = 300, message = "Title must be between 10 and 300 characters")
 String title,
 
-@NotBlank(message = "Body is required")
-@Size(min = 20, message = "Body must be at least 20 characters")
 String body,
 
 @Size(max = 500, message = "Topic tag cannot exceed 500 characters")
