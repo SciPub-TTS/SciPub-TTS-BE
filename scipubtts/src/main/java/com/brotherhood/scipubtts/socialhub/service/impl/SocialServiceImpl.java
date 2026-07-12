@@ -322,9 +322,8 @@ public class SocialServiceImpl implements SocialService {
             return;
         }
 
-        referenceRepository.deleteAllByPostId(postId);
-        entityManager.flush();
         post.getReferences().clear();
+        entityManager.flush();
 
         List<SocialPostReference> nextReferences = bookmarks.stream()
                 .map(bookmark -> buildReferenceFromBookmark(
