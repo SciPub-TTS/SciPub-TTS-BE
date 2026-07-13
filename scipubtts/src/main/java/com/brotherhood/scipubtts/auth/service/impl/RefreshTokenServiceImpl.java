@@ -41,7 +41,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         Duration ttl = rememberMe
                 ? authProperties.rememberMeRefreshTokenTtl()
                 : authProperties.refreshTokenTtl();
-
         String rawToken = secureValueService.generateOpaqueToken();
 
         RefreshToken token = RefreshToken.builder()
@@ -82,6 +81,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         //Nếu thời gian hết hạn nằm trước thời gian hiện tại (now), hệ thống từ chối vì token quá hạn.
         if (current.getExpiredAt().isBefore(now)) {
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        if (current.getUser().isBanned()) {
+            refreshTokenRepository.revokeAllActiveByUserId(current.getUser().getId(), now);
+            throw new BusinessException(ErrorCode.ACCOUNT_BANNED);
         }
 
         //Sau khi xác nhận token cũ hoàn toàn hợp lệ, hệ thống tiến hành "khai tử" nó bằng cách cập nhật mốc thời gian hủy setRevokedAt(now). Từ giây phút này, token này chính thức phế bỏ, không bao giờ dùng lại được nữa.

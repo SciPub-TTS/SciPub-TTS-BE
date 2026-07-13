@@ -19,23 +19,26 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(length = 255)
+    @Column
     private String username;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Role role = Role.RESEARCHER;
 
-    @Column(name = "first_name", length = 255)
+    @Column(name = "first_name")
     private String firstName;
 
-    @Column(name = "last_name", length = 255)
+    @Column(name = "last_name")
     private String lastName;
 
-    @Column(name = "password_hash", length = 255)
+    @Column(name = "avatar_url", length = 1024)
+    private String avatarUrl;
+
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "is_email_verified", nullable = false)

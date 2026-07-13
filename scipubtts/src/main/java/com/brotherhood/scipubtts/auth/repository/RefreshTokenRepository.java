@@ -33,6 +33,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
            and rt.revokedAt is null
            and rt.expiredAt > :now
     """)
-    int revokeAllActiveByUserId(@Param("userId") UUID userId,
+    void revokeAllActiveByUserId(@Param("userId") UUID userId,
                                 @Param("now") OffsetDateTime now);
 }

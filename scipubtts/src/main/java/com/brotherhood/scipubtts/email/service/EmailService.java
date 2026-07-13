@@ -1,8 +1,9 @@
 package com.brotherhood.scipubtts.email.service;
 
 public interface EmailService {
-    public void sendVerificationEmail(String to, String verifyUrl);
+    void sendVerificationEmail(String to, String verifyUrl);
+    void sendPasswordResetCode(String to, String code);
 
-
-    public void sendPasswordResetCode(String to, String code);
+    void sendAccountBannedEmail(String to);
+    void sendAccountUnbannedEmail(String to);
 }

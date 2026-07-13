@@ -1,8 +1,11 @@
 package com.brotherhood.scipubtts.auth.service;
 
+import com.brotherhood.scipubtts.auth.dto.request.CompleteGoogleRegisterRequest;
 import com.brotherhood.scipubtts.auth.dto.request.LoginRequest;
+import com.brotherhood.scipubtts.auth.dto.request.OAuth2SessionExchangeRequest;
 import com.brotherhood.scipubtts.auth.dto.request.RegisterLocalRequest;
 import com.brotherhood.scipubtts.auth.dto.response.AuthResponse;
+import com.brotherhood.scipubtts.auth.dto.response.GoogleSignupPreviewResponse;
 import com.brotherhood.scipubtts.auth.security.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,7 +23,21 @@ public interface AuthService {
     AuthResponse refresh(HttpServletRequest request,
                          HttpServletResponse response);
 
+    AuthResponse exchangeOAuth2Session(
+            OAuth2SessionExchangeRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    );
+
     void logout(UserPrincipal principal,
                 HttpServletRequest request,
                 HttpServletResponse response);
+
+    AuthResponse completeGoogleRegister(
+            CompleteGoogleRegisterRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    );
+
+    GoogleSignupPreviewResponse previewGoogleRegister(String rawToken);
 }

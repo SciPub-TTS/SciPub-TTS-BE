@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.search.repository;
 
 import com.brotherhood.scipubtts.search.entity.SearchHistory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,14 +23,40 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
             select sh.content as content, max(sh.createdAt) as latestCreatedAt
             from SearchHistory sh
             where (:userId is null or sh.userId = :userId)
+              and (:keyword = '' or lower(sh.content) like concat('%', lower(:keyword), '%'))
             group by sh.content
             order by max(sh.createdAt) desc
             """)
     List<RecentSearchProjection> findRecentDistinctSearches(
             @Param("userId") UUID userId,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 
-    long deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
+    @Query(
+            value = """
+                    select sh.content as content, max(sh.createdAt) as latestCreatedAt
+                    from SearchHistory sh
+                    where sh.userId = :userId
+                    group by sh.content
+                    order by max(sh.createdAt) desc
+                    """,
+            countQuery = """
+                    select count(distinct lower(sh.content))
+                    from SearchHistory sh
+                    where sh.userId = :userId
+                    """,
+            nativeQuery = true
+    )
+    Page<RecentSearchProjection> findRecentDistinctSearchesByUserId(
+            @Param("userId") UUID userId,
+            Pageable pageable
+    );
+
+    long countByUserId(UUID userId);
+
+    void deleteByUserIdAndContentIgnoreCase(UUID userId, String content);
+
+    void deleteByUserId(UUID userId);
 }
 

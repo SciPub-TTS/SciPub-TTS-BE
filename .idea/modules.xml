@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/SciPub-TTS-BE.iml" filepath="$PROJECT_DIR$/.idea/SciPub-TTS-BE.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scipubtts/scipubtts.iml" filepath="$PROJECT_DIR$/scipubtts/scipubtts.iml" />
     </modules>
   </component>
 </project>

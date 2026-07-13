@@ -1,6 +1,5 @@
 package com.brotherhood.scipubtts.config;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -8,15 +7,15 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 
-@ConfigurationProperties(prefix = "app.auth")
 @Component
 @Getter
 @Setter
+@ConfigurationProperties(prefix = "app.auth")
 public class AuthProperties {
 
     private String refreshCookieName = "refresh_token";
     private String refreshCookiePath = "/api/auth";
-    private boolean refreshCookieSecure = false; // true khi chạy HTTPS thật
+    private boolean refreshCookieSecure = false;
     private String refreshCookieSameSite = "Lax";
     private long refreshTokenHours = 24;
     private long rememberMeRefreshTokenDays = 30;

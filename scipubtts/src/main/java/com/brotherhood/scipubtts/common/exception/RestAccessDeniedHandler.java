@@ -3,10 +3,10 @@ package com.brotherhood.scipubtts.common.exception;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.config.AuthProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -25,7 +25,11 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
 
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+    public void handle(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull AccessDeniedException accessDeniedException
+    ) throws IOException {
         String message = ErrorCode.ACCESS_DENIED.getMessage();
         if (authProperties.isExposeSecurityErrorDetails() && accessDeniedException.getMessage() != null) {
             message = message + ":" + accessDeniedException.getMessage();
