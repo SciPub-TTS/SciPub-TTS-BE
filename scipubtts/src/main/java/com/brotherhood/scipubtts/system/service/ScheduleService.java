@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.system.service;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.schedule.DynamicScheduleManager;
 import com.brotherhood.scipubtts.system.dto.CronConfigResponse;
 import com.brotherhood.scipubtts.system.dto.UpdateCronConfigRequest;
 import com.brotherhood.scipubtts.system.entity.SystemValue;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.List;
 public class ScheduleService {
 
     private final SystemValueRepository systemValueRepository;
+    private final DynamicScheduleManager dynamicScheduleManager;
     private static final String CONFIG_FEED_DAILY = "cron.schedule.research_feed.sync_daily";
     private static final String CONFIG_DASHBOARD_WEEKLY = "cron.schedule.statistic_weekly.run_job";
 
@@ -56,7 +60,24 @@ public class ScheduleService {
         systemValue.setConfigValue(cron);
         systemValue.setUpdatedAt(OffsetDateTime.now());
 
-        return toCronConfigResponse(systemValue);
+        SystemValue savedSystemValue = systemValueRepository.save(systemValue);
+        reloadJobAfterCommit(configKey, cron);
+
+        return toCronConfigResponse(savedSystemValue);
+    }
+
+    private void reloadJobAfterCommit(String configKey, String cron) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            dynamicScheduleManager.reloadJob(configKey, cron);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                dynamicScheduleManager.reloadJob(configKey, cron);
+            }
+        });
     }
 
     private CronConfigResponse toCronConfigResponse(SystemValue systemValue) {
