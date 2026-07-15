@@ -59,7 +59,7 @@ public class OpenAlexFieldTaxonomySyncServiceImpl implements OpenAlexFieldTaxono
     private Map<String, String> queryParams(String cursor) {
         Map<String, String> params = new LinkedHashMap<>();
         params.put("filter", FIELD_FILTER);
-        params.put("select", SELECT_FIELDS);
+        params.put("sele    ct", SELECT_FIELDS);
         params.put("per_page", String.valueOf(OpenAlexCursorSupport.MAX_PER_PAGE));
         params.put("cursor", cursor);
         return params;
@@ -102,10 +102,11 @@ public class OpenAlexFieldTaxonomySyncServiceImpl implements OpenAlexFieldTaxono
 
     private void upsertSubfield(String openAlexId, String displayName) {
         OffsetDateTime now = OffsetDateTime.now();
-        OpenAlexSubfield subfield = openAlexSubfieldRepository.findByOpenAlexId(openAlexId)
+        String normalizedOpenAlexId = extractOpenAlexIdValue(openAlexId);
+        OpenAlexSubfield subfield = openAlexSubfieldRepository.findByOpenAlexId(normalizedOpenAlexId)
                 .orElseGet(() -> {
                     OpenAlexSubfield created = new OpenAlexSubfield();
-                    created.setOpenAlexId(openAlexId);
+                    created.setOpenAlexId(normalizedOpenAlexId);
                     created.setCreatedAt(now);
                     return created;
                 });
@@ -118,10 +119,11 @@ public class OpenAlexFieldTaxonomySyncServiceImpl implements OpenAlexFieldTaxono
 
     private void upsertTopic(String openAlexId, String displayName) {
         OffsetDateTime now = OffsetDateTime.now();
-        OpenAlexTopic topic = openAlexTopicRepository.findByOpenAlexId(openAlexId)
+        String normalizedOpenAlexId = extractOpenAlexIdValue(openAlexId);
+        OpenAlexTopic topic = openAlexTopicRepository.findByOpenAlexId(normalizedOpenAlexId)
                 .orElseGet(() -> {
                     OpenAlexTopic created = new OpenAlexTopic();
-                    created.setOpenAlexId(openAlexId);
+                    created.setOpenAlexId(normalizedOpenAlexId);
                     created.setCreatedAt(now);
                     return created;
                 });
@@ -130,6 +132,15 @@ public class OpenAlexFieldTaxonomySyncServiceImpl implements OpenAlexFieldTaxono
         topic.setUpdatedAt(now);
         topic.setLastSyncedAt(now);
         openAlexTopicRepository.save(topic);
+    }
+
+    private String extractOpenAlexIdValue(String openAlexId) {
+        int lastSlashIndex = openAlexId.lastIndexOf('/');
+        if (lastSlashIndex < 0 || lastSlashIndex == openAlexId.length() - 1) {
+            return openAlexId;
+        }
+
+        return openAlexId.substring(lastSlashIndex + 1);
     }
 
     private record TaxonomyItem(String openAlexId, String displayName) {

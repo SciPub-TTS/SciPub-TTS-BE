@@ -198,11 +198,11 @@ public class AdminController {
 
     @GetMapping("config/feed-sync-cron")
     public ResponseEntity<ResponseObject> getConfigFeedSyncCron() {
-        CronConfigResponse data = scheduleService.getDailySyncSchedule();
+        List<CronConfigResponse> data = scheduleService.getAllSchedules();
         return ResponseEntity.ok(
                 new ResponseObject(
                         HttpStatus.OK.value(),
-                        "Feed sync cron config fetched successfully",
+                        "Cron configs fetched successfully",
                         data
                 )
         );

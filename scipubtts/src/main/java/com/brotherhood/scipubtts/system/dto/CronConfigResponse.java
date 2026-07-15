@@ -2,6 +2,8 @@ package com.brotherhood.scipubtts.system.dto;
 
 import lombok.Builder;
 
+import java.time.OffsetDateTime;
+
 @Builder
 public record CronConfigResponse(
         String configKey,
@@ -12,5 +14,8 @@ public record CronConfigResponse(
         String dayOfMonth,
         String month,
         String dayOfWeek,
-        String description
+        String description,
+        OffsetDateTime createdAt,
+        OffsetDateTime updateAt
+
 ) {}
