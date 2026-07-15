@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.config;
 
 
 import com.brotherhood.scipubtts.schedule.ResearchFeedScheduler;
+import com.brotherhood.scipubtts.schedule.OpenAlexFieldTaxonomyScheduler;
 import com.brotherhood.scipubtts.schedule.StatisticWeeklyScheduler;
 import com.brotherhood.scipubtts.system.entity.SystemValue;
 import com.brotherhood.scipubtts.system.repository.SystemValueRepository;
@@ -22,6 +23,7 @@ public class AppScheduleConfig implements SchedulingConfigurer {
     // Inject trực tiếp 2 lớp scheduler của bạn vào đây
     private final ResearchFeedScheduler researchFeedScheduler;
     private final StatisticWeeklyScheduler statisticWeeklyScheduler;
+    private final OpenAlexFieldTaxonomyScheduler openAlexFieldTaxonomyScheduler;
 
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
@@ -45,6 +47,16 @@ public class AppScheduleConfig implements SchedulingConfigurer {
         taskRegistrar.addTriggerTask(
                 statisticWeeklyScheduler::runWeeklyStatisticJob,
                 triggerContext -> new CronTrigger(weeklyCron).nextExecution(triggerContext)
+        );
+
+        String monthlyTaxonomyKey = "cron.schedule.openalex_field_taxonomy.sync_monthly";
+        String monthlyTaxonomyCron = systemValueRepository.findByConfigKey(monthlyTaxonomyKey)
+                .map(SystemValue::getConfigValue)
+                .orElse("0 0 3 1 * *");
+
+        taskRegistrar.addTriggerTask(
+                openAlexFieldTaxonomyScheduler::syncFieldTaxonomyMonthly,
+                triggerContext -> new CronTrigger(monthlyTaxonomyCron).nextExecution(triggerContext)
         );
     }
 }

@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.admin.controller;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminOpenAlexFieldSummaryResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserBanSummaryResponse;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -124,6 +126,32 @@ public class AdminController {
                 new ResponseObject(
                         HttpStatus.OK.value(),
                         "Dashboard statistics fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("/dashboard/openalex-field-summary")
+    public ResponseEntity<ResponseObject> getOpenAlexFieldSummary() {
+        AdminOpenAlexFieldSummaryResponse data = adminService.getOpenAlexFieldSummary();
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "OpenAlex field summary fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @PostMapping("/dashboard/openalex-field-summary/sync")
+    public ResponseEntity<ResponseObject> syncOpenAlexFieldSummary() {
+        AdminOpenAlexFieldSummaryResponse data = adminService.syncOpenAlexFieldSummary();
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "OpenAlex field summary synced successfully",
                         data
                 )
         );

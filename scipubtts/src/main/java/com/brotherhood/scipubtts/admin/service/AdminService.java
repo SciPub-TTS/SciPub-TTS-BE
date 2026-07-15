@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.admin.service;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminOpenAlexFieldSummaryResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserBanSummaryResponse;
@@ -25,6 +26,10 @@ public interface AdminService {
     AdminUserSearchHistoryPageResponse getUserSearchHistory(UUID userId, int page, int size);
 
     AdminDashboardStatisticsResponse getDashboardStatistics();
+
+    AdminOpenAlexFieldSummaryResponse getOpenAlexFieldSummary();
+
+    AdminOpenAlexFieldSummaryResponse syncOpenAlexFieldSummary();
 
     AdminUserBanSummaryResponse getUserBanSummary();
 
