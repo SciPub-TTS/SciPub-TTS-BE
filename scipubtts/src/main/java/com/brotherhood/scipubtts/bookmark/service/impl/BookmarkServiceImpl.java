@@ -87,25 +87,25 @@ public class BookmarkServiceImpl implements BookmarkService {
         int safeSize = normalizeSize(size);
         Pageable pageable = PageRequest.of(safePage, safeSize, buildSort(sort));
 
-//        List<UserBookmark> userBookmarksAllUser = userBookmarkRepository.findAll();
-//
-//        Page<UserBookmark> bookmarkPage = new org.springframework.data.domain.PageImpl<>(
-//                userBookmarksAllUser,
-//                pageable,
-//                userBookmarksAllUser.size()
-//        );
+        List<UserBookmark> userBookmarksAllUser = userBookmarkRepository.findAll();
 
-        Page<UserBookmark> bookmarkPage = userBookmarkRepository.searchMyBookmarks(
-                userId,
-                collectionId,
-                normalizeText(title),
-                normalizeText(keyword),
-                normalizeText(topic),
-                normalizeText(source),
-                normalizeText(author),
-                year,
-                pageable
+        Page<UserBookmark> bookmarkPage = new org.springframework.data.domain.PageImpl<>(
+                userBookmarksAllUser,
+                pageable,
+                userBookmarksAllUser.size()
         );
+
+//        Page<UserBookmark> bookmarkPage = userBookmarkRepository.searchMyBookmarks(
+//                userId,
+//                collectionId,
+//                normalizeText(title),
+//                normalizeText(keyword),
+//                normalizeText(topic),
+//                normalizeText(source),
+//                normalizeText(author),
+//                year,
+//                pageable
+//        );
 
         List<UserBookmark> bookmarks = bookmarkPage.getContent();
         Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId =
