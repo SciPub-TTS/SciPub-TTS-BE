@@ -64,6 +64,11 @@ public interface UserBookmarkRepository extends JpaRepository<UserBookmark, UUID
             Pageable pageable
     );
 
+
+
+
+
+
     long countByUserId(UUID userId);
 
     @Query("""
