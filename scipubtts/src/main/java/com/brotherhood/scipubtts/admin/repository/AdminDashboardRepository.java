@@ -7,8 +7,8 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,26 +25,12 @@ public class AdminDashboardRepository {
         return count("SELECT COUNT(*) FROM users");
     }
 
-    public long countUsersCreatedFrom(OffsetDateTime from) {
-        return count(
-                "SELECT COUNT(*) FROM users WHERE created_at >= ?",
-                from
-        );
-    }
-
     public long countBannedUsers() {
         return count("SELECT COUNT(*) FROM users WHERE is_banned = true");
     }
 
     public long countActiveUsers() {
         return count("SELECT COUNT(*) FROM users WHERE is_banned = false");
-    }
-
-    public long countBannedUsersCreatedFrom(OffsetDateTime from) {
-        return count(
-                "SELECT COUNT(*) FROM users WHERE is_banned = true AND created_at >= ?",
-                from
-        );
     }
 
     public long countApiCallsFrom(OffsetDateTime from) {
@@ -55,19 +41,6 @@ public class AdminDashboardRepository {
                 WHERE COALESCE(started_at, finished_at) >= ?
                 """,
                 from
-        );
-    }
-
-    public long countApiCallsBetween(OffsetDateTime from, OffsetDateTime to) {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM api_call_log
-                WHERE COALESCE(started_at, finished_at) >= ?
-                  AND COALESCE(started_at, finished_at) < ?
-                """,
-                from,
-                to
         );
     }
 
@@ -115,68 +88,6 @@ public class AdminDashboardRepository {
                 ),
                 startDate,
                 endDate
-        );
-    }
-
-    public long countSubfields() {
-        return count("SELECT COUNT(*) FROM subfields");
-    }
-
-    public long countFields() {
-        return count("SELECT COUNT(*) FROM fields");
-    }
-
-    public long countTopics() {
-        return count("SELECT COUNT(*) FROM topics");
-    }
-
-    public long countTopicsForLatestPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (SELECT MAX(end_time) FROM topics)
-                """
-        );
-    }
-
-    public long countTopicsForPreviousPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (
-                    SELECT MAX(end_time)
-                    FROM topics
-                    WHERE end_time < (SELECT MAX(end_time) FROM topics)
-                )
-                """
-        );
-    }
-
-    public long countActiveTrendsForLatestPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (SELECT MAX(end_time) FROM topics)
-                  AND (velocity > 0 OR acceleration > 0)
-                """
-        );
-    }
-
-    public long countActiveTrendsForPreviousPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (
-                    SELECT MAX(end_time)
-                    FROM topics
-                    WHERE end_time < (SELECT MAX(end_time) FROM topics)
-                )
-                  AND (velocity > 0 OR acceleration > 0)
-                """
         );
     }
 
