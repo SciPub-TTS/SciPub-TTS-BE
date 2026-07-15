@@ -149,7 +149,9 @@ public enum ErrorCode {
         "One or more referenced papers could not be found in your bookmarks."),
 
     // ===== SYSTEM / CONFIGURATION =====
-    CONFIGURATION_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "Required system configuration key is missing.");
+    CONFIGURATION_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "Required system configuration key is missing."),
+    SYSTEM_CONFIGURATION_NOT_FOUND(HttpStatus.NOT_FOUND, "System configuration key was not found."),
+    INVALID_CRON_EXPRESSION(HttpStatus.BAD_REQUEST, "Invalid cron expression: %s");
 
     private final HttpStatus status;
     private final String message;

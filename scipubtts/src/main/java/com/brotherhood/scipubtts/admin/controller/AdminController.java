@@ -13,12 +13,15 @@ import com.brotherhood.scipubtts.admin.service.AdminService;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.system.dto.CronConfigResponse;
+import com.brotherhood.scipubtts.system.dto.UpdateCronConfigRequest;
 import com.brotherhood.scipubtts.system.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -208,5 +211,20 @@ public class AdminController {
         );
     }
 
+    @PatchMapping("config/sync-cron/{configKey}")
+    public ResponseEntity<ResponseObject> updateConfigSyncCron(
+            @PathVariable String configKey,
+            @Valid @RequestBody UpdateCronConfigRequest request
+    ) {
+        CronConfigResponse data = scheduleService.updateCronConfig(configKey, request);
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Cron config updated successfully",
+                        data
+                )
+        );
+    }
 
 }
