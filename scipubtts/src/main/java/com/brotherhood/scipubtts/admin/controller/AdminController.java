@@ -196,7 +196,7 @@ public class AdminController {
         );
     }
 
-    @GetMapping("config/feed-sync-cron")
+    @GetMapping("config/sync-cron")
     public ResponseEntity<ResponseObject> getConfigFeedSyncCron() {
         List<CronConfigResponse> data = scheduleService.getAllSchedules();
         return ResponseEntity.ok(
@@ -208,15 +208,5 @@ public class AdminController {
         );
     }
 
-    @GetMapping("config/dashboard-sync-cron")
-    public ResponseEntity<ResponseObject> getConfigDashboardSyncCron() {
-        CronConfigResponse data = scheduleService.getWeeklyStatisticSchedule();
-        return ResponseEntity.ok(
-                new ResponseObject(
-                        HttpStatus.OK.value(),
-                        "Dashboard sync cron config fetched successfully",
-                        data
-                )
-        );
-    }
+
 }
