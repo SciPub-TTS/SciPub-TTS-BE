@@ -1,6 +1,7 @@
 package com.brotherhood.scipubtts.feed.service.impl;
 
 import com.brotherhood.scipubtts.feed.client.OpenAlexWorksClient;
+import com.brotherhood.scipubtts.common.openalex.logging.OpenAlexCallContext;
 import com.brotherhood.scipubtts.feed.dto.response.OpenAlexWorksResponse;
 import com.brotherhood.scipubtts.feed.entity.ApiJob;
 import com.brotherhood.scipubtts.feed.model.FeedDraft;
@@ -95,8 +96,12 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
                 .totalFailed(0)
                 .build();
 
-        job = apiJobRepository.save(job);
+        ApiJob savedJob = apiJobRepository.save(job);
 
+        OpenAlexCallContext.runAsSystemJob(savedJob.getId(), JOB_TYPE, () -> syncDailyFeed(savedJob));
+    }
+
+    private void syncDailyFeed(ApiJob job) {
         int totalFetched = 0;
         int totalSaved = 0;
         int failedTargets = 0;
