@@ -51,22 +51,35 @@ public class SearchQuerySupport {
         return keyword == null ? "" : keyword.trim();
     }
 
-    public String resolveSort(String sortBy, String sortDirection, boolean hasSearchQuery) {
+    public String resolveSort(List<String> sortBy, List<String> sortDirection, boolean hasSearchQuery) {
         String defaultSort = hasSearchQuery ? "relevance_score:desc" : "cited_by_count:desc";
 
-        if (!StringUtils.hasText(sortBy)) {
+        if (sortBy == null || sortBy.isEmpty()) {
             return defaultSort;
         }
 
-        String normalizedSortBy = sortBy.trim().toLowerCase(Locale.ROOT);
-        String normalizedSortDirection =
-                "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
+        List<String> openAlexSorts = new ArrayList<>();
 
-        return switch (normalizedSortBy) {
-            case "citation" -> "cited_by_count:" + normalizedSortDirection;
-            case "published" -> "publication_year:" + normalizedSortDirection;
-            default -> defaultSort;
-        };
+        for (int index = 0; index < sortBy.size(); index += 1) {
+            String normalizedSortBy = sortBy.get(index) == null
+                    ? ""
+                    : sortBy.get(index).trim().toLowerCase(Locale.ROOT);
+            String normalizedSortDirection =
+                    sortDirection != null
+                            && index < sortDirection.size()
+                            && "asc".equalsIgnoreCase(sortDirection.get(index))
+                            ? "asc"
+                            : "desc";
+
+            switch (normalizedSortBy) {
+                case "citation" -> openAlexSorts.add("cited_by_count:" + normalizedSortDirection);
+                case "published" -> openAlexSorts.add("publication_year:" + normalizedSortDirection);
+                default -> {
+                }
+            }
+        }
+
+        return openAlexSorts.isEmpty() ? defaultSort : String.join(",", openAlexSorts);
     }
 
     public String resolveEntitySort(String sortBy, String sortDirection, boolean hasSearchQuery) {

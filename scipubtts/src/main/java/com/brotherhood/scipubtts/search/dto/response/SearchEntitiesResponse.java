@@ -10,9 +10,10 @@ public record SearchEntitiesResponse(
             long totalCount,
             int page,
             int perPage,
-            long dbResponseTimeMs,
             double costUsd,
             String entityType,
+            String appliedFilter,
+            String appliedSort,
             boolean hasMore,
             boolean totalCountExact
     ) {

@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.search.repository;
+package com.brotherhood.scipubtts.dashboard.repository;
 
 import com.brotherhood.scipubtts.dashboard.entity.Topic;
 import org.springframework.data.domain.Pageable;

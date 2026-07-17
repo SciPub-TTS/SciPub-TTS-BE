@@ -10,7 +10,6 @@ public record SearchWorksResponse(
             long totalCount,
             int page,
             int perPage,
-            long dbResponseTimeMs,
             double costUsd,
             String appliedFilter,
             String appliedSort
@@ -42,10 +41,7 @@ public record SearchWorksResponse(
             List<String> authors,
             List<EntityRef> authorRefs,
             List<String> keywords,
-            EntityRef topicRef,
-            Boolean matchesTrendingKeyword,
-            Boolean matchesTrendingTopic,
-            Double trendingScore
+            EntityRef topicRef
     ) {
     }
 }
