@@ -3,6 +3,7 @@ package com.brotherhood.scipubtts.admin.service.impl;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminOpenAlexFieldSummaryResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserActivityResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserDetailUserResponse;
@@ -13,7 +14,10 @@ import com.brotherhood.scipubtts.admin.dto.AdminUserProfileResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserSearchHistoryItemResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserSearchHistoryPageResponse;
 import com.brotherhood.scipubtts.admin.repository.AdminDashboardRepository;
+import com.brotherhood.scipubtts.admin.repository.OpenAlexSubfieldRepository;
+import com.brotherhood.scipubtts.admin.repository.OpenAlexTopicRepository;
 import com.brotherhood.scipubtts.admin.service.AdminService;
+import com.brotherhood.scipubtts.admin.service.OpenAlexFieldTaxonomySyncService;
 import com.brotherhood.scipubtts.auth.service.RefreshTokenService;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
@@ -22,7 +26,9 @@ import com.brotherhood.scipubtts.email.event.UserBannedEvent;
 import com.brotherhood.scipubtts.email.event.UserUnbannedEvent;
 import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
 import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
+import com.brotherhood.scipubtts.dashboard.repository.KeywordTrendReadRepository;
 import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
+import com.brotherhood.scipubtts.dashboard.repository.TopicTrendReadRepository;
 import com.brotherhood.scipubtts.user.entity.Role;
 import com.brotherhood.scipubtts.user.entity.User;
 import com.brotherhood.scipubtts.user.entity.UserProfile;
@@ -37,11 +43,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +63,11 @@ public class AdminServiceImpl implements AdminService {
     private final UserBookmarkRepository userBookmarkRepository;
     private final UserProfileRepository userProfileRepository;
     private final SearchHistoryRepository searchHistoryRepository;
+    private final KeywordTrendReadRepository keywordTrendReadRepository;
+    private final TopicTrendReadRepository topicTrendReadRepository;
+    private final OpenAlexSubfieldRepository openAlexSubfieldRepository;
+    private final OpenAlexTopicRepository openAlexTopicRepository;
+    private final OpenAlexFieldTaxonomySyncService openAlexFieldTaxonomySyncService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.dashboard.total-api-credit:100000}")
@@ -178,40 +187,39 @@ public class AdminServiceImpl implements AdminService {
     @Transactional(readOnly = true)
     public AdminDashboardStatisticsResponse getDashboardStatistics() {
         OffsetDateTime now = OffsetDateTime.now();
-        OffsetDateTime startOfWeek = startOfCurrentWeek(now);
-        OffsetDateTime startOfMonth = startOfCurrentMonth(now);
-        OffsetDateTime startOfPreviousMonth = startOfMonth.minusMonths(1);
         OffsetDateTime startOfToday = startOfToday(now);
 
         long totalUsers = adminDashboardRepository.countUsers();
-        long usersThisWeek = adminDashboardRepository.countUsersCreatedFrom(startOfWeek);
-
         long bannedUsers = adminDashboardRepository.countBannedUsers();
-        long bannedUsersThisMonth = adminDashboardRepository.countBannedUsersCreatedFrom(startOfMonth);
 
-        long apiCallsThisMonth = adminDashboardRepository.countApiCallsFrom(startOfMonth);
-        long apiCallsPreviousMonth = adminDashboardRepository.countApiCallsBetween(startOfPreviousMonth, startOfMonth);
-        long apiCallsToday = adminDashboardRepository.countApiCallsFrom(startOfToday);
-
-        long totalSubfields = adminDashboardRepository.countSubfields();
-        long totalFields = adminDashboardRepository.countFields();
-        long totalTopics = adminDashboardRepository.countTopics();
-        long topicsLatestPeriod = adminDashboardRepository.countTopicsForLatestPeriod();
-        long topicsPreviousPeriod = adminDashboardRepository.countTopicsForPreviousPeriod();
-        long activeTrends = adminDashboardRepository.countActiveTrendsForLatestPeriod();
-        long previousActiveTrends = adminDashboardRepository.countActiveTrendsForPreviousPeriod();
+        long totalSubfields = openAlexSubfieldRepository.count();
+        long totalTopics = openAlexTopicRepository.count();
+        long trendKeywordCount = countTrendKeywordsForLatestWeek();
+        long trendTopicCount = countTrendTopicsForLatestWeek();
 
         return new AdminDashboardStatisticsResponse(
-                card(totalUsers, "Registered accounts", signedCount(usersThisWeek, "this week")),
-                card(activeTrends, "Detected trend signals", signedCount(activeTrends - previousActiveTrends, "this week")),
-                card(bannedUsers, "Restricted accounts", signedCount(bannedUsersThisMonth, "this month")),
-                card(apiCallsThisMonth, "This month", percentageDelta(apiCallsThisMonth, apiCallsPreviousMonth)),
-                card(apiCallsToday, "Today", "Within daily quota"),
-                card(totalApiCredit, "Daily usage", "All"),
-                card(totalSubfields, "Research subfields", null),
-                card(totalTopics, "Generated from " + totalFields + " fields", signedCount(topicsLatestPeriod - topicsPreviousPeriod, "after last sync")),
-                card(adminDashboardRepository.findLatestSynchronization().orElse(null), "Latest data update", null)
+                card(totalUsers),
+                card(bannedUsers),
+                card(totalSubfields),
+                card(totalTopics),
+                card(trendTopicCount),
+                card(trendKeywordCount)
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminOpenAlexFieldSummaryResponse getOpenAlexFieldSummary() {
+        return new AdminOpenAlexFieldSummaryResponse(
+                card(openAlexSubfieldRepository.count()),
+                card(openAlexTopicRepository.count())
+        );
+    }
+
+    @Override
+    public AdminOpenAlexFieldSummaryResponse syncOpenAlexFieldSummary() {
+        openAlexFieldTaxonomySyncService.syncFieldTaxonomy();
+        return getOpenAlexFieldSummary();
     }
 
     @Override
@@ -221,20 +229,10 @@ public class AdminServiceImpl implements AdminService {
         long banned = adminDashboardRepository.countBannedUsers();
         long total = active + banned;
 
-        int activePercentage = 0;
-        int bannedPercentage = 0;
-
-        if (total > 0) {
-            activePercentage = (int) Math.round(active * 100.0 / total);
-            bannedPercentage = 100 - activePercentage;
-        }
-
         return new AdminUserBanSummaryResponse(
-                active,
-                banned,
-                total,
-                activePercentage,
-                bannedPercentage
+                card(active),
+                card(banned),
+                card(total)
         );
     }
 
@@ -370,18 +368,26 @@ public class AdminServiceImpl implements AdminService {
         return countsByUserId;
     }
 
-    private <T> AdminDashboardStatisticsResponse.StatisticCard<T> card(
-            T value,
-            String description,
-            String delta
-    ) {
-        return new AdminDashboardStatisticsResponse.StatisticCard<>(value, description, delta);
+    private long countTrendKeywordsForLatestWeek() {
+        LocalDate latestSnapshotDate = keywordTrendReadRepository.findLatestSnapshotDate();
+        if (latestSnapshotDate == null) {
+            return 0L;
+        }
+
+        return keywordTrendReadRepository.countTrendingKeywords(latestSnapshotDate);
     }
 
-    private OffsetDateTime startOfCurrentWeek(OffsetDateTime now) {
-        LocalDate date = now.toLocalDate()
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        return date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
+    private long countTrendTopicsForLatestWeek() {
+        LocalDate latestSnapshotDate = topicTrendReadRepository.findLatestSnapshotDate();
+        if (latestSnapshotDate == null) {
+            return 0L;
+        }
+
+        return topicTrendReadRepository.countTrendingTopics(latestSnapshotDate);
+    }
+
+    private <T> AdminDashboardStatisticsResponse.StatisticCard<T> card(T value) {
+        return new AdminDashboardStatisticsResponse.StatisticCard<>(value);
     }
 
     private OffsetDateTime startOfCurrentMonth(OffsetDateTime now) {
@@ -391,21 +397,6 @@ public class AdminServiceImpl implements AdminService {
 
     private OffsetDateTime startOfToday(OffsetDateTime now) {
         return now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
-    }
-
-    private String signedCount(long value, String suffix) {
-        String sign = value >= 0 ? "+" : "";
-        return sign + value + " " + suffix;
-    }
-
-    private String percentageDelta(long current, long previous) {
-        if (previous == 0) {
-            return current == 0 ? "0% vs last month" : "+100% vs last month";
-        }
-
-        long percent = Math.round(((double) (current - previous) / previous) * 100);
-        String sign = percent >= 0 ? "+" : "";
-        return sign + percent + "% vs last month";
     }
 
     private record FollowCounts(long topicCount, long authorCount) {

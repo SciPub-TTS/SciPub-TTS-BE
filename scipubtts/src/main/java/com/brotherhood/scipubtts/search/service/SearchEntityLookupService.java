@@ -19,6 +19,7 @@ public class SearchEntityLookupService {
 
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PER_PAGE = 20;
+    private static final int OPENALEX_MAX_PAGEABLE_RECORDS = 10_000;
 
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
@@ -69,6 +70,15 @@ public class SearchEntityLookupService {
                 safeRequest.sortDirection(),
                 hasSearchQuery
         );
+        String appliedFilter = buildAppliedEntityFilter(
+                targetEntityType,
+                query,
+                institutionIds,
+                countryCodes,
+                primaryTopicIds,
+                subFieldIds,
+                fieldIds
+        );
 
         if (
                 SearchEntityType.WORKS.equals(targetEntityType)
@@ -82,13 +92,14 @@ public class SearchEntityLookupService {
                         fieldIds
                 )
         ) {
-            return emptyResponse(targetEntityType, page, perPage);
+            return emptyResponse(targetEntityType, page, perPage, appliedFilter, resolvedSort);
         }
 
         if (searchScopeSupport.requiresTopicProfileScope(targetEntityType)) {
             return searchEntitiesWithinScopedTopicProfile(
                     targetEntityType,
                     query,
+                    appliedFilter,
                     institutionIds,
                     countryCodes,
                     primaryTopicIds,
@@ -101,6 +112,7 @@ public class SearchEntityLookupService {
         return searchEntitiesWithDirectFilter(
                 targetEntityType,
                 query,
+                appliedFilter,
                 subFieldIds,
                 fieldIds,
                 page,
@@ -139,6 +151,7 @@ public class SearchEntityLookupService {
     private SearchEntitiesResponse searchEntitiesWithDirectFilter(
             SearchEntityType entityType,
             String query,
+            String appliedFilter,
             List<String> subFieldIds,
             List<String> fieldIds,
             int page,
@@ -147,7 +160,7 @@ public class SearchEntityLookupService {
     ) {
         String nameOnlyFilter = buildEntityNameFilter(query);
         String directFilter = searchScopeSupport.getDirectFilter(entityType);
-        String appliedFilter = combineFilters(
+        String openAlexFilter = combineFilters(
                 nameOnlyFilter,
                 directFilter,
                 buildMultiValueFilter("subfield.id", subFieldIds),
@@ -158,12 +171,12 @@ public class SearchEntityLookupService {
                 page,
                 perPage,
                 resolvedSort,
-                appliedFilter
+                openAlexFilter
         );
 
         Map<String, Object> openAlexResponse = openAlexClient.get(entityType.path(), queryParams);
 
-        return mapDirectResponse(entityType, openAlexResponse, page, perPage);
+        return mapDirectResponse(entityType, openAlexResponse, page, perPage, appliedFilter, resolvedSort);
     }
 
     private Map<String, String> buildDirectQueryParams(
@@ -189,6 +202,7 @@ public class SearchEntityLookupService {
     private SearchEntitiesResponse searchEntitiesWithinScopedTopicProfile(
             SearchEntityType entityType,
             String query,
+            String appliedFilter,
             List<String> institutionIds,
             List<String> countryCodes,
             List<String> primaryTopicIds,
@@ -200,13 +214,20 @@ public class SearchEntityLookupService {
         int pageEndExclusive = fromIndex + perPage;
         int requiredScopedResultCount = pageEndExclusive + 1;
         int openAlexPage = 1;
+        int maxOpenAlexPage = Math.max(
+                OPENALEX_MAX_PAGEABLE_RECORDS / SearchConstants.ENTITY_SCOPE_FETCH_PER_PAGE,
+                1
+        );
         boolean reachedEnd = false;
-        long totalDbResponseTimeMs = 0L;
         double totalCostUsd = 0D;
         Set<String> seenIds = new LinkedHashSet<>();
         List<Map<String, Object>> scopedRawResults = new ArrayList<>();
 
-        while (!reachedEnd && scopedRawResults.size() < requiredScopedResultCount) {
+        while (
+                !reachedEnd
+                        && openAlexPage <= maxOpenAlexPage
+                        && scopedRawResults.size() < requiredScopedResultCount
+        ) {
             String nameOnlyFilter = buildEntityNameFilter(query);
             Map<String, String> queryParams = buildScopedQueryParams(
                     entityType,
@@ -223,11 +244,6 @@ public class SearchEntityLookupService {
             List<Map<String, Object>> rawResults =
                     openAlexMapReader.getMapList(openAlexResponse, "results");
 
-            totalDbResponseTimeMs += openAlexMapReader.getLong(
-                    meta,
-                    "db_response_time_ms",
-                    0L
-            );
             totalCostUsd += openAlexMapReader.getDouble(meta, "cost_usd", 0D);
 
             if (rawResults.isEmpty()) {
@@ -267,15 +283,15 @@ public class SearchEntityLookupService {
                 scopedRawResults.subList(safeFromIndex, safeToIndex)
         );
 
-        // totalCount is a lower bound while more raw OpenAlex pages may still contain scoped matches.
         return new SearchEntitiesResponse(
                 new SearchEntitiesResponse.Meta(
                         scopedRawResults.size(),
                         page,
                         perPage,
-                        totalDbResponseTimeMs,
                         totalCostUsd,
                         entityType.parameterValue(),
+                        appliedFilter,
+                        resolvedSort,
                         hasMore,
                         reachedEnd
                 ),
@@ -337,16 +353,19 @@ public class SearchEntityLookupService {
     private SearchEntitiesResponse emptyResponse(
             SearchEntityType entityType,
             int page,
-            int perPage
+            int perPage,
+            String appliedFilter,
+            String resolvedSort
     ) {
         return new SearchEntitiesResponse(
                 new SearchEntitiesResponse.Meta(
                         0L,
                         page,
                         perPage,
-                        0L,
                         0D,
                         entityType.parameterValue(),
+                        appliedFilter,
+                        resolvedSort,
                         false,
                         true
                 ),
@@ -358,7 +377,9 @@ public class SearchEntityLookupService {
             SearchEntityType entityType,
             Map<String, Object> openAlexResponse,
             int fallbackPage,
-            int fallbackPerPage
+            int fallbackPerPage,
+            String appliedFilter,
+            String resolvedSort
     ) {
         Map<String, Object> meta = openAlexMapReader.getMap(openAlexResponse, "meta");
         List<Map<String, Object>> rawResults =
@@ -373,9 +394,10 @@ public class SearchEntityLookupService {
                         totalCount,
                         page,
                         perPage,
-                        openAlexMapReader.getLong(meta, "db_response_time_ms", 0L),
                         openAlexMapReader.getDouble(meta, "cost_usd", 0D),
                         entityType.parameterValue(),
+                        appliedFilter,
+                        resolvedSort,
                         ((long) page * perPage) < totalCount,
                         true
                 ),
@@ -509,6 +531,39 @@ public class SearchEntityLookupService {
         }
 
         return "display_name.search:" + normalizedQuery;
+    }
+
+    private String buildAppliedEntityFilter(
+            SearchEntityType entityType,
+            String query,
+            List<String> institutionIds,
+            List<String> countryCodes,
+            List<String> primaryTopicIds,
+            List<String> subFieldIds,
+            List<String> fieldIds
+    ) {
+        String nameOnlyFilter = buildEntityNameFilter(query);
+
+        if (SearchEntityType.AUTHORS.equals(entityType)) {
+            return combineFilters(
+                    nameOnlyFilter,
+                    searchScopeSupport.getDirectFilter(entityType),
+                    buildMultiValueFilter("last_known_institutions.id", institutionIds),
+                    buildMultiValueFilter("last_known_institutions.country_code", countryCodes),
+                    buildMultiValueFilter("topics.id", primaryTopicIds)
+            );
+        }
+
+        if (SearchEntityType.TOPICS.equals(entityType)) {
+            return combineFilters(
+                    nameOnlyFilter,
+                    searchScopeSupport.getDirectFilter(entityType),
+                    buildMultiValueFilter("subfield.id", subFieldIds),
+                    buildMultiValueFilter("field.id", fieldIds)
+            );
+        }
+
+        return nameOnlyFilter;
     }
 
     private boolean hasEntitySearchCriteria(

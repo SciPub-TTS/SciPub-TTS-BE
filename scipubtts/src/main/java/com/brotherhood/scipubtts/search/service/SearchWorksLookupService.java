@@ -14,11 +14,6 @@ import java.util.Map;
 @Service
 public class SearchWorksLookupService {
 
-    // This service is the main search flow:
-    // normalize request
-    // build OpenAlex query
-    // call OpenAlex
-    // map response into our DTO
     private final OpenAlexClient openAlexClient;
     private final SearchQuerySupport searchQuerySupport;
     private final SearchFilterBuilder searchFilterBuilder;
@@ -55,7 +50,6 @@ public class SearchWorksLookupService {
 
         // Step 5: convert our request into OpenAlex query parameters.
         Map<String, String> queryParams = buildOpenAlexQueryParams(
-                safeRequest,
                 page,
                 perPage,
                 appliedFilter,
@@ -64,10 +58,6 @@ public class SearchWorksLookupService {
 
         // Step 6: call OpenAlex and map the raw response into our response DTO.
         Map<String, Object> openAlexResponse = openAlexClient.get("/works", queryParams);
-//        String normalizedTrendingMode = searchQuerySupport.normalizeTrendingMode(safeRequest.getTrendingMode());
-//        if (!"none".equals(normalizedTrendingMode)) {
-//            openAlexResponse = applyTrendingRanking(openAlexResponse, normalizedTrendingMode);
-//        }
         return searchWorksMapper.map(openAlexResponse, appliedFilter, appliedSort, page, perPage);
     }
 
@@ -123,7 +113,6 @@ public class SearchWorksLookupService {
     }
 
     private Map<String, String> buildOpenAlexQueryParams(
-            SearchWorksQueryRequest request,
             int page,
             int perPage,
             String appliedFilter,

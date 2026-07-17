@@ -71,14 +71,11 @@ public record SearchWorksQueryRequest(
         @Schema(nullable = true, allowableValues = {"is", "is not"}, example = "is")
         String indexedByOrcid,
 
-        @Schema(nullable = true, allowableValues = {"none", "keyword", "topic", "both"}, example = "both")
-        String trendingMode,
+        @Schema(nullable = true, allowableValues = {"relevance", "citation", "published"}, example = "[\"citation\", \"published\"]")
+        List<String> sortBy,
 
-        @Schema(nullable = true, allowableValues = {"relevance", "citation", "published"}, example = "citation")
-        String sortBy,
-
-        @Schema(nullable = true, allowableValues = {"asc", "desc"}, example = "desc")
-        String sortDirection,
+        @Schema(nullable = true, allowableValues = {"asc", "desc"}, example = "[\"desc\", \"asc\"]")
+        List<String> sortDirection,
 
         @Schema(nullable = true, example = "1", defaultValue = "1")
         Integer page,
@@ -88,7 +85,6 @@ public record SearchWorksQueryRequest(
 ) {
     public static SearchWorksQueryRequest empty() {
         return new SearchWorksQueryRequest(
-                null,
                 null,
                 null,
                 null,

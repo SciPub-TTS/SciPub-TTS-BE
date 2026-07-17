@@ -5,8 +5,6 @@ import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
 import com.brotherhood.scipubtts.search.dto.response.SearchEntitiesResponse;
-import com.brotherhood.scipubtts.search.dto.response.HotKeywordResponse;
-import com.brotherhood.scipubtts.search.dto.response.HotTopicResponse;
 import com.brotherhood.scipubtts.search.dto.request.SearchEntityQueryRequest;
 import com.brotherhood.scipubtts.search.dto.SearchEntityType;
 import com.brotherhood.scipubtts.search.dto.response.SearchHistoryItemResponse;
@@ -14,9 +12,7 @@ import com.brotherhood.scipubtts.search.dto.request.SearchHistorySaveRequest;
 import com.brotherhood.scipubtts.search.dto.response.SearchSummaryResponse;
 import com.brotherhood.scipubtts.search.dto.request.SearchWorksQueryRequest;
 import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
-import com.brotherhood.scipubtts.search.service.KeywordTrendService;
 import com.brotherhood.scipubtts.search.service.SearchService;
-import com.brotherhood.scipubtts.search.service.TopicTrendService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,7 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.DeleteMapping;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,17 +37,11 @@ import java.util.UUID;
 public class SearchController {
 
     private final SearchService searchService;
-    private final TopicTrendService topicTrendService;
-    private final KeywordTrendService keywordTrendService;
 
     public SearchController(
-            SearchService searchService,
-            TopicTrendService topicTrendService,
-            KeywordTrendService keywordTrendService
+            SearchService searchService
     ) {
         this.searchService = searchService;
-        this.topicTrendService = topicTrendService;
-        this.keywordTrendService = keywordTrendService;
     }
 
     @GetMapping("/summary")
@@ -154,28 +143,6 @@ public class SearchController {
         );
 
         return ok("Search entities successfully", data);
-    }
-
-    @GetMapping("/trending-topics")
-    @Operation(summary = "Load weekly trending topics from the internal topic trend table")
-    public ResponseEntity<ResponseObject> getTrendingTopics(
-            @RequestParam(required = false) LocalDate snapshotDate,
-            @RequestParam(defaultValue = "8") int limit
-    ) {
-        HotTopicResponse data = topicTrendService.getWeeklyHotTopics(snapshotDate, limit);
-
-        return ok("Loaded weekly trending topics", data);
-    }
-
-    @GetMapping("/trending-keywords")
-    @Operation(summary = "Load weekly trending keywords from the internal keyword trend table")
-    public ResponseEntity<ResponseObject> getTrendingKeywords(
-            @RequestParam(required = false) LocalDate snapshotDate,
-            @RequestParam(defaultValue = "8") int limit
-    ) {
-        HotKeywordResponse data = keywordTrendService.getWeeklyHotKeywords(snapshotDate, limit);
-
-        return ok("Loaded weekly trending keywords", data);
     }
 
     @GetMapping("/history/recent")
