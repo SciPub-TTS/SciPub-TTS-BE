@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.schedule;
 
+import com.brotherhood.scipubtts.common.openalex.logging.OpenAlexCallContext;
 import com.brotherhood.scipubtts.dashboard.dto.request.KeywordCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.PeriodRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
@@ -22,6 +23,7 @@ import java.util.List;
 public class StatisticWeeklyScheduler {
 
   private static final String KEYWORD_FORMULA = "balanced";
+  private static final String JOB_TYPE = "DASHBOARD_SYNC";
 
   private static final List<String> FIELD_IDS = List.of("17", "22");
 
@@ -31,6 +33,10 @@ public class StatisticWeeklyScheduler {
   private final KeywordServiceImpl keywordService;
 
   public void runWeeklyStatisticJob() {
+    OpenAlexCallContext.runAsSystemJob(null, JOB_TYPE, this::runWeeklyStatisticJobWithContext);
+  }
+
+  private void runWeeklyStatisticJobWithContext() {
     log.info("Bắt đầu job thống kê hàng tuần lúc 0h30 thứ 2");
 
     LocalDate now = LocalDate.now();
