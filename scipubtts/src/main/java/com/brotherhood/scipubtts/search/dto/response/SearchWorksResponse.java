@@ -1,10 +1,12 @@
 package com.brotherhood.scipubtts.search.dto.response;
 
+import com.brotherhood.scipubtts.detail.works.dto.response.DetailWorkResponse;
+
 import java.util.List;
 
 public record SearchWorksResponse(
         Meta meta,
-        List<WorkItem> results
+        List<DetailWorkResponse> results
 ) {
     public record Meta(
             long totalCount,
