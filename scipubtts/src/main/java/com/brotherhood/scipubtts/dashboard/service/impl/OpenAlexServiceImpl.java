@@ -26,6 +26,8 @@ public class OpenAlexServiceImpl implements OpenAlexService {
   private final RestClient restClient;
   private final int TOP_TOPICS = 30;
   private final int TOP_KEYWORDS = 100;
+  private static final int MAX_CITATION_PAPERS = 1000;
+  private static final int CITATION_THRESHOLD_BOOST = 2;
 
   public OpenAlexServiceImpl(RestClient openAlexClient) {
     this.restClient = openAlexClient;
@@ -360,14 +362,15 @@ public class OpenAlexServiceImpl implements OpenAlexService {
             new ArrayList<>();
 
     int apiCallCount = 0;
-    for (int publicationYear = startYear;
-         publicationYear <= endYear;
-         publicationYear++){
+
+    outer:
+    for (int publicationYear = endYear;
+         publicationYear >= startYear;
+         publicationYear--){
 
       int diff = endYear - publicationYear;
 
-      // 2^diff - 1
-      int citationThreshold =(1 << diff) - 1;
+      int citationThreshold = (1 << (diff + CITATION_THRESHOLD_BOOST)) - 1;
 
       String filter =
               String.format(
@@ -421,6 +424,10 @@ public class OpenAlexServiceImpl implements OpenAlexService {
 
         result.addAll(response.workCitationList());
 
+        if (result.size() >= MAX_CITATION_PAPERS) {
+          break outer;
+        }
+
         cursor = response.meta() != null
                 && OpenAlexCursorSupport.hasNextCursor(response.meta().nextCursor())
                 ? response.meta().nextCursor()
@@ -429,7 +436,13 @@ public class OpenAlexServiceImpl implements OpenAlexService {
     }
 
     System.out.println("Total API calls made: " + apiCallCount);
-    return new OpenAlexWorkCitationResponse(null, result);
+
+    List<OpenAlexWorkCitationResponse.WorkCitation> capped =
+            result.size() > MAX_CITATION_PAPERS
+                    ? result.subList(0, MAX_CITATION_PAPERS)
+                    : result;
+
+    return new OpenAlexWorkCitationResponse(null, capped);
   }
 
   public long countInstitutionByTopic(

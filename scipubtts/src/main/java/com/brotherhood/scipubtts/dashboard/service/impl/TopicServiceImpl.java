@@ -36,7 +36,10 @@ public class TopicServiceImpl implements TopicService {
 
   private static final long PERIOD_DAYS = 7;
   private static final int PREVIOUS_PERIODS_COUNT = 4;
-  private static final double CITATION_LAMBDA = Math.log(2);
+  private static final double CITATION_LAMBDA = Math.log(2) / (365.25 / 7);
+  private static final long CITATION_LOOKBACK_YEARS = 5;
+  private static final long INSTITUTION_LOOKBACK_YEARS = 1;
+  private static final long NEWCOMER_LOOKBACK_YEARS = 1;
   private static final long FAKE_TOPIC_CALCULATION_MS = 100;
 
   private static final Random RANDOM = new Random();
@@ -169,11 +172,14 @@ public class TopicServiceImpl implements TopicService {
   }
 
   private double calculateCitationDecay(Topic topic){
+    LocalDate windowEnd = topic.getEndTime();
+    LocalDate windowStart = windowEnd.minusYears(CITATION_LOOKBACK_YEARS);
+
     var response =
             openAlexService.takeWorkCitationList(
                     new OpenAlexTopicFilterRequest(
-                            topic.getStartTime().toString(),
-                            topic.getEndTime().toString(),
+                            windowStart.toString(),
+                            windowEnd.toString(),
                             topic.getTopicId()
                     )
             );
@@ -203,7 +209,7 @@ public class TopicServiceImpl implements TopicService {
               );
 
       double age =
-              daysBetween / 365.25;
+              daysBetween / 7.0;
 
       citationScore +=
               citationCount
@@ -218,12 +224,14 @@ public class TopicServiceImpl implements TopicService {
   private double calculateInstitution(
           Topic topic
   ) {
+    LocalDate windowEnd = topic.getEndTime();
+    LocalDate windowStart = windowEnd.minusYears(INSTITUTION_LOOKBACK_YEARS);
 
     return openAlexService
             .countInstitutionByTopic(
                     new OpenAlexTopicFilterRequest(
-                            topic.getStartTime().toString(),
-                            topic.getEndTime().toString(),
+                            windowStart.toString(),
+                            windowEnd.toString(),
                             topic.getTopicId()
                     )
             );
@@ -244,7 +252,8 @@ public class TopicServiceImpl implements TopicService {
     if (currentPeriodAuthor.isEmpty()) return 0.0;
 
     var pastEnd = currentStart.minusDays(1);
-    var pastStart = topic.getStartTime();
+    var pastStart = currentStart.minusYears(NEWCOMER_LOOKBACK_YEARS);
+
     Set<String> allAuthor = openAlexService.takeDistinctAuthorIds(
             new OpenAlexTopicFilterRequest(
                     pastStart.toString(),
