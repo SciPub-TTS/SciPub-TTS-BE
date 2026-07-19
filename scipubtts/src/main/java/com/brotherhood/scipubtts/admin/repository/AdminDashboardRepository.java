@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.admin.repository;
 
+import com.brotherhood.scipubtts.admin.dto.AdminApiCallLogItemResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminApiCallLogPageResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -7,10 +9,12 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class AdminDashboardRepository {
@@ -25,26 +29,12 @@ public class AdminDashboardRepository {
         return count("SELECT COUNT(*) FROM users");
     }
 
-    public long countUsersCreatedFrom(OffsetDateTime from) {
-        return count(
-                "SELECT COUNT(*) FROM users WHERE created_at >= ?",
-                from
-        );
-    }
-
     public long countBannedUsers() {
         return count("SELECT COUNT(*) FROM users WHERE is_banned = true");
     }
 
     public long countActiveUsers() {
         return count("SELECT COUNT(*) FROM users WHERE is_banned = false");
-    }
-
-    public long countBannedUsersCreatedFrom(OffsetDateTime from) {
-        return count(
-                "SELECT COUNT(*) FROM users WHERE is_banned = true AND created_at >= ?",
-                from
-        );
     }
 
     public long countApiCallsFrom(OffsetDateTime from) {
@@ -58,30 +48,18 @@ public class AdminDashboardRepository {
         );
     }
 
-    public long countApiCallsBetween(OffsetDateTime from, OffsetDateTime to) {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM api_call_log
-                WHERE COALESCE(started_at, finished_at) >= ?
-                  AND COALESCE(started_at, finished_at) < ?
-                """,
-                from,
-                to
-        );
-    }
-
-    public List<AdminApiCallConsumerResponse> findTopApiConsumersFromSearchHistory(
+    public List<AdminApiCallConsumerResponse> findTopApiConsumersFromApiCallLog(
             OffsetDateTime from,
             int limit
     ) {
         return jdbcTemplate.query(
                 """
                 SELECT u.email, COUNT(*) AS call_count
-                FROM search_history sh
-                JOIN users u ON u.id = sh.user_id
-                WHERE sh.user_id IS NOT NULL
-                  AND sh.created_at >= ?
+                FROM api_call_log acl
+                JOIN users u ON u.id = acl.user_id
+                WHERE acl.caller_type = 'USER'
+                  AND acl.user_id IS NOT NULL
+                  AND COALESCE(acl.started_at, acl.finished_at) >= ?
                 GROUP BY u.id, u.email
                 ORDER BY call_count DESC, u.email ASC
                 LIMIT ?
@@ -95,7 +73,7 @@ public class AdminDashboardRepository {
         );
     }
 
-    public List<AdminApiUsageDailyResponse> findApiUsageDailyFromSearchHistory(
+    public List<AdminApiUsageDailyResponse> findApiUsageDailyFromApiCallLog(
             LocalDate startDate,
             LocalDate endDate
     ) {
@@ -103,9 +81,8 @@ public class AdminDashboardRepository {
                 """
                 SELECT days.usage_date, COALESCE(COUNT(sh.id), 0) AS call_count
                 FROM generate_series(?::date, ?::date, interval '1 day') AS days(usage_date)
-                LEFT JOIN search_history sh
-                    ON sh.created_at >= days.usage_date
-                   AND sh.created_at < days.usage_date + interval '1 day'
+                LEFT JOIN api_call_log sh
+                    ON (COALESCE(sh.started_at, sh.finished_at) AT TIME ZONE 'UTC')::date = days.usage_date
                 GROUP BY days.usage_date
                 ORDER BY days.usage_date ASC
                 """,
@@ -118,65 +95,112 @@ public class AdminDashboardRepository {
         );
     }
 
-    public long countSubfields() {
-        return count("SELECT COUNT(*) FROM subfields");
-    }
+    public AdminApiCallLogPageResponse findApiCallLogs(
+            int page,
+            int size,
+            OffsetDateTime from,
+            OffsetDateTime to,
+            String callerType,
+            UUID userId,
+            String jobType,
+            Integer status,
+            String endpoint
+    ) {
+        StringBuilder where = new StringBuilder(" FROM api_call_log acl LEFT JOIN users u ON u.id = acl.user_id WHERE 1 = 1");
+        List<Object> args = new ArrayList<>();
 
-    public long countFields() {
-        return count("SELECT COUNT(*) FROM fields");
-    }
+        if (from != null) {
+            where.append(" AND COALESCE(acl.started_at, acl.finished_at) >= ?");
+            args.add(from);
+        }
 
-    public long countTopics() {
-        return count("SELECT COUNT(*) FROM topics");
-    }
+        if (to != null) {
+            where.append(" AND COALESCE(acl.started_at, acl.finished_at) < ?");
+            args.add(to);
+        }
 
-    public long countTopicsForLatestPeriod() {
-        return count(
+        if (callerType != null && !callerType.isBlank()) {
+            where.append(" AND acl.caller_type = ?");
+            args.add(callerType);
+        }
+
+        if (userId != null) {
+            where.append(" AND acl.user_id = ?");
+            args.add(userId);
+        }
+
+        if (jobType != null && !jobType.isBlank()) {
+            where.append(" AND acl.job_type = ?");
+            args.add(jobType);
+        }
+
+        if (status != null) {
+            where.append(" AND acl.response_status = ?");
+            args.add(status);
+        }
+
+        if (endpoint != null && !endpoint.isBlank()) {
+            where.append(" AND acl.endpoint LIKE ? ESCAPE '\\'");
+            args.add(escapeLikePattern(endpoint) + "%");
+        }
+
+        long totalElements = count("SELECT COUNT(*)" + where, args.toArray());
+        int totalPages = size == 0 ? 0 : (int) Math.ceil((double) totalElements / size);
+        int offset = page * size;
+
+        List<Object> pageArgs = new ArrayList<>(args);
+        pageArgs.add(size);
+        pageArgs.add(offset);
+
+        List<AdminApiCallLogItemResponse> items = jdbcTemplate.query(
                 """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (SELECT MAX(end_time) FROM topics)
-                """
+                SELECT acl.id,
+                       acl.caller_type,
+                       acl.user_id,
+                       u.email AS user_email,
+                       acl.job_id,
+                       acl.job_type,
+                       acl.method,
+                       acl.endpoint,
+                       acl.query_params,
+                       acl.response_status,
+                       acl.records_fetched,
+                       acl.duration_ms,
+                       acl.started_at,
+                       acl.finished_at,
+                       acl.error_log
+                """ + where + """
+                 
+                ORDER BY acl.started_at DESC NULLS LAST, acl.id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (rs, rowNum) -> new AdminApiCallLogItemResponse(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("caller_type"),
+                        rs.getObject("user_id", UUID.class),
+                        rs.getString("user_email"),
+                        rs.getObject("job_id", UUID.class),
+                        rs.getString("job_type"),
+                        rs.getString("method"),
+                        rs.getString("endpoint"),
+                        rs.getString("query_params"),
+                        (Integer) rs.getObject("response_status"),
+                        (Integer) rs.getObject("records_fetched"),
+                        (Long) rs.getObject("duration_ms"),
+                        toOffsetDateTime(rs.getTimestamp("started_at")),
+                        toOffsetDateTime(rs.getTimestamp("finished_at")),
+                        rs.getString("error_log")
+                ),
+                pageArgs.toArray()
         );
-    }
 
-    public long countTopicsForPreviousPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (
-                    SELECT MAX(end_time)
-                    FROM topics
-                    WHERE end_time < (SELECT MAX(end_time) FROM topics)
-                )
-                """
-        );
-    }
-
-    public long countActiveTrendsForLatestPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (SELECT MAX(end_time) FROM topics)
-                  AND (velocity > 0 OR acceleration > 0)
-                """
-        );
-    }
-
-    public long countActiveTrendsForPreviousPeriod() {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM topics
-                WHERE end_time = (
-                    SELECT MAX(end_time)
-                    FROM topics
-                    WHERE end_time < (SELECT MAX(end_time) FROM topics)
-                )
-                  AND (velocity > 0 OR acceleration > 0)
-                """
+        return new AdminApiCallLogPageResponse(
+                items,
+                page,
+                size,
+                totalElements,
+                totalPages,
+                page + 1 < totalPages
         );
     }
 
@@ -209,6 +233,21 @@ public class AdminDashboardRepository {
             return Optional.empty();
         }
 
-        return Optional.of(timestamp.toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime());
+        return Optional.of(toOffsetDateTime(timestamp));
+    }
+
+    private OffsetDateTime toOffsetDateTime(Timestamp timestamp) {
+        if (timestamp == null) {
+            return null;
+        }
+
+        return timestamp.toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime();
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

@@ -45,7 +45,8 @@ public interface SearchHistoryRepository extends JpaRepository<SearchHistory, UU
                     select count(distinct lower(sh.content))
                     from SearchHistory sh
                     where sh.userId = :userId
-                    """
+                    """,
+            nativeQuery = true
     )
     Page<RecentSearchProjection> findRecentDistinctSearchesByUserId(
             @Param("userId") UUID userId,

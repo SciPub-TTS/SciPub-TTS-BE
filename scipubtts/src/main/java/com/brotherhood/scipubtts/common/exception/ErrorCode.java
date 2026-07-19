@@ -83,6 +83,9 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "Invalid email verification token."),
     EMAIL_VERIFICATION_TOKEN_ALREADY_USED(HttpStatus.BAD_REQUEST, "This email verification token has already been used."),
     EMAIL_VERIFICATION_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "Email verification token has expired."),
+    EMAIL_TEMPLATE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Failed to create email from template: %s, %s"
+    ),
 
     // ===== OPENALEX =====
     OPENALEX_ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -101,12 +104,21 @@ public enum ErrorCode {
             "Failed to retrieve publication data from OpenAlex."),
     JSON_SERIALIZATION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,
                     "An error occurred while processing system data."),
+    OPENALEX_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE,
+            "OpenAlex service is temporarily unavailable."
+    ),
 
     // ===== STATISTIC =====
     TOPIC_REQUEST_INVALID(HttpStatus.BAD_REQUEST,
             "Request start time and end time must not be null."),
     TOPIC_NOT_FOUND(HttpStatus.BAD_REQUEST,
             "Can not find topic with this id."),
+    UNKNOWN_METRIC_TITLE(HttpStatus.BAD_REQUEST,
+            "Unknown metric title: %s"
+    ),
+    TOPIC_WEIGHT_NOT_CONFIGURED(HttpStatus.BAD_REQUEST,
+            "No TopicWeight configured for formula: %s"
+    ),
 
     // ===== BOOKMARK =====
     BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "Bookmark not found."),
@@ -118,11 +130,11 @@ public enum ErrorCode {
     BOOKMARK_COLLECTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "A bookmark collection with this name already exists."),
 
     // ===== REPORT =====
-    EXPORT_NO_PAPER_SELECTED(HttpStatus.BAD_REQUEST, "Phải chọn ít nhất 1 bài báo để export"),
-    EXPORT_EXCEEDS_PAPER_LIMIT(HttpStatus.BAD_REQUEST, "Chỉ được export tối đa 20 bài báo"),
-    EXPORT_NO_FIELD_SELECTED(HttpStatus.BAD_REQUEST, "Phải chọn ít nhất 1 trường dữ liệu để export"),
-    EXPORT_FORMAT_REQUIRED(HttpStatus.NOT_FOUND, "Phải chọn định dạng export (CSV hoặc JSON)"),
-    EXPORT_NO_PAPER_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy dữ liệu cho các bài báo đã chọn"),
+    EXPORT_NO_PAPER_SELECTED(HttpStatus.BAD_REQUEST, "At least one paper must be selected for export"),
+    EXPORT_EXCEEDS_PAPER_LIMIT(HttpStatus.BAD_REQUEST, "A maximum of 20 papers can be exported at a time"),
+    EXPORT_NO_FIELD_SELECTED(HttpStatus.BAD_REQUEST, "At least one data field must be selected for export"),
+    EXPORT_FORMAT_REQUIRED(HttpStatus.BAD_REQUEST, "Export format is required (CSV or JSON)"),
+    EXPORT_NO_PAPER_FOUND(HttpStatus.NOT_FOUND, "No data found for the selected papers"),
 
     // ===== SOCIAL =====
     SOCIAL_POST_NOT_FOUND(HttpStatus.NOT_FOUND,
@@ -137,7 +149,9 @@ public enum ErrorCode {
         "One or more referenced papers could not be found in your bookmarks."),
 
     // ===== SYSTEM / CONFIGURATION =====
-    CONFIGURATION_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "Required system configuration key is missing.");
+    CONFIGURATION_KEY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "Required system configuration key is missing."),
+    SYSTEM_CONFIGURATION_NOT_FOUND(HttpStatus.NOT_FOUND, "System configuration key was not found."),
+    INVALID_CRON_EXPRESSION(HttpStatus.BAD_REQUEST, "Invalid cron expression: %s");
 
     private final HttpStatus status;
     private final String message;

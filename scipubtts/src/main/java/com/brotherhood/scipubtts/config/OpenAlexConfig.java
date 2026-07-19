@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.config;
 
+import com.brotherhood.scipubtts.common.openalex.logging.OpenAlexLoggingInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,10 +17,11 @@ public class OpenAlexConfig {
   private String openAlexApiKey;
 
   @Bean
-  public RestClient openAlexRestClient() {
+  public RestClient openAlexRestClient(OpenAlexLoggingInterceptor openAlexLoggingInterceptor) {
     var builder = RestClient.builder()
             .baseUrl(openAlexBaseUrl)
-            .defaultHeader(HttpHeaders.USER_AGENT, "ScipubTTS");
+            .defaultHeader(HttpHeaders.USER_AGENT, "ScipubTTS")
+            .requestInterceptor(openAlexLoggingInterceptor);
 
     if (openAlexApiKey != null && !openAlexApiKey.isBlank()) {
       builder = builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + openAlexApiKey);

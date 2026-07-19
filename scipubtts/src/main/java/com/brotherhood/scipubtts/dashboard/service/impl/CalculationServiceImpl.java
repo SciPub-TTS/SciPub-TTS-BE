@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.dashboard.service.impl;
 
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
 import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.constant.weight.KeywordWeight;
 import com.brotherhood.scipubtts.dashboard.constant.weight.TopicWeight;
@@ -44,8 +46,7 @@ public class CalculationServiceImpl implements CalculationService {
   private TopicWeight resolveTopicWeight(FormulaType formulaType) {
     TopicWeight weight = topicWeights.get(formulaType);
     if (weight == null) {
-      throw new IllegalArgumentException(
-              "No TopicWeight configured for formula: " + formulaType);
+      throw new BusinessException(ErrorCode.TOPIC_WEIGHT_NOT_CONFIGURED);
     }
     return weight;
   }

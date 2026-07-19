@@ -2,6 +2,8 @@ package com.brotherhood.scipubtts.dashboard.service.impl;
 
 import com.brotherhood.scipubtts.common.exception.BusinessException;
 import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.common.openalex.logging.OpenAlexCallContext;
+import com.brotherhood.scipubtts.common.openalex.logging.OpenAlexCallContextSnapshot;
 import com.brotherhood.scipubtts.dashboard.constant.FormulaType;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateAllRequest;
 import com.brotherhood.scipubtts.dashboard.dto.request.TopicCalculateSingleRequest;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -351,7 +354,7 @@ public class TopicServiceImpl implements TopicService {
       for (int i = 0; i < totalTopics; i++) {
         int index = i;
 
-        futures.add(executor.submit(() -> {
+        futures.add(executor.submit(withOpenAlexContext(() -> {
           Topic rawTopic = topicList.get(index);
           long start = System.currentTimeMillis();
 
@@ -375,7 +378,7 @@ public class TopicServiceImpl implements TopicService {
                   rawTopic.getTopicId(), index, minutes);
 
           return topic;
-        }));
+        })));
       }
 
       List<Topic> result = new ArrayList<>();
@@ -669,7 +672,7 @@ public class TopicServiceImpl implements TopicService {
       for (int period = 1; period <= PREVIOUS_PERIODS_COUNT; period++) {
         final int currentPeriod = period;
 
-        futures.add(executor.submit(() -> {
+        futures.add(executor.submit(withOpenAlexContext(() -> {
           long start = System.currentTimeMillis();
           long shiftDays = PERIOD_DAYS * currentPeriod;
 
@@ -702,7 +705,7 @@ public class TopicServiceImpl implements TopicService {
                   currentTopic.getTopicId(), currentPeriod, duration);
 
           return result;
-        }));
+        })));
       }
 
       List<Topic> results = new ArrayList<>();
@@ -774,7 +777,7 @@ public class TopicServiceImpl implements TopicService {
       List<Future<List<Topic>>> futures = new ArrayList<>();
 
       for (Topic currentTopic : currentTopics) {
-        futures.add(executor.submit(() -> {
+        futures.add(executor.submit(withOpenAlexContext(() -> {
           long start = System.currentTimeMillis();
 
           List<Topic> result = calculateTopicPreviousPeriodsParallel(currentTopic, true).topicList();
@@ -784,7 +787,7 @@ public class TopicServiceImpl implements TopicService {
                   currentTopic.getTopicId(), PREVIOUS_PERIODS_COUNT, duration);
 
           return result;
-        }));
+        })));
       }
 
       List<Topic> results = new ArrayList<>();
@@ -882,5 +885,10 @@ public class TopicServiceImpl implements TopicService {
     }
 
     return new TopicCalculateResponse(results);
+  }
+
+  private <T> Callable<T> withOpenAlexContext(Callable<T> callable) {
+    OpenAlexCallContextSnapshot snapshot = OpenAlexCallContext.capture();
+    return () -> OpenAlexCallContext.callWithContext(snapshot, callable);
   }
 }

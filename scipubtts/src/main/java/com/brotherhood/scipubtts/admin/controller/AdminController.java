@@ -1,8 +1,10 @@
 package com.brotherhood.scipubtts.admin.controller;
 
+import com.brotherhood.scipubtts.admin.dto.AdminApiCallLogPageResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
+import com.brotherhood.scipubtts.admin.dto.AdminOpenAlexFieldSummaryResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserDetailResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminUserBanSummaryResponse;
@@ -12,19 +14,24 @@ import com.brotherhood.scipubtts.admin.service.AdminService;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
 import com.brotherhood.scipubtts.system.dto.CronConfigResponse;
+import com.brotherhood.scipubtts.system.dto.UpdateCronConfigRequest;
 import com.brotherhood.scipubtts.system.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @RestController
@@ -129,6 +136,32 @@ public class AdminController {
         );
     }
 
+    @GetMapping("/dashboard/openalex-field-summary")
+    public ResponseEntity<ResponseObject> getOpenAlexFieldSummary() {
+        AdminOpenAlexFieldSummaryResponse data = adminService.getOpenAlexFieldSummary();
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "OpenAlex field summary fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @PostMapping("/dashboard/openalex-field-summary/sync")
+    public ResponseEntity<ResponseObject> syncOpenAlexFieldSummary() {
+        AdminOpenAlexFieldSummaryResponse data = adminService.syncOpenAlexFieldSummary();
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "OpenAlex field summary synced successfully",
+                        data
+                )
+        );
+    }
+
     @GetMapping("/users/ban-summary")
     public ResponseEntity<ResponseObject> getUserBanSummary() {
         AdminUserBanSummaryResponse data = adminService.getUserBanSummary();
@@ -168,27 +201,65 @@ public class AdminController {
         );
     }
 
-    @GetMapping("config/feed-sync-cron")
-    public ResponseEntity<ResponseObject> getConfigFeedSyncCron() {
-        CronConfigResponse data = scheduleService.getDailySyncSchedule();
+    @GetMapping("/dashboard/api-calls/logs")
+    public ResponseEntity<ResponseObject> getApiCallLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) OffsetDateTime from,
+            @RequestParam(required = false) OffsetDateTime to,
+            @RequestParam(required = false) String callerType,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) String jobType,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String endpoint
+    ) {
+        AdminApiCallLogPageResponse data = adminService.getApiCallLogs(
+                page,
+                size,
+                from,
+                to,
+                callerType,
+                userId,
+                jobType,
+                status,
+                endpoint
+        );
+
         return ResponseEntity.ok(
                 new ResponseObject(
                         HttpStatus.OK.value(),
-                        "Feed sync cron config fetched successfully",
+                        "API call logs fetched successfully",
                         data
                 )
         );
     }
 
-    @GetMapping("config/dashboard-sync-cron")
-    public ResponseEntity<ResponseObject> getConfigDashboardSyncCron() {
-        CronConfigResponse data = scheduleService.getWeeklyStatisticSchedule();
+    @GetMapping("config/sync-cron")
+    public ResponseEntity<ResponseObject> getConfigFeedSyncCron() {
+        List<CronConfigResponse> data = scheduleService.getAllSchedules();
         return ResponseEntity.ok(
                 new ResponseObject(
                         HttpStatus.OK.value(),
-                        "Dashboard sync cron config fetched successfully",
+                        "Cron configs fetched successfully",
                         data
                 )
         );
     }
+
+    @PatchMapping("config/sync-cron/{configKey}")
+    public ResponseEntity<ResponseObject> updateConfigSyncCron(
+            @PathVariable String configKey,
+            @Valid @RequestBody UpdateCronConfigRequest request
+    ) {
+        CronConfigResponse data = scheduleService.updateCronConfig(configKey, request);
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "Cron config updated successfully",
+                        data
+                )
+        );
+    }
+
 }

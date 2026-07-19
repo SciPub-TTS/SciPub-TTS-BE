@@ -5,22 +5,20 @@ import com.brotherhood.scipubtts.search.dto.SearchEntityType;
 import com.brotherhood.scipubtts.search.dto.response.SearchSummaryResponse;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SearchSummaryService {
 
-    private static final Duration SUMMARY_CACHE_TTL = Duration.ofMinutes(5);
+    private static final int CACHE_MINUTES = 5;
 
     private final OpenAlexClient openAlexClient;
     private final OpenAlexMapReader openAlexMapReader;
     private final SearchScopeSupport searchScopeSupport;
-    private final Map<SearchEntityType, CachedSummary> cachedSummaries =
-            new ConcurrentHashMap<>();
+    private final Map<SearchEntityType, CachedSummary> cachedSummaries = new HashMap<>();
 
     public SearchSummaryService(
             OpenAlexClient openAlexClient,
@@ -33,28 +31,52 @@ public class SearchSummaryService {
     }
 
     public SearchSummaryResponse getSummary(SearchEntityType entityType) {
-        SearchEntityType safeEntityType =
-                entityType == null ? SearchEntityType.WORKS : entityType;
-        CachedSummary currentSummary = cachedSummaries.get(safeEntityType);
+        SearchEntityType safeEntityType = getSafeEntityType(entityType);
 
-        if (currentSummary != null && !currentSummary.isExpired()) {
-            return currentSummary.response();
+        CachedSummary cachedSummary = cachedSummaries.get(safeEntityType);
+        if (cachedSummary != null && !isCacheExpired(cachedSummary)) {
+            return cachedSummary.getResponse();
         }
 
-        SearchSummaryResponse freshSummary = new SearchSummaryResponse(
-                fetchTotalCount(safeEntityType),
-                safeEntityType.parameterValue(),
-                supportsExactSummaryCount(safeEntityType)
-        );
-        cachedSummaries.put(
-                safeEntityType,
-                new CachedSummary(
-                        freshSummary,
-                        Instant.now().plus(SUMMARY_CACHE_TTL)
-                )
-        );
+        SearchSummaryResponse freshSummary = loadFreshSummary(safeEntityType);
+        saveToCache(safeEntityType, freshSummary);
 
         return freshSummary;
+    }
+
+    private SearchEntityType getSafeEntityType(SearchEntityType entityType) {
+        if (entityType == null) {
+            return SearchEntityType.WORKS;
+        }
+
+        return entityType;
+    }
+
+    private boolean isCacheExpired(CachedSummary cachedSummary) {
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(cachedSummary.getExpiredAt());
+    }
+
+    private SearchSummaryResponse loadFreshSummary(SearchEntityType entityType) {
+        long totalCount = fetchTotalCount(entityType);
+        String entityTypeValue = entityType.parameterValue();
+        boolean totalCountExact = supportsExactSummaryCount(entityType);
+
+        return new SearchSummaryResponse(
+                totalCount,
+                entityTypeValue,
+                totalCountExact
+        );
+    }
+
+    private void saveToCache(
+            SearchEntityType entityType,
+            SearchSummaryResponse response
+    ) {
+        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(CACHE_MINUTES);
+        CachedSummary cachedSummary = new CachedSummary(response, expiredAt);
+
+        cachedSummaries.put(entityType, cachedSummary);
     }
 
     private long fetchTotalCount(SearchEntityType entityType) {
@@ -77,12 +99,24 @@ public class SearchSummaryService {
         return !SearchEntityType.AUTHORS.equals(entityType);
     }
 
-    private record CachedSummary(
-            SearchSummaryResponse response,
-            Instant expiresAt
-    ) {
-        private boolean isExpired() {
-            return Instant.now().isAfter(expiresAt);
+    private static class CachedSummary {
+        private final SearchSummaryResponse response;
+        private final LocalDateTime expiredAt;
+
+        public CachedSummary(
+                SearchSummaryResponse response,
+                LocalDateTime expiredAt
+        ) {
+            this.response = response;
+            this.expiredAt = expiredAt;
+        }
+
+        public SearchSummaryResponse getResponse() {
+            return response;
+        }
+
+        public LocalDateTime getExpiredAt() {
+            return expiredAt;
         }
     }
 }

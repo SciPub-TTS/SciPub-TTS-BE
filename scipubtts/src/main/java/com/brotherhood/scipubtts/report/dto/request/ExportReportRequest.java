@@ -9,14 +9,14 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record ExportReportRequest(
-        @NotEmpty(message = "Phải chọn ít nhất 1 bài báo để export")
-        @Size(max = 20, message = "Chỉ được export tối đa 20 bài báo")
+        @NotEmpty(message = "At least one paper must be selected for export")
+        @Size(max = 20, message = "A maximum of 20 papers can be exported at a time")
         List<String> paperIds,
 
-        @NotEmpty(message = "Phải chọn ít nhất 1 trường dữ liệu để export")
+        @NotEmpty(message = "At least one data field must be selected for export")
         List<ExportField> fields,
 
-        @NotNull(message = "Phải chọn định dạng export (CSV hoặc JSON)")
+        @NotNull(message = "Export format is required (CSV or JSON)")
         ExportFormat format,
 
         boolean includeMetadata,

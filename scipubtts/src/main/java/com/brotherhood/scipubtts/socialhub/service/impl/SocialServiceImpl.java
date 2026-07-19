@@ -64,7 +64,7 @@ public class SocialServiceImpl implements SocialService {
     @Override
     @Transactional
     public SocialPostDetailResponse createPost(UUID authorId, CreateSocialPostRequest request) {
-        if (!StringUtils.hasText(request.title()) || !StringUtils.hasText(request.body())) {
+        if (!StringUtils.hasText(request.title())) {
             throw new BusinessException(ErrorCode.SOCIAL_POST_TITLE_OR_BODY_BLANK);
         }
 
@@ -78,7 +78,7 @@ public class SocialServiceImpl implements SocialService {
         SocialPost post = SocialPost.builder()
                 .author(author)
                 .title(request.title().trim())
-                .body(request.body().trim())
+                .body(normalizeOptionalBody(request.body()))
                 .topicTag(snapshotSupport.normalizeText(request.topicTag()))
                 .build();
 
@@ -132,8 +132,8 @@ public class SocialServiceImpl implements SocialService {
             post.setTitle(request.title().trim());
         }
 
-        if (StringUtils.hasText(request.body())) {
-            post.setBody(request.body().trim());
+        if (request.body() != null) {
+            post.setBody(normalizeOptionalBody(request.body()));
         }
 
         if (request.topicTag() != null) {
@@ -158,20 +158,7 @@ public class SocialServiceImpl implements SocialService {
                 Map<String, String> workTypeSnapshotsByOpenAlexId =
                         resolveBookmarkWorkTypeSnapshots(validBookmarks);
 
-                likeRepository.deleteAllByPostId(postId);
-                post.resetLikeCount();
-                likesReset = true;
-
-                post.getReferences().clear();
-                post.getReferences().addAll(validBookmarks.stream()
-                        .map(bookmark -> buildReferenceFromBookmark(
-                                post,
-                                bookmark,
-                                workTypeSnapshotsByOpenAlexId.get(
-                                        normalizeOpenAlexId(bookmark.getOpenAlexId())
-                                )
-                        ))
-                        .toList());
+                replacePostReferences(post, validBookmarks, workTypeSnapshotsByOpenAlexId);
             }
         }
 
@@ -319,6 +306,38 @@ public class SocialServiceImpl implements SocialService {
         }
 
         return body.substring(0, BODY_PREVIEW_LENGTH) + "...";
+    }
+
+    private String normalizeOptionalBody(String body) {
+        return body == null ? "" : body.trim();
+    }
+
+    private void replacePostReferences(
+            SocialPost post,
+            List<UserBookmark> bookmarks,
+            Map<String, String> workTypeSnapshotsByOpenAlexId
+    ) {
+        UUID postId = post.getId();
+        if (postId == null) {
+            return;
+        }
+
+        post.getReferences().clear();
+        entityManager.flush();
+
+        List<SocialPostReference> nextReferences = bookmarks.stream()
+                .map(bookmark -> buildReferenceFromBookmark(
+                        post,
+                        bookmark,
+                        workTypeSnapshotsByOpenAlexId.get(
+                                normalizeOpenAlexId(bookmark.getOpenAlexId())
+                        )
+                ))
+                .toList();
+
+        referenceRepository.saveAll(nextReferences);
+        entityManager.flush();
+        post.getReferences().addAll(nextReferences);
     }
 
     private String buildAuthorName(User author) {
