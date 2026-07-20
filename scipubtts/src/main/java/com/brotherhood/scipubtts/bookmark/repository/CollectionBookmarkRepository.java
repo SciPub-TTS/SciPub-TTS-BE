@@ -1,7 +1,7 @@
 package com.brotherhood.scipubtts.bookmark.repository;
 
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.entity.CollectionBookmark;
+import com.brotherhood.scipubtts.bookmark.repository.projection.BookmarkCollectionMembershipRow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -25,10 +25,6 @@ public interface CollectionBookmarkRepository extends JpaRepository<CollectionBo
             @Param("bookmarkId") UUID bookmarkId
     );
 
-    List<CollectionBookmark> findByCollectionId(UUID collectionId);
-
-    List<CollectionBookmark> findByCollectionIdAndBookmarkIdIn(UUID collectionId, Collection<UUID> bookmarkIds);
-
     @Query("""
             SELECT cb.bookmarkId
             FROM CollectionBookmark cb
@@ -40,18 +36,19 @@ public interface CollectionBookmarkRepository extends JpaRepository<CollectionBo
             @Param("bookmarkIds") Collection<UUID> bookmarkIds
     );
 
-    long countByCollectionId(UUID collectionId);
-
     @Query("""
-            SELECT new com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionMembershipRow(
+            SELECT new com.brotherhood.scipubtts.bookmark.repository.projection.BookmarkCollectionMembershipRow(
                 cb.bookmarkId,
                 c.id,
-                c.name
+                c.name,
+                COUNT(allItems.id)
             )
             FROM CollectionBookmark cb
             JOIN BookmarkCollection c ON c.id = cb.collectionId
+            LEFT JOIN CollectionBookmark allItems ON allItems.collectionId = c.id
             WHERE c.userId = :userId
               AND cb.bookmarkId IN :bookmarkIds
+            GROUP BY cb.bookmarkId, c.id, c.name, cb.createdAt, c.createdAt
             ORDER BY cb.bookmarkId ASC, cb.createdAt ASC, c.createdAt ASC
             """)
     List<BookmarkCollectionMembershipRow> findMembershipRowsByUserIdAndBookmarkIds(

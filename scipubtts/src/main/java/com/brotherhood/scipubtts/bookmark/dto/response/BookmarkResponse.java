@@ -10,11 +10,10 @@ public record BookmarkResponse(
         String title,
         String authors,
         String workType,
-        String source,
         String topic,
         Integer publicationYear,
         Integer citationCount,
-        List<BookmarkCollectionSummaryResponse> collections,
+        List<BookmarkCollectionResponse> collections,
         OffsetDateTime createdAt
 ) {
 }

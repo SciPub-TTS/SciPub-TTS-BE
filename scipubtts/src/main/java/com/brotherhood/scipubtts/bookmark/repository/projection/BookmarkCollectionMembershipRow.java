@@ -1,10 +1,11 @@
-package com.brotherhood.scipubtts.bookmark.dto.response;
+package com.brotherhood.scipubtts.bookmark.repository.projection;
 
 import java.util.UUID;
 
 public record BookmarkCollectionMembershipRow(
         UUID bookmarkId,
         UUID collectionId,
-        String collectionName
+        String collectionName,
+        long workCount
 ) {
 }

@@ -6,10 +6,7 @@ import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionIt
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.FilterOptionsResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.TrendingPaperResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,20 +20,10 @@ public interface BookmarkService {
             int page,
             int size,
             UUID collectionId,
-            String title,
-            String keyword,
-            String topic,
-            String source,
-            String author,
-            Integer year,
-            String sort
+            String keyword
     );
 
     BookmarkStatusResponse getStatus(UUID userId, String openAlexId);
-
-    BookmarkStatsResponse getStats(UUID userId);
-
-    FilterOptionsResponse getFilterOptions(UUID userId);
 
     List<BookmarkCollectionResponse> getCollections(UUID userId);
 
@@ -51,6 +38,4 @@ public interface BookmarkService {
     void deleteBookmark(UUID userId, UUID bookmarkId);
 
     void deleteByOpenAlexId(UUID userId, String openAlexId);
-
-    List<TrendingPaperResponse> getTop6TrendingPapers();
 }
