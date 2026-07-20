@@ -7,12 +7,11 @@ import com.brotherhood.scipubtts.socialhub.dto.request.CreateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.request.UpdateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.response.LikeToggleResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostDetailResponse;
-import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostSummaryResponse;
+import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostPageResponse;
 import com.brotherhood.scipubtts.socialhub.service.SocialService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -37,7 +36,7 @@ public class SocialController {
     ) {
         Pageable pageable = PageRequest.of(page, Math.min(size, 50));
         UUID viewerId = principal != null ? principal.getId() : null;
-        Page<SocialPostSummaryResponse> result = socialService.getNewest(pageable, viewerId);
+        SocialPostPageResponse result = socialService.getNewest(pageable, viewerId);
 
         return ResponseEntity.ok(new ResponseObject(200, "Success", result));
     }
@@ -50,7 +49,7 @@ public class SocialController {
     ) {
         Pageable pageable = PageRequest.of(page, Math.min(size, 50));
         UUID viewerId = principal != null ? principal.getId() : null;
-        Page<SocialPostSummaryResponse> result = socialService.getTop(pageable, viewerId);
+        SocialPostPageResponse result = socialService.getTop(pageable, viewerId);
 
         return ResponseEntity.ok(new ResponseObject(200, "Success", result));
     }

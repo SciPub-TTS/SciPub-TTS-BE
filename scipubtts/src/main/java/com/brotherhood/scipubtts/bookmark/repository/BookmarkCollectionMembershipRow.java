@@ -1,4 +1,4 @@
-package com.brotherhood.scipubtts.bookmark.repository.projection;
+package com.brotherhood.scipubtts.bookmark.repository;
 
 import java.util.UUID;
 

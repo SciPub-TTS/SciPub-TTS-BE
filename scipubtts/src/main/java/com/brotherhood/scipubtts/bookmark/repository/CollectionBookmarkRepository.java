@@ -1,7 +1,6 @@
 package com.brotherhood.scipubtts.bookmark.repository;
 
 import com.brotherhood.scipubtts.bookmark.entity.CollectionBookmark;
-import com.brotherhood.scipubtts.bookmark.repository.projection.BookmarkCollectionMembershipRow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -37,7 +36,7 @@ public interface CollectionBookmarkRepository extends JpaRepository<CollectionBo
     );
 
     @Query("""
-            SELECT new com.brotherhood.scipubtts.bookmark.repository.projection.BookmarkCollectionMembershipRow(
+            SELECT new com.brotherhood.scipubtts.bookmark.repository.BookmarkCollectionMembershipRow(
                 cb.bookmarkId,
                 c.id,
                 c.name,

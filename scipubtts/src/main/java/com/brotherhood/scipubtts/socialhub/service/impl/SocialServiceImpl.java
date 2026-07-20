@@ -30,6 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,6 +51,8 @@ public class SocialServiceImpl implements SocialService {
     private static final int MAX_REFERENCES = 3;
     private static final int BODY_PREVIEW_LENGTH = 200;
     private static final String OPENALEX_WORK_TYPE_SELECT_FIELDS = "id,type";
+    private static final DateTimeFormatter DISPLAY_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final SocialPostRepository postRepository;
     private final SocialPostLikeRepository likeRepository;
@@ -265,8 +269,8 @@ public class SocialServiceImpl implements SocialService {
                         buildAuthorName(author),
                         author.getAvatarUrl()
                 ),
-                post.getCreatedAt(),
-                post.getUpdatedAt()
+                formatDisplayDate(post.getCreatedAt()),
+                formatDisplayDate(post.getUpdatedAt())
         );
     }
 
@@ -294,10 +298,18 @@ public class SocialServiceImpl implements SocialService {
                         author.getAvatarUrl()
                 ),
                 references.stream().map(this::toDetailReferenceInfo).toList(),
-                post.getCreatedAt(),
-                post.getUpdatedAt(),
+                formatDisplayDate(post.getCreatedAt()),
+                formatDisplayDate(post.getUpdatedAt()),
                 likesReset
         );
+    }
+
+    private String formatDisplayDate(OffsetDateTime dateTime) {
+        if (dateTime == null) {
+            return null;
+        }
+
+        return dateTime.format(DISPLAY_DATE_FORMATTER);
     }
 
     private String buildBodyPreview(String body) {

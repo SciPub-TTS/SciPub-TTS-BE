@@ -11,9 +11,9 @@ import com.brotherhood.scipubtts.bookmark.entity.BookmarkCollection;
 import com.brotherhood.scipubtts.bookmark.entity.CollectionBookmark;
 import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
 import com.brotherhood.scipubtts.bookmark.repository.BookmarkCollectionRepository;
+import com.brotherhood.scipubtts.bookmark.repository.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.repository.CollectionBookmarkRepository;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
-import com.brotherhood.scipubtts.bookmark.repository.projection.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.service.BookmarkService;
 import com.brotherhood.scipubtts.bookmark.support.BookmarkSnapshotSupport;
 import com.brotherhood.scipubtts.common.exception.BusinessException;
@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -44,6 +45,8 @@ public class BookmarkServiceImpl implements BookmarkService {
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 12;
     private static final int MAX_SIZE = 50;
+    private static final DateTimeFormatter DISPLAY_DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final UserBookmarkRepository userBookmarkRepository;
     private final BookmarkCollectionRepository bookmarkCollectionRepository;
@@ -288,7 +291,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                 bookmark.getPublicationYear(),
                 bookmark.getCitationSnapshot(),
                 collections,
-                bookmark.getCreatedAt()
+                formatDisplayDateTime(bookmark.getCreatedAt())
         );
     }
 
@@ -346,6 +349,14 @@ public class BookmarkServiceImpl implements BookmarkService {
         }
 
         return Math.min(size, MAX_SIZE);
+    }
+
+    private String formatDisplayDateTime(OffsetDateTime dateTime) {
+        if (dateTime == null) {
+            return "";
+        }
+
+        return dateTime.format(DISPLAY_DATE_TIME_FORMATTER);
     }
 
     private BookmarkCollection requireCollection(UUID userId, UUID collectionId) {
