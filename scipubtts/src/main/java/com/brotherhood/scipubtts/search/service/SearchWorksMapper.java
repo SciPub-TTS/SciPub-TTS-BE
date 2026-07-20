@@ -1,5 +1,7 @@
 package com.brotherhood.scipubtts.search.service;
 
+import com.brotherhood.scipubtts.detail.works.dto.response.DetailWorkResponse;
+import com.brotherhood.scipubtts.detail.works.service.DetailWorkResponseMapper;
 import com.brotherhood.scipubtts.search.dto.response.SearchWorksResponse;
 import org.springframework.stereotype.Component;
 
@@ -11,13 +13,16 @@ import java.util.Map;
 public class SearchWorksMapper {
 
     // OpenAlex returns dynamic JSON, so OpenAlexMapReader extracts data safely.
+    private final DetailWorkResponseMapper detailWorkResponseMapper;
     private final OpenAlexMapReader openAlexMapReader;
     private final SearchQuerySupport searchQuerySupport;
 
     public SearchWorksMapper(
+            DetailWorkResponseMapper detailWorkResponseMapper,
             OpenAlexMapReader openAlexMapReader,
             SearchQuerySupport searchQuerySupport
     ) {
+        this.detailWorkResponseMapper = detailWorkResponseMapper;
         this.openAlexMapReader = openAlexMapReader;
         this.searchQuerySupport = searchQuerySupport;
     }
@@ -36,11 +41,11 @@ public class SearchWorksMapper {
         int perPage = openAlexMapReader.getInt(meta, "per_page", fallbackPerPage);
         double costUsd = openAlexMapReader.getDouble(meta, "cost_usd", 0.0);
 
-        List<SearchWorksResponse.WorkItem> items = new ArrayList<>();
+        List<SearchWorksResponse.WorkItem> rawItems = new ArrayList<>();
         List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
 
         for (Map<String, Object> result : results) {
-            items.add(mapWorkItem(result));
+            rawItems.add(mapWorkItem(result));
         }
 
         SearchWorksResponse.Meta responseMeta = new SearchWorksResponse.Meta(
@@ -52,6 +57,7 @@ public class SearchWorksMapper {
                 appliedSort
         );
 
+        List<DetailWorkResponse> items = detailWorkResponseMapper.mapWorkItems(rawItems);
         return new SearchWorksResponse(responseMeta, items);
     }
 

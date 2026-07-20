@@ -29,8 +29,7 @@ public interface BookmarkCollectionRepository extends JpaRepository<BookmarkColl
             SELECT new com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse(
                 c.id,
                 c.name,
-                COUNT(cb.id),
-                c.createdAt
+                COUNT(cb.id)
             )
             FROM BookmarkCollection c
             LEFT JOIN CollectionBookmark cb ON cb.collectionId = c.id

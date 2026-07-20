@@ -7,6 +7,6 @@ public record BookmarkStatusResponse(
         boolean bookmarked,
         UUID bookmarkId,
         String openAlexId,
-        List<BookmarkCollectionSummaryResponse> collections
+        List<BookmarkCollectionResponse> collections
 ) {
 }

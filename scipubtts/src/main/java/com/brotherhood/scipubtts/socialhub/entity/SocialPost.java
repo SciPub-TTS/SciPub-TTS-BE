@@ -73,7 +73,4 @@ public class SocialPost {
         this.deletedAt = OffsetDateTime.now();
     }
 
-    public void resetLikeCount() {
-        this.likeCount = 0;
-    }
 }

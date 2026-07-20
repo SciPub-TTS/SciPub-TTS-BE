@@ -3,19 +3,15 @@ package com.brotherhood.scipubtts.bookmark.service.impl;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkCollectionRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionSummaryResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkPageResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.FilterOptionsResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.TrendingPaperResponse;
 import com.brotherhood.scipubtts.bookmark.entity.BookmarkCollection;
 import com.brotherhood.scipubtts.bookmark.entity.CollectionBookmark;
 import com.brotherhood.scipubtts.bookmark.entity.UserBookmark;
 import com.brotherhood.scipubtts.bookmark.repository.BookmarkCollectionRepository;
+import com.brotherhood.scipubtts.bookmark.repository.BookmarkCollectionMembershipRow;
 import com.brotherhood.scipubtts.bookmark.repository.CollectionBookmarkRepository;
 import com.brotherhood.scipubtts.bookmark.repository.UserBookmarkRepository;
 import com.brotherhood.scipubtts.bookmark.service.BookmarkService;
@@ -33,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -48,6 +45,8 @@ public class BookmarkServiceImpl implements BookmarkService {
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 12;
     private static final int MAX_SIZE = 50;
+    private static final DateTimeFormatter DISPLAY_DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final UserBookmarkRepository userBookmarkRepository;
     private final BookmarkCollectionRepository bookmarkCollectionRepository;
@@ -75,32 +74,21 @@ public class BookmarkServiceImpl implements BookmarkService {
             int page,
             int size,
             UUID collectionId,
-            String title,
-            String keyword,
-            String topic,
-            String source,
-            String author,
-            Integer year,
-            String sort
+            String keyword
     ) {
         int safePage = Math.max(page, DEFAULT_PAGE);
         int safeSize = normalizeSize(size);
-        Pageable pageable = PageRequest.of(safePage, safeSize, buildSort(sort));
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.Direction.DESC, "createdAt");
 
         Page<UserBookmark> bookmarkPage = userBookmarkRepository.searchMyBookmarks(
                 userId,
                 collectionId,
-                normalizeText(title),
                 normalizeText(keyword),
-                normalizeText(topic),
-                normalizeText(source),
-                normalizeText(author),
-                year,
                 pageable
         );
 
         List<UserBookmark> bookmarks = bookmarkPage.getContent();
-        Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId =
+        Map<UUID, List<BookmarkCollectionResponse>> collectionsByBookmarkId =
                 loadCollectionsByBookmarkId(userId, bookmarks);
 
         List<BookmarkResponse> items = bookmarks.stream()
@@ -110,9 +98,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         return new BookmarkPageResponse(
                 items,
                 bookmarkPage.getNumber(),
-                bookmarkPage.getSize(),
                 bookmarkPage.getTotalElements(),
-                bookmarkPage.getTotalPages(),
                 bookmarkPage.hasNext()
         );
     }
@@ -128,7 +114,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
         return userBookmarkRepository.findByUserIdAndOpenAlexId(userId, normalizedOpenAlexId)
                 .map(bookmark -> {
-                    List<BookmarkCollectionSummaryResponse> collections =
+                    List<BookmarkCollectionResponse> collections =
                             loadCollectionsByBookmarkId(userId, List.of(bookmark))
                                     .getOrDefault(bookmark.getId(), List.of());
 
@@ -145,30 +131,6 @@ public class BookmarkServiceImpl implements BookmarkService {
                         normalizedOpenAlexId,
                         List.of()
                 ));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public BookmarkStatsResponse getStats(UUID userId) {
-        long totalPapers = userBookmarkRepository.countByUserId(userId);
-        long totalTopics = userBookmarkRepository.countDistinctTopicsByUserId(userId);
-        long totalAuthors = userBookmarkRepository.countDistinctAuthorsByUserId(userId);
-
-        return new BookmarkStatsResponse(
-                safeLongToInt(totalPapers),
-                safeLongToInt(totalTopics),
-                safeLongToInt(totalAuthors)
-        );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public FilterOptionsResponse getFilterOptions(UUID userId) {
-        return new FilterOptionsResponse(
-                userBookmarkRepository.findDistinctTopicsByUserId(userId),
-                userBookmarkRepository.findDistinctYearsByUserId(userId),
-                userBookmarkRepository.findDistinctAuthorsByUserId(userId)
-        );
     }
 
     @Override
@@ -206,12 +168,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                             .build()
             );
 
-            return new BookmarkCollectionResponse(
-                    collection.getId(),
-                    collection.getName(),
-                    0,
-                    collection.getCreatedAt()
-            );
+            return new BookmarkCollectionResponse(collection.getId(), collection.getName(), 0);
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(ErrorCode.BOOKMARK_COLLECTION_ALREADY_EXISTS);
         }
@@ -276,13 +233,6 @@ public class BookmarkServiceImpl implements BookmarkService {
         );
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<TrendingPaperResponse> getTop6TrendingPapers() {
-        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
-        return userBookmarkRepository.findTrendingPaperThisWeek(oneWeekAgo, PageRequest.of(0, 6));
-    }
-
     private BookmarkResponse createNewBookmark(
             UUID userId,
             String openAlexId,
@@ -329,7 +279,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
     private BookmarkResponse toResponse(
             UserBookmark bookmark,
-            List<BookmarkCollectionSummaryResponse> collections
+            List<BookmarkCollectionResponse> collections
     ) {
         return new BookmarkResponse(
                 bookmark.getId(),
@@ -337,18 +287,17 @@ public class BookmarkServiceImpl implements BookmarkService {
                 bookmark.getTitleSnapshot(),
                 bookmark.getAuthorsSnapshot(),
                 resolveWorkTypeLabel(bookmark),
-                bookmark.getSourceSnapshot(),
                 bookmark.getTopicSnapshot(),
                 bookmark.getPublicationYear(),
                 bookmark.getCitationSnapshot(),
                 collections,
-                bookmark.getCreatedAt()
+                formatDisplayDateTime(bookmark.getCreatedAt())
         );
     }
 
     private BookmarkResponse toResponse(
             UserBookmark bookmark,
-            Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId
+            Map<UUID, List<BookmarkCollectionResponse>> collectionsByBookmarkId
     ) {
         return toResponse(bookmark, collectionsByBookmarkId.getOrDefault(bookmark.getId(), List.of()));
     }
@@ -360,7 +309,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         );
     }
 
-    private Map<UUID, List<BookmarkCollectionSummaryResponse>> loadCollectionsByBookmarkId(
+    private Map<UUID, List<BookmarkCollectionResponse>> loadCollectionsByBookmarkId(
             UUID userId,
             List<UserBookmark> bookmarks
     ) {
@@ -378,15 +327,16 @@ public class BookmarkServiceImpl implements BookmarkService {
                         bookmarkIds
                 );
 
-        Map<UUID, List<BookmarkCollectionSummaryResponse>> collectionsByBookmarkId =
+        Map<UUID, List<BookmarkCollectionResponse>> collectionsByBookmarkId =
                 new LinkedHashMap<>();
 
         for (BookmarkCollectionMembershipRow row : rows) {
             collectionsByBookmarkId
                     .computeIfAbsent(row.bookmarkId(), ignored -> new ArrayList<>())
-                    .add(new BookmarkCollectionSummaryResponse(
+                    .add(new BookmarkCollectionResponse(
                             row.collectionId(),
-                            row.collectionName()
+                            row.collectionName(),
+                            row.workCount()
                     ));
         }
 
@@ -401,36 +351,12 @@ public class BookmarkServiceImpl implements BookmarkService {
         return Math.min(size, MAX_SIZE);
     }
 
-    private Sort buildSort(String sort) {
-        String normalizedSort = normalizeText(sort);
-
-        if (normalizedSort == null) {
-            return Sort.by(Sort.Direction.DESC, "createdAt");
+    private String formatDisplayDateTime(OffsetDateTime dateTime) {
+        if (dateTime == null) {
+            return "";
         }
 
-        return switch (normalizedSort.toUpperCase()) {
-            case "OLDEST" -> Sort.by(Sort.Direction.ASC, "createdAt");
-            case "YEAR_DESC" -> Sort.by(Sort.Direction.DESC, "publicationYear")
-                    .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-            case "YEAR_ASC" -> Sort.by(Sort.Direction.ASC, "publicationYear")
-                    .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-            case "CITATION_DESC" -> Sort.by(Sort.Direction.DESC, "citationSnapshot")
-                    .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-            case "CITATION_ASC" -> Sort.by(Sort.Direction.ASC, "citationSnapshot")
-                    .and(Sort.by(Sort.Direction.DESC, "createdAt"));
-            case "TITLE_ASC" -> Sort.by(Sort.Direction.ASC, "titleSnapshot");
-            case "TITLE_DESC" -> Sort.by(Sort.Direction.DESC, "titleSnapshot");
-            case "RECENT" -> Sort.by(Sort.Direction.DESC, "createdAt");
-            default -> Sort.by(Sort.Direction.DESC, "createdAt");
-        };
-    }
-
-    private int safeLongToInt(long value) {
-        if (value > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-
-        return (int) value;
+        return dateTime.format(DISPLAY_DATE_TIME_FORMATTER);
     }
 
     private BookmarkCollection requireCollection(UUID userId, UUID collectionId) {

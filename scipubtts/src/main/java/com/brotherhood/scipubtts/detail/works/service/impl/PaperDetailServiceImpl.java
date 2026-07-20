@@ -1,8 +1,10 @@
 package com.brotherhood.scipubtts.detail.works.service.impl;
 
 import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
+import com.brotherhood.scipubtts.detail.works.dto.response.PaperDetailResponse;
 import com.brotherhood.scipubtts.detail.works.dto.response.WorkReferenceSummaryResponse;
 import com.brotherhood.scipubtts.detail.works.service.PaperDetailOpenAlexQueryFactory;
+import com.brotherhood.scipubtts.detail.works.service.PaperDetailResponseMapper;
 import com.brotherhood.scipubtts.detail.works.service.PaperDetailService;
 import com.brotherhood.scipubtts.search.service.OpenAlexMapReader;
 import org.springframework.stereotype.Service;
@@ -21,38 +23,37 @@ public class PaperDetailServiceImpl implements PaperDetailService {
     private final OpenAlexClient openAlexClient;
     private final OpenAlexMapReader openAlexMapReader;
     private final PaperDetailOpenAlexQueryFactory paperDetailOpenAlexQueryFactory;
+    private final PaperDetailResponseMapper paperDetailResponseMapper;
 
     public PaperDetailServiceImpl(
             OpenAlexClient openAlexClient,
             OpenAlexMapReader openAlexMapReader,
-            PaperDetailOpenAlexQueryFactory paperDetailOpenAlexQueryFactory
+            PaperDetailOpenAlexQueryFactory paperDetailOpenAlexQueryFactory,
+            PaperDetailResponseMapper paperDetailResponseMapper
     ) {
         this.openAlexClient = openAlexClient;
         this.openAlexMapReader = openAlexMapReader;
         this.paperDetailOpenAlexQueryFactory = paperDetailOpenAlexQueryFactory;
+        this.paperDetailResponseMapper = paperDetailResponseMapper;
     }
 
     @Override
-    public Map<String, Object> getWorkDetail(String workId) {
+    public PaperDetailResponse getWorkDetail(String workId) {
         Map<String, Object> workDetail = openAlexClient.get(
                 paperDetailOpenAlexQueryFactory.buildWorkDetailPath(workId),
                 paperDetailOpenAlexQueryFactory.buildWorkDetailQueryParams()
         );
 
-        addReferenceDetails(workDetail, "referenced_works", "referenced_work_details");
-        addReferenceDetails(workDetail, "related_works", "related_work_details");
+        List<WorkReferenceSummaryResponse> referencedWorks =
+                buildWorkReferenceSummaries(workDetail.get("referenced_works"));
+        List<WorkReferenceSummaryResponse> relatedWorks =
+                buildWorkReferenceSummaries(workDetail.get("related_works"));
 
-        return workDetail;
-    }
-
-    private void addReferenceDetails(
-            Map<String, Object> workDetail,
-            String sourceKey,
-            String targetKey
-    ) {
-        Object rawWorkIds = workDetail.get(sourceKey);
-        List<WorkReferenceSummaryResponse> summaries = buildWorkReferenceSummaries(rawWorkIds);
-        workDetail.put(targetKey, summaries);
+        return paperDetailResponseMapper.mapWorkDetail(
+                workDetail,
+                referencedWorks,
+                relatedWorks
+        );
     }
 
     private List<WorkReferenceSummaryResponse> buildWorkReferenceSummaries(Object rawWorkIds) {
