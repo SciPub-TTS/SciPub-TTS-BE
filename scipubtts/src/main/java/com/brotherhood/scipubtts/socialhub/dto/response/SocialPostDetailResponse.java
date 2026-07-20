@@ -13,8 +13,7 @@ public record SocialPostDetailResponse(
         AuthorInfo author,
         List<ReferenceInfo> references,
         String createdAt,
-        String updatedAt,
-        boolean likesReset
+        String updatedAt
 ) {
     public record AuthorInfo(UUID id, String fullName, String avatarUrl) {}
 
