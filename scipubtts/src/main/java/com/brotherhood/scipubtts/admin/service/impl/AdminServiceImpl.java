@@ -28,6 +28,7 @@ import com.brotherhood.scipubtts.email.event.UserUnbannedEvent;
 import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
 import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
 import com.brotherhood.scipubtts.dashboard.repository.KeywordTrendReadRepository;
+import com.brotherhood.scipubtts.search.dto.response.RecentSearchResponse;
 import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
 import com.brotherhood.scipubtts.dashboard.repository.TopicTrendReadRepository;
 import com.brotherhood.scipubtts.user.entity.Role;
@@ -127,7 +128,7 @@ public class AdminServiceImpl implements AdminService {
 
         int safePage = Math.max(page, 0);
         int safeSize = normalizeSize(size);
-        Page<SearchHistoryRepository.RecentSearchProjection> searchPage =
+        Page<RecentSearchResponse> searchPage =
                 searchHistoryRepository.findRecentDistinctSearchesByUserId(
                         userId,
                         PageRequest.of(safePage, safeSize)
@@ -135,8 +136,8 @@ public class AdminServiceImpl implements AdminService {
         List<AdminUserSearchHistoryItemResponse> items = searchPage.getContent()
                 .stream()
                 .map(search -> new AdminUserSearchHistoryItemResponse(
-                        search.getContent(),
-                        search.getLatestCreatedAt()
+                        search.content(),
+                        search.latestCreatedAt()
                 ))
                 .toList();
 
