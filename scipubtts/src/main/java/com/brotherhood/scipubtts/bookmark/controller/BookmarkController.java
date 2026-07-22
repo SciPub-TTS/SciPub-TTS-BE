@@ -6,9 +6,7 @@ import com.brotherhood.scipubtts.bookmark.dto.request.CreateBookmarkRequest;
 import com.brotherhood.scipubtts.bookmark.dto.request.UpdateBookmarkCollectionItemsRequest;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkCollectionResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatsResponse;
 import com.brotherhood.scipubtts.bookmark.dto.response.BookmarkStatusResponse;
-import com.brotherhood.scipubtts.bookmark.dto.response.FilterOptionsResponse;
 import com.brotherhood.scipubtts.bookmark.service.BookmarkService;
 import com.brotherhood.scipubtts.common.annotation.CurrentUserUUID;
 import com.brotherhood.scipubtts.common.apiResponse.ResponseObject;
@@ -53,16 +51,10 @@ public class BookmarkController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(required = false) UUID collectionId,
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String topic,
-            @RequestParam(required = false) String source,
-            @RequestParam(required = false) String author,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(defaultValue = "RECENT") String sort) {
+            @RequestParam(required = false) String keyword) {
 
         BookmarkPageResponse data = bookmarkService.getMyBookmarks(
-                userId, page, size, collectionId, title, keyword, topic, source, author, year, sort
+                userId, page, size, collectionId, keyword
         );
 
         return ResponseEntity.ok(
@@ -86,35 +78,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 4. GET BOOKMARK STATS
-    // ==========================================
-    @GetMapping("/stats")
-    public ResponseEntity<ResponseObject> getStats(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
-
-        BookmarkStatsResponse data = bookmarkService.getStats(userId);
-
-        return ResponseEntity.ok(
-                new ResponseObject(200, "Bookmark statistics fetched successfully", data)
-        );
-    }
-
-    // ==========================================
-    // 5. GET FILTER OPTIONS
-    // ==========================================
-    @GetMapping("/filter-options")
-    public ResponseEntity<ResponseObject> getFilterOptions(
-            @Parameter(hidden = true) @CurrentUserUUID UUID userId) {
-
-        FilterOptionsResponse data = bookmarkService.getFilterOptions(userId);
-
-        return ResponseEntity.ok(
-                new ResponseObject(200, "Bookmark filter options fetched successfully", data)
-        );
-    }
-
-    // ==========================================
-    // 6. COLLECTIONS
+    // 4. COLLECTIONS
     // ==========================================
     @GetMapping("/collections")
     public ResponseEntity<ResponseObject> getCollections(
@@ -177,7 +141,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 7. DELETE BOOKMARK BY ID
+    // 5. DELETE BOOKMARK BY ID
     // ==========================================
     @DeleteMapping("/{bookmarkId}")
     public ResponseEntity<ResponseObject> deleteBookmark(
@@ -192,7 +156,7 @@ public class BookmarkController {
     }
 
     // ==========================================
-    // 8. DELETE BOOKMARK BY OPENALEX ID
+    // 6. DELETE BOOKMARK BY OPENALEX ID
     // ==========================================
     @DeleteMapping("/by-openalex/{openAlexId}")
     public ResponseEntity<ResponseObject> deleteByOpenAlexId(

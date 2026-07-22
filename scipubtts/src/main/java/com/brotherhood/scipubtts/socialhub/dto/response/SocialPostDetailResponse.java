@@ -1,6 +1,5 @@
 package com.brotherhood.scipubtts.socialhub.dto.response;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,9 +12,8 @@ public record SocialPostDetailResponse(
         boolean liked,
         AuthorInfo author,
         List<ReferenceInfo> references,
-        OffsetDateTime createdAt,
-        OffsetDateTime updatedAt,
-        boolean likesReset
+        String createdAt,
+        String updatedAt
 ) {
     public record AuthorInfo(UUID id, String fullName, String avatarUrl) {}
 

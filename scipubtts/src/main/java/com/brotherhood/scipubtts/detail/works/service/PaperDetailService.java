@@ -1,7 +1,7 @@
 package com.brotherhood.scipubtts.detail.works.service;
 
-import java.util.Map;
+import com.brotherhood.scipubtts.detail.works.dto.response.PaperDetailResponse;
 
 public interface PaperDetailService {
-    Map<String, Object> getWorkDetail(String workId);
+    PaperDetailResponse getWorkDetail(String workId);
 }

@@ -12,6 +12,7 @@ import com.brotherhood.scipubtts.socialhub.dto.request.CreateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.request.UpdateSocialPostRequest;
 import com.brotherhood.scipubtts.socialhub.dto.response.LikeToggleResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostDetailResponse;
+import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostPageResponse;
 import com.brotherhood.scipubtts.socialhub.dto.response.SocialPostSummaryResponse;
 import com.brotherhood.scipubtts.socialhub.entity.SocialPost;
 import com.brotherhood.scipubtts.socialhub.entity.SocialPostLike;
@@ -30,6 +31,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,6 +52,8 @@ public class SocialServiceImpl implements SocialService {
     private static final int MAX_REFERENCES = 3;
     private static final int BODY_PREVIEW_LENGTH = 200;
     private static final String OPENALEX_WORK_TYPE_SELECT_FIELDS = "id,type";
+    private static final DateTimeFormatter DISPLAY_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final SocialPostRepository postRepository;
     private final SocialPostLikeRepository likeRepository;
@@ -93,12 +98,12 @@ public class SocialServiceImpl implements SocialService {
                 .collect(Collectors.toList()));
 
         SocialPost saved = postRepository.save(post);
-        return toDetailResponse(saved, false, false);
+        return toDetailResponse(saved, false);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SocialPostSummaryResponse> getNewest(Pageable pageable, UUID viewerId) {
+    public SocialPostPageResponse getNewest(Pageable pageable, UUID viewerId) {
         return toSummaryPage(
                 postRepository.findAllByOrderByCreatedAtDesc(pageable),
                 viewerId
@@ -107,7 +112,7 @@ public class SocialServiceImpl implements SocialService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SocialPostSummaryResponse> getTop(Pageable pageable, UUID viewerId) {
+    public SocialPostPageResponse getTop(Pageable pageable, UUID viewerId) {
         return toSummaryPage(
                 postRepository.findAllByOrderByLikeCountDescCreatedAtDesc(pageable),
                 viewerId
@@ -119,7 +124,7 @@ public class SocialServiceImpl implements SocialService {
     public SocialPostDetailResponse getPostDetail(UUID postId, UUID viewerId) {
         SocialPost post = findActivePost(postId);
         boolean liked = viewerId != null && likeRepository.existsByPostIdAndUserId(postId, viewerId);
-        return toDetailResponse(post, liked, false);
+        return toDetailResponse(post, liked);
     }
 
     @Override
@@ -139,8 +144,6 @@ public class SocialServiceImpl implements SocialService {
         if (request.topicTag() != null) {
             post.setTopicTag(snapshotSupport.normalizeText(request.topicTag()));
         }
-
-        boolean likesReset = false;
 
         if (request.references() != null) {
             Set<String> previousReferenceIds = new HashSet<>(
@@ -163,9 +166,9 @@ public class SocialServiceImpl implements SocialService {
         }
 
         SocialPost updated = postRepository.save(post);
-        boolean liked = !likesReset && likeRepository.existsByPostIdAndUserId(postId, editorId);
+        boolean liked = likeRepository.existsByPostIdAndUserId(postId, editorId);
 
-        return toDetailResponse(updated, liked, likesReset);
+        return toDetailResponse(updated, liked);
     }
 
     @Override
@@ -236,13 +239,17 @@ public class SocialServiceImpl implements SocialService {
         return validBookmarks;
     }
 
-    private Page<SocialPostSummaryResponse> toSummaryPage(Page<SocialPost> page, UUID viewerId) {
+    private SocialPostPageResponse toSummaryPage(Page<SocialPost> page, UUID viewerId) {
         List<UUID> postIds = page.stream().map(SocialPost::getId).toList();
         Set<UUID> likedIds = (viewerId != null && !postIds.isEmpty())
                 ? likeRepository.findLikedPostIds(viewerId, postIds)
                 : Set.of();
 
-        return page.map(post -> toSummaryResponse(post, likedIds.contains(post.getId())));
+        List<SocialPostSummaryResponse> content = page.stream()
+                .map(post -> toSummaryResponse(post, likedIds.contains(post.getId())))
+                .toList();
+
+        return new SocialPostPageResponse(content, page.getTotalElements());
     }
 
     private SocialPostSummaryResponse toSummaryResponse(SocialPost post, boolean liked) {
@@ -265,15 +272,14 @@ public class SocialServiceImpl implements SocialService {
                         buildAuthorName(author),
                         author.getAvatarUrl()
                 ),
-                post.getCreatedAt(),
-                post.getUpdatedAt()
+                formatDisplayDate(post.getCreatedAt()),
+                formatDisplayDate(post.getUpdatedAt())
         );
     }
 
     private SocialPostDetailResponse toDetailResponse(
             SocialPost post,
-            boolean liked,
-            boolean likesReset
+            boolean liked
     ) {
         User author = post.getAuthor();
         List<ResolvedReferenceSnapshot> references = resolveReferenceSnapshots(
@@ -294,10 +300,17 @@ public class SocialServiceImpl implements SocialService {
                         author.getAvatarUrl()
                 ),
                 references.stream().map(this::toDetailReferenceInfo).toList(),
-                post.getCreatedAt(),
-                post.getUpdatedAt(),
-                likesReset
+                formatDisplayDate(post.getCreatedAt()),
+                formatDisplayDate(post.getUpdatedAt())
         );
+    }
+
+    private String formatDisplayDate(OffsetDateTime dateTime) {
+        if (dateTime == null) {
+            return null;
+        }
+
+        return dateTime.format(DISPLAY_DATE_FORMATTER);
     }
 
     private String buildBodyPreview(String body) {

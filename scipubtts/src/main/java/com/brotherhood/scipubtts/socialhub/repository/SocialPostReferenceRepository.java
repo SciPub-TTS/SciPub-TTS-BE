@@ -10,10 +10,6 @@ import java.util.UUID;
 
 public interface SocialPostReferenceRepository extends JpaRepository<SocialPostReference, UUID> {
 
-    List<SocialPostReference> findByPostId(UUID postId);
-
-    int countByPostId(UUID postId);
-
     @Query("SELECT r.openalexId FROM SocialPostReference  r WHERE r.post.id = :postId")
     List<String> findOpenalexIdByPostId(@Param("postId") UUID postId);
 }

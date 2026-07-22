@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.admin.service.impl;
 
+import com.brotherhood.scipubtts.admin.dto.AdminApiCallLogPageResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
@@ -27,6 +28,7 @@ import com.brotherhood.scipubtts.email.event.UserUnbannedEvent;
 import com.brotherhood.scipubtts.follow.entity.FollowTargetType;
 import com.brotherhood.scipubtts.follow.repository.UserFollowRepository;
 import com.brotherhood.scipubtts.dashboard.repository.KeywordTrendReadRepository;
+import com.brotherhood.scipubtts.search.dto.response.RecentSearchResponse;
 import com.brotherhood.scipubtts.search.repository.SearchHistoryRepository;
 import com.brotherhood.scipubtts.dashboard.repository.TopicTrendReadRepository;
 import com.brotherhood.scipubtts.user.entity.Role;
@@ -46,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +128,7 @@ public class AdminServiceImpl implements AdminService {
 
         int safePage = Math.max(page, 0);
         int safeSize = normalizeSize(size);
-        Page<SearchHistoryRepository.RecentSearchProjection> searchPage =
+        Page<RecentSearchResponse> searchPage =
                 searchHistoryRepository.findRecentDistinctSearchesByUserId(
                         userId,
                         PageRequest.of(safePage, safeSize)
@@ -133,8 +136,8 @@ public class AdminServiceImpl implements AdminService {
         List<AdminUserSearchHistoryItemResponse> items = searchPage.getContent()
                 .stream()
                 .map(search -> new AdminUserSearchHistoryItemResponse(
-                        search.getContent(),
-                        search.getLatestCreatedAt()
+                        search.content(),
+                        search.latestCreatedAt()
                 ))
                 .toList();
 
@@ -239,7 +242,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public List<AdminApiCallConsumerResponse> getTopApiConsumersThisMonth() {
-        return adminDashboardRepository.findTopApiConsumersFromSearchHistory(
+        return adminDashboardRepository.findTopApiConsumersFromApiCallLog(
                 startOfCurrentMonth(OffsetDateTime.now()),
                 5
         );
@@ -248,12 +251,56 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public List<AdminApiUsageDailyResponse> getApiUsageLast7Days() {
-        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
         LocalDate startDate = today.minusDays(6);
 
-        return adminDashboardRepository.findApiUsageDailyFromSearchHistory(
+        return adminDashboardRepository.findApiUsageDailyFromApiCallLog(
                 startDate,
                 today
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminApiCallLogPageResponse getApiCallLogs(
+            int page,
+            int size,
+            OffsetDateTime from,
+            OffsetDateTime to,
+            String callerType,
+            UUID userId,
+            String jobType,
+            Integer status,
+            String endpoint
+    ) {
+        int safePage = Math.max(page, 0);
+        int safeSize = normalizeSize(size);
+        String normalizedCallerType = normalizeCallerType(callerType);
+
+        if (from != null && to != null && !from.isBefore(to)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_SEARCH_FILTER_COMBINATION,
+                    "from must be earlier than to"
+            );
+        }
+
+        if (status != null && (status < 100 || status > 599)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_SEARCH_FILTER_COMBINATION,
+                    "status must be a valid HTTP status code"
+            );
+        }
+
+        return adminDashboardRepository.findApiCallLogs(
+                safePage,
+                safeSize,
+                from,
+                to,
+                normalizedCallerType,
+                userId,
+                blankToNull(jobType),
+                status,
+                blankToNull(endpoint)
         );
     }
 
@@ -291,6 +338,30 @@ public class AdminServiceImpl implements AdminService {
             case "EMAIL_DESC" -> Sort.by(Sort.Direction.DESC, "email");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
+    }
+
+    private String normalizeCallerType(String callerType) {
+        if (callerType == null || callerType.isBlank()) {
+            return null;
+        }
+
+        String normalized = callerType.trim().toUpperCase();
+        if (!normalized.equals("USER") && !normalized.equals("SYSTEM")) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_SEARCH_FILTER_COMBINATION,
+                    "callerType must be USER or SYSTEM"
+            );
+        }
+
+        return normalized;
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
     }
 
     private AdminUserResponse toResponse(User user) {
@@ -392,7 +463,7 @@ public class AdminServiceImpl implements AdminService {
 
     private OffsetDateTime startOfCurrentMonth(OffsetDateTime now) {
         LocalDate date = now.toLocalDate().withDayOfMonth(1);
-        return date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
+        return date.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
     }
 
     private OffsetDateTime startOfToday(OffsetDateTime now) {

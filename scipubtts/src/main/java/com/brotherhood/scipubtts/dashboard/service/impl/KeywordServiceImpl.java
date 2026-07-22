@@ -254,19 +254,19 @@ public class KeywordServiceImpl implements KeywordService {
 
   // PGR = (recent - past) / past × 100
   private Double computePgr(long worksRecent, long worksPast) {
-    if (worksPast == 0) return null;
+    if (worksPast == 0) return 0.0;
     return (double)(worksRecent - worksPast) / worksPast * 100.0;
   }
 
   // CAGR = (recent / past)^(1/k) - 1 × 100
   private Double computeCagr(long worksRecent, long worksPast, double k) {
-    if (worksPast == 0 || k <= 0) return null;
+    if (worksPast == 0 || k <= 0) return 0.0;
     return (Math.pow((double) worksRecent / worksPast, 1.0 / k) - 1) * 100.0;
   }
 
   // PS = recent / total × 100
   private Double computePs(long worksRecent, long worksTotal) {
-    if (worksTotal == 0) return null;
+    if (worksTotal == 0) return 0.0;
     return (double) worksRecent / worksTotal * 100.0;
   }
 }

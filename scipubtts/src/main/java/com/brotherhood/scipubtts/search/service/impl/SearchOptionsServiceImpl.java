@@ -1,0 +1,601 @@
+package com.brotherhood.scipubtts.search.service.impl;
+
+import com.brotherhood.scipubtts.common.exception.BusinessException;
+import com.brotherhood.scipubtts.common.exception.ErrorCode;
+import com.brotherhood.scipubtts.common.openalex.OpenAlexClient;
+import com.brotherhood.scipubtts.search.dto.SearchEntityType;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionListResponse;
+import com.brotherhood.scipubtts.search.dto.response.SearchFilterOptionsResponse;
+import com.brotherhood.scipubtts.search.service.OpenAlexMapReader;
+import com.brotherhood.scipubtts.search.service.SearchConstants;
+import com.brotherhood.scipubtts.search.service.SearchOptionsService;
+import com.brotherhood.scipubtts.search.service.SearchQuerySupport;
+import com.brotherhood.scipubtts.search.service.SearchSummaryService;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+public class SearchOptionsServiceImpl implements SearchOptionsService {
+
+    private static final Duration DEFAULT_FILTER_OPTIONS_CACHE_TTL = Duration.ofMinutes(5);
+    private static final int OPENALEX_GROUP_BY_MAX_RESULTS = 200;
+
+    private final OpenAlexClient openAlexClient;
+    private final SearchQuerySupport searchQuerySupport;
+    private final OpenAlexMapReader openAlexMapReader;
+    private final SearchSummaryService searchSummaryService;
+    private final Map<String, CachedFilterOptions> defaultFilterOptionsCache = new ConcurrentHashMap<>();
+
+    public SearchOptionsServiceImpl(
+            OpenAlexClient openAlexClient,
+            SearchQuerySupport searchQuerySupport,
+            OpenAlexMapReader openAlexMapReader,
+            SearchSummaryService searchSummaryService
+    ) {
+        this.openAlexClient = openAlexClient;
+        this.searchQuerySupport = searchQuerySupport;
+        this.openAlexMapReader = openAlexMapReader;
+        this.searchSummaryService = searchSummaryService;
+    }
+
+    @Override
+    public SearchFilterOptionsResponse getFilterOptions(String keyword, int limit, int page) {
+        int normalizedLimit = searchQuerySupport.normalizeFilterOptionLimit(limit);
+        int normalizedPage = searchQuerySupport.normalizeOptionPage(page);
+        String normalizedKeyword = searchQuerySupport.normalizeKeyword(keyword);
+
+        if (StringUtils.hasText(normalizedKeyword)) {
+            return buildFilterOptionsResponse(normalizedKeyword, normalizedLimit, normalizedPage);
+        }
+
+        return getDefaultFilterOptions(normalizedLimit, normalizedPage);
+    }
+
+    @Override
+    public SearchFilterOptionListResponse getFilterOptionPage(
+            String filterKey,
+            SearchEntityType entityType,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        int normalizedLimit = searchQuerySupport.normalizeFilterOptionLimit(limit);
+        int normalizedPage = searchQuerySupport.normalizeOptionPage(page);
+        String normalizedKeyword = searchQuerySupport.normalizeKeyword(keyword);
+        String normalizedFilterKey = filterKey == null ? "" : filterKey.trim();
+        SearchEntityType safeEntityType =
+                entityType == null ? SearchEntityType.WORKS : entityType;
+
+        return switch (safeEntityType) {
+            case AUTHORS -> buildAuthorFilterOptionPage(
+                    normalizedFilterKey,
+                    normalizedKeyword,
+                    normalizedLimit,
+                    normalizedPage
+            );
+            case TOPICS -> buildTopicFilterOptionPage(
+                    normalizedFilterKey,
+                    normalizedKeyword,
+                    normalizedLimit,
+                    normalizedPage
+            );
+            case WORKS -> buildWorkFilterOptionPage(
+                    normalizedFilterKey,
+                    normalizedKeyword,
+                    normalizedLimit,
+                    normalizedPage
+            );
+        };
+    }
+
+    private SearchFilterOptionsResponse getDefaultFilterOptions(int limit, int page) {
+        String cacheKey = buildDefaultCacheKey(limit, page);
+        CachedFilterOptions cachedFilterOptions = defaultFilterOptionsCache.get(cacheKey);
+
+        if (cachedFilterOptions != null && !cachedFilterOptions.isExpired()) {
+            return cachedFilterOptions.response();
+        }
+
+        SearchFilterOptionsResponse freshResponse = buildFilterOptionsResponse("", limit, page);
+        defaultFilterOptionsCache.put(
+                cacheKey,
+                new CachedFilterOptions(
+                        freshResponse,
+                        Instant.now().plus(DEFAULT_FILTER_OPTIONS_CACHE_TTL)
+                )
+        );
+
+        return freshResponse;
+    }
+
+    private SearchFilterOptionsResponse buildFilterOptionsResponse(
+            String keyword,
+            int limit,
+            int page
+    ) {
+        List<SearchFilterOptionsResponse.FacetOption> typeOptions =
+                fetchGroupedWorkOptions("type", keyword, limit, page);
+        List<SearchFilterOptionsResponse.FacetOption> subFieldOptions =
+                fetchGroupedWorkOptions("primary_topic.subfield.id", keyword, limit, page);
+        List<SearchFilterOptionsResponse.FacetOption> countryOptions =
+                fetchScopedFacetOptions("institutions.country_code", keyword, limit, page);
+
+        List<SearchFilterOptionsResponse.EntityOption> sourceOptions = fetchScopedEntityOptions(
+                "primary_location.source.id",
+                keyword,
+                limit,
+                page
+        );
+
+        List<SearchFilterOptionsResponse.EntityOption> authorOptions = fetchScopedEntityOptions(
+                "authorships.author.id",
+                keyword,
+                limit,
+                page
+        );
+
+        List<SearchFilterOptionsResponse.EntityOption> institutionOptions = fetchScopedEntityOptions(
+                "authorships.institutions.id",
+                keyword,
+                limit,
+                page
+        );
+
+        List<SearchFilterOptionsResponse.EntityOption> awardOptions = fetchScopedEntityOptions(
+                "awards.id",
+                keyword,
+                limit,
+                page
+        );
+
+        return new SearchFilterOptionsResponse(
+                searchSummaryService.getSummary(SearchEntityType.WORKS).totalCount(),
+                new SearchFilterOptionsResponse.YearRange(SearchConstants.MIN_YEAR, Year.now().getValue()),
+                typeOptions,
+                new SearchFilterOptionsResponse.ToggleFilter("is_oa", false),
+                subFieldOptions,
+                authorOptions,
+                institutionOptions,
+                new SearchFilterOptionsResponse.ToggleFilter("has_content.pdf", false),
+                new SearchFilterOptionsResponse.CitationRange(SearchConstants.MIN_CITATION, fetchMaximumCitationCount()),
+                countryOptions,
+                sourceOptions,
+                awardOptions,
+                new SearchFilterOptionsResponse.EnumFilter("has_orcid", List.of("is", "is not"), "")
+        );
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> fetchGroupedWorkOptions(
+            String groupBy,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        List<SearchFilterOptionsResponse.FacetOption> allOptions = loadGroupedWorkOptions(
+                groupBy,
+                resolveGroupedFetchSize(keyword, limit, page)
+        );
+
+        if (!StringUtils.hasText(keyword)) {
+            return paginateOptions(allOptions, limit, page);
+        }
+
+        return filterAndPaginateOptions(
+                allOptions,
+                keyword,
+                limit,
+                page,
+                SearchFilterOptionsResponse.FacetOption::label
+        );
+    }
+
+    private SearchFilterOptionListResponse buildFacetFilterOptionPage(
+            String filterKey,
+            String groupBy,
+            String keyword,
+            int limit,
+            int page,
+            boolean scoped
+    ) {
+        List<SearchFilterOptionsResponse.FacetOption> options =
+                scoped
+                        ? fetchScopedFacetOptions(groupBy, keyword, limit, page)
+                        : fetchGroupedWorkOptions(groupBy, keyword, limit, page);
+
+        return new SearchFilterOptionListResponse(
+                filterKey,
+                mapFacetOptions(options)
+        );
+    }
+
+    private SearchFilterOptionListResponse buildEntityFilterOptionPage(
+            String filterKey,
+            String groupBy,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        List<SearchFilterOptionsResponse.EntityOption> options =
+                fetchScopedEntityOptions(groupBy, keyword, limit, page);
+
+        return new SearchFilterOptionListResponse(
+                filterKey,
+                mapEntityOptions(options)
+        );
+    }
+
+    private SearchFilterOptionListResponse buildWorkFilterOptionPage(
+            String filterKey,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return switch (filterKey) {
+            case "type" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "type",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            case "subField" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "primary_topic.subfield.id",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            case "country" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "institutions.country_code",
+                    keyword,
+                    limit,
+                    page,
+                    true
+            );
+            case "author" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "authorships.author.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "institution" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "authorships.institutions.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "source" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "primary_location.source.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "award" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "awards.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+        };
+    }
+
+    private SearchFilterOptionListResponse buildAuthorFilterOptionPage(
+            String filterKey,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return switch (filterKey) {
+            case "institution" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "authorships.institutions.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            case "country" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "institutions.country_code",
+                    keyword,
+                    limit,
+                    page,
+                    true
+            );
+            case "primaryTopic" -> buildEntityFilterOptionPage(
+                    filterKey,
+                    "primary_topic.id",
+                    keyword,
+                    limit,
+                    page
+            );
+            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+        };
+    }
+
+    private SearchFilterOptionListResponse buildTopicFilterOptionPage(
+            String filterKey,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        return switch (filterKey) {
+            case "subField" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "primary_topic.subfield.id",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            case "field" -> buildFacetFilterOptionPage(
+                    filterKey,
+                    "primary_topic.field.id",
+                    keyword,
+                    limit,
+                    page,
+                    false
+            );
+            default -> throw new BusinessException(ErrorCode.OPENALEX_ENTITY_NOT_FOUND);
+        };
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> fetchScopedFacetOptions(
+            String groupBy,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        List<SearchFilterOptionsResponse.FacetOption> allOptions = loadScopedFacetOptions(
+                groupBy,
+                resolveGroupedFetchSize(keyword, limit, page)
+        );
+
+        if (!StringUtils.hasText(keyword)) {
+            return paginateOptions(allOptions, limit, page);
+        }
+
+        return filterAndPaginateOptions(
+                allOptions,
+                keyword,
+                limit,
+                page,
+                SearchFilterOptionsResponse.FacetOption::label
+        );
+    }
+
+    private List<SearchFilterOptionsResponse.EntityOption> fetchScopedEntityOptions(
+            String groupBy,
+            String keyword,
+            int limit,
+            int page
+    ) {
+        List<SearchFilterOptionsResponse.EntityOption> allOptions = loadScopedEntityOptions(
+                groupBy,
+                resolveGroupedFetchSize(keyword, limit, page)
+        );
+
+        if (!StringUtils.hasText(keyword)) {
+            return paginateOptions(allOptions, limit, page);
+        }
+
+        return filterAndPaginateOptions(
+                allOptions,
+                keyword,
+                limit,
+                page,
+                SearchFilterOptionsResponse.EntityOption::label
+        );
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedFacetOptions(
+            String groupBy,
+            int fetchSize
+    ) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, fetchSize);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
+        List<SearchFilterOptionsResponse.FacetOption> options = new ArrayList<>();
+
+        for (Map<String, Object> group : groups) {
+            String key = openAlexMapReader.getString(group, "key");
+            String label = openAlexMapReader.sanitizeDisplayText(
+                    openAlexMapReader.getString(group, "key_display_name")
+            );
+            long count = openAlexMapReader.getLong(group, "count", 0L);
+
+            if (key.isBlank() || label.isBlank()) {
+                continue;
+            }
+
+            options.add(new SearchFilterOptionsResponse.FacetOption(
+                    searchQuerySupport.normalizeGroupedValue(groupBy, key),
+                    label,
+                    count
+            ));
+        }
+
+        return options;
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> loadGroupedWorkOptions(
+            String groupBy,
+            int fetchSize
+    ) {
+        return loadGroupedFacetOptions(groupBy, fetchSize);
+    }
+
+    private List<SearchFilterOptionsResponse.FacetOption> loadScopedFacetOptions(
+            String groupBy,
+            int fetchSize
+    ) {
+        return loadGroupedFacetOptions(groupBy, fetchSize);
+    }
+
+
+    private List<SearchFilterOptionsResponse.EntityOption> loadScopedEntityOptions(
+            String groupBy,
+            int fetchSize
+    ) {
+        Map<String, String> queryParams = createScopedGroupedQueryParams(groupBy, fetchSize);
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> groups = openAlexMapReader.getMapList(response, "group_by");
+        List<SearchFilterOptionsResponse.EntityOption> options = new ArrayList<>();
+
+        for (Map<String, Object> group : groups) {
+            String value = searchQuerySupport.normalizeEntityValue(
+                    openAlexMapReader.getString(group, "key")
+            );
+            String label = openAlexMapReader.sanitizeDisplayText(
+                    openAlexMapReader.getString(group, "key_display_name")
+            );
+            long count = openAlexMapReader.getLong(group, "count", 0L);
+
+            if (value.isBlank() || label.isBlank()) {
+                continue;
+            }
+
+            options.add(new SearchFilterOptionsResponse.EntityOption(value, label, count));
+        }
+
+        return options;
+    }
+
+    private List<SearchFilterOptionListResponse.OptionItem> mapFacetOptions(
+            List<SearchFilterOptionsResponse.FacetOption> options
+    ) {
+        List<SearchFilterOptionListResponse.OptionItem> mappedOptions = new ArrayList<>();
+
+        for (SearchFilterOptionsResponse.FacetOption option : options) {
+            mappedOptions.add(new SearchFilterOptionListResponse.OptionItem(
+                    option.value(),
+                    option.label(),
+                    option.count()
+            ));
+        }
+
+        return mappedOptions;
+    }
+
+    private List<SearchFilterOptionListResponse.OptionItem> mapEntityOptions(
+            List<SearchFilterOptionsResponse.EntityOption> options
+    ) {
+        List<SearchFilterOptionListResponse.OptionItem> mappedOptions = new ArrayList<>();
+
+        for (SearchFilterOptionsResponse.EntityOption option : options) {
+            mappedOptions.add(new SearchFilterOptionListResponse.OptionItem(
+                    option.value(),
+                    option.label(),
+                    option.count()
+            ));
+        }
+
+        return mappedOptions;
+    }
+
+    private <T> List<T> filterAndPaginateOptions(
+            List<T> allOptions,
+            String keyword,
+            int limit,
+            int page,
+            java.util.function.Function<T, String> labelExtractor
+    ) {
+        List<T> matchedOptions = new ArrayList<>();
+
+        for (T option : allOptions) {
+            if (matchesKeyword(labelExtractor.apply(option), keyword)) {
+                matchedOptions.add(option);
+            }
+        }
+
+        return paginateOptions(matchedOptions, limit, page);
+    }
+
+    private int fetchMaximumCitationCount() {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
+        queryParams.put("per_page", "1");
+        queryParams.put("sort", "cited_by_count:desc");
+        queryParams.put("select", "cited_by_count");
+
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
+
+        if (results.isEmpty()) {
+            return 0;
+        }
+
+        return Math.max(openAlexMapReader.getInt(results.getFirst(), "cited_by_count", 0), 0);
+    }
+
+    private <T> List<T> paginateOptions(List<T> options, int limit, int page) {
+        int offset = Math.max(page - 1, 0) * limit;
+
+        if (offset >= options.size()) {
+            return List.of();
+        }
+
+        int toIndex = Math.min(offset + limit, options.size());
+        return new ArrayList<>(options.subList(offset, toIndex));
+    }
+
+    private int resolveGroupedFetchSize(String keyword, int limit, int page) {
+        if (StringUtils.hasText(keyword)) {
+            return OPENALEX_GROUP_BY_MAX_RESULTS;
+        }
+
+        long requiredSize = (long) limit * Math.max(page, 1);
+        return (int) Math.min(requiredSize, OPENALEX_GROUP_BY_MAX_RESULTS);
+    }
+
+    private Map<String, String> createPagedQueryParams(int limit) {
+        Map<String, String> queryParams = new LinkedHashMap<>();
+        queryParams.put("per_page", String.valueOf(limit));
+        queryParams.put("page", "1");
+        return queryParams;
+    }
+
+    private Map<String, String> createScopedGroupedQueryParams(String groupBy, int limit) {
+        Map<String, String> queryParams = createPagedQueryParams(limit);
+        queryParams.put("filter", SearchConstants.WORKS_SCOPE_FILTER);
+        queryParams.put("group_by", groupBy);
+        queryParams.put("sort", "count:desc");
+        return queryParams;
+    }
+
+    private boolean matchesKeyword(String label, String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return true;
+        }
+
+        return label.toLowerCase().contains(keyword.trim().toLowerCase());
+    }
+
+    private String buildDefaultCacheKey(int limit, int page) {
+        return limit + ":" + page;
+    }
+
+    private record CachedFilterOptions(SearchFilterOptionsResponse response, Instant expiresAt) {
+
+        private boolean isExpired() {
+            return Instant.now().isAfter(expiresAt);
+        }
+    }
+
+}

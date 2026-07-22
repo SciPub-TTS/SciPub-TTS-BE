@@ -1,5 +1,6 @@
 package com.brotherhood.scipubtts.admin.controller;
 
+import com.brotherhood.scipubtts.admin.dto.AdminApiCallLogPageResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiCallConsumerResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminApiUsageDailyResponse;
 import com.brotherhood.scipubtts.admin.dto.AdminDashboardStatisticsResponse;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @RestController
@@ -194,6 +196,39 @@ public class AdminController {
                 new ResponseObject(
                         HttpStatus.OK.value(),
                         "API usage over time fetched successfully",
+                        data
+                )
+        );
+    }
+
+    @GetMapping("/dashboard/api-calls/logs")
+    public ResponseEntity<ResponseObject> getApiCallLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) OffsetDateTime from,
+            @RequestParam(required = false) OffsetDateTime to,
+            @RequestParam(required = false) String callerType,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) String jobType,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String endpoint
+    ) {
+        AdminApiCallLogPageResponse data = adminService.getApiCallLogs(
+                page,
+                size,
+                from,
+                to,
+                callerType,
+                userId,
+                jobType,
+                status,
+                endpoint
+        );
+
+        return ResponseEntity.ok(
+                new ResponseObject(
+                        HttpStatus.OK.value(),
+                        "API call logs fetched successfully",
                         data
                 )
         );
