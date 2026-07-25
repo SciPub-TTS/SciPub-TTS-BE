@@ -190,7 +190,6 @@ public class AdminServiceImpl implements AdminService {
     @Transactional(readOnly = true)
     public AdminDashboardStatisticsResponse getDashboardStatistics() {
         OffsetDateTime now = OffsetDateTime.now();
-        OffsetDateTime startOfToday = startOfToday(now);
 
         long totalUsers = adminDashboardRepository.countUsers();
         long bannedUsers = adminDashboardRepository.countBannedUsers();

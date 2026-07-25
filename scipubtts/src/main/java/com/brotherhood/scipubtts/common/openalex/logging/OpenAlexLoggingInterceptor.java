@@ -165,7 +165,7 @@ public class OpenAlexLoggingInterceptor implements ClientHttpRequestInterceptor 
         StringBuilder sanitized = new StringBuilder();
         String[] pairs = rawQuery.split("&");
         for (String pair : pairs) {
-            if (sanitized.length() > 0) {
+            if (!sanitized.isEmpty()) {
                 sanitized.append('&');
             }
 

@@ -106,7 +106,7 @@ class OpenAlexLoggingInterceptorTest {
     }
 
     @Test
-    void forcedSystemContextOverridesAuthenticatedUserAndStoresJobMetadata() throws Exception {
+    void forcedSystemContextOverridesAuthenticatedUserAndStoresJobMetadata() {
         UUID userId = UUID.randomUUID();
         UUID jobId = UUID.randomUUID();
         UserPrincipal principal = new UserPrincipal(

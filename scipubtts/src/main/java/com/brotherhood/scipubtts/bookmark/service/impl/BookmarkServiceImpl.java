@@ -359,8 +359,8 @@ public class BookmarkServiceImpl implements BookmarkService {
         return dateTime.format(DISPLAY_DATE_TIME_FORMATTER);
     }
 
-    private BookmarkCollection requireCollection(UUID userId, UUID collectionId) {
-        return bookmarkCollectionRepository.findByIdAndUserId(collectionId, userId)
+    private void requireCollection(UUID userId, UUID collectionId) {
+        bookmarkCollectionRepository.findByIdAndUserId(collectionId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BOOKMARK_COLLECTION_NOT_FOUND));
     }
 
@@ -446,7 +446,7 @@ public class BookmarkServiceImpl implements BookmarkService {
                 continue;
             }
 
-            if (formattedValue.length() > 0) {
+            if (!formattedValue.isEmpty()) {
                 formattedValue.append(' ');
             }
 
@@ -454,7 +454,7 @@ public class BookmarkServiceImpl implements BookmarkService {
             formattedValue.append(segment.substring(1));
         }
 
-        return formattedValue.length() == 0 ? null : formattedValue.toString();
+        return formattedValue.isEmpty() ? null : formattedValue.toString();
     }
 
     private String resolveWorkTypeLabel(

@@ -104,7 +104,7 @@ public class ExportReportServiceImpl implements ExportReportService {
 
             CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
                     .setHeader(headers)
-                    .build();
+                    .get();
 
             try (CSVPrinter printer = new CSVPrinter(writer, csvFormat)) {
                 for (PaperExportData paper : papers) {

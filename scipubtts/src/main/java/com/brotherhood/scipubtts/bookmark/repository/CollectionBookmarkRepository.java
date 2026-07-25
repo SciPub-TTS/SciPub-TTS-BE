@@ -19,7 +19,7 @@ public interface CollectionBookmarkRepository extends JpaRepository<CollectionBo
             WHERE cb.collectionId = :collectionId
               AND cb.bookmarkId = :bookmarkId
             """)
-    int deleteByCollectionIdAndBookmarkId(
+    void deleteByCollectionIdAndBookmarkId(
             @Param("collectionId") UUID collectionId,
             @Param("bookmarkId") UUID bookmarkId
     );

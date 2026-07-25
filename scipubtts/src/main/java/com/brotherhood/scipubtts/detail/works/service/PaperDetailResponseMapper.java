@@ -654,7 +654,7 @@ public class PaperDetailResponseMapper {
             return "";
         }
 
-        String displayCountry = new Locale("", normalizedCountryCode).getDisplayCountry(Locale.ENGLISH);
+        String displayCountry = Locale.of("", normalizedCountryCode).getDisplayCountry(Locale.ENGLISH);
         return StringUtils.hasText(displayCountry) ? displayCountry : normalizedCountryCode;
     }
 

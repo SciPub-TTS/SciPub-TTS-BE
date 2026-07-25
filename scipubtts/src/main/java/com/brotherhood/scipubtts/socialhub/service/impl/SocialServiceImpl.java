@@ -455,7 +455,7 @@ public class SocialServiceImpl implements SocialService {
         );
 
         Integer yearSnapshot = reference.getYearSnapshot() != null
-                ? reference.getYearSnapshot().intValue()
+                ? Integer.valueOf(reference.getYearSnapshot().intValue())
                 : fallbackBookmark != null
                 ? fallbackBookmark.getPublicationYear()
                 : null;
@@ -689,7 +689,7 @@ public class SocialServiceImpl implements SocialService {
                 continue;
             }
 
-            if (formattedValue.length() > 0) {
+            if (!formattedValue.isEmpty()) {
                 formattedValue.append(' ');
             }
 
@@ -697,7 +697,7 @@ public class SocialServiceImpl implements SocialService {
             formattedValue.append(segment.substring(1));
         }
 
-        return formattedValue.length() == 0 ? null : formattedValue.toString();
+        return formattedValue.isEmpty() ? null : formattedValue.toString();
     }
 
     private String normalizeOpenAlexId(String rawValue) {
