@@ -23,6 +23,8 @@ public interface CalculationService {
   );
 
 
+
+
   TopicMetricStatistic buildTopicMetricStatistic(List<Topic> topics);
 
   double toNormalizedPercent(double value, double min, double max);
