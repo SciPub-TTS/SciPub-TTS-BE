@@ -37,17 +37,6 @@ public class AdminDashboardRepository {
         return count("SELECT COUNT(*) FROM users WHERE is_banned = false");
     }
 
-    public long countApiCallsFrom(OffsetDateTime from) {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM api_call_log
-                WHERE COALESCE(started_at, finished_at) >= ?
-                """,
-                from
-        );
-    }
-
     public List<AdminApiCallConsumerResponse> findTopApiConsumersFromApiCallLog(
             OffsetDateTime from,
             int limit
@@ -170,7 +159,6 @@ public class AdminDashboardRepository {
                        acl.finished_at,
                        acl.error_log
                 """ + where + """
-                 
                 ORDER BY acl.started_at DESC NULLS LAST, acl.id DESC
                 LIMIT ? OFFSET ?
                 """,
@@ -201,24 +189,6 @@ public class AdminDashboardRepository {
                 totalElements,
                 totalPages,
                 page + 1 < totalPages
-        );
-    }
-
-    public Optional<OffsetDateTime> findLatestSynchronization() {
-        Optional<OffsetDateTime> latestJob = queryOptionalOffsetDateTime(
-                """
-                SELECT MAX(finished_at)
-                FROM api_job
-                WHERE status = 'SUCCESS'
-                """
-        );
-
-        if (latestJob.isPresent()) {
-            return latestJob;
-        }
-
-        return queryOptionalOffsetDateTime(
-                "SELECT MAX(finished_at) FROM api_call_log"
         );
     }
 
