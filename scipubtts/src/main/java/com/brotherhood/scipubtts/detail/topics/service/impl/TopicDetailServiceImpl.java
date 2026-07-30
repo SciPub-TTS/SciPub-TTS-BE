@@ -82,21 +82,17 @@ public class TopicDetailServiceImpl implements TopicDetailService {
     }
 
     private List<DetailWorkResponse> loadWorks(String filterValue) {
-        Map<String, String> queryParams = buildWorkQueryParams(filterValue);
-        Map<String, Object> response = openAlexClient.get("/works", queryParams);
-        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
-
-        return detailWorkResponseMapper.mapWorkItems(searchWorksMapper.mapWorkItems(results));
-    }
-
-    private Map<String, String> buildWorkQueryParams(String filterValue) {
         Map<String, String> queryParams = new LinkedHashMap<>();
+
         queryParams.put("filter", filterValue);
         queryParams.put("sort", "publication_date:desc");
         queryParams.put("per_page", String.valueOf(DETAIL_WORK_LIMIT));
         queryParams.put("select", SearchConstants.WORKS_SELECT_FIELDS);
 
-        return queryParams;
+        Map<String, Object> response = openAlexClient.get("/works", queryParams);
+        List<Map<String, Object>> results = openAlexMapReader.getMapList(response, "results");
+
+        return detailWorkResponseMapper.mapWorkItems(searchWorksMapper.mapWorkItems(results));
     }
 
     private List<TopicDetailResponse.YearStat> loadCountsByYear(String topicId) {
