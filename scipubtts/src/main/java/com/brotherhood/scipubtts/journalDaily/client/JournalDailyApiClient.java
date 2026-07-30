@@ -67,6 +67,7 @@ public class JournalDailyApiClient {
                                 .queryParam("show-tags",   "keyword")
                                 .queryParam("order-by",    "newest")
                                 .queryParam("pillar",      "news")
+                                .queryParam("type", "article")
                                 .queryParam("page-size",   pageSize)
                                 .queryParam("page",        pageToFetch)
                                 .queryParam("api-key",     apiKey)

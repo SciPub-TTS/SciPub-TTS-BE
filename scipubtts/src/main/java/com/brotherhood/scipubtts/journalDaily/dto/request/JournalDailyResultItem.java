@@ -10,7 +10,7 @@ public record JournalDailyResultItem(
 
         // Guardian's own article id — dùng làm external_id
         String id,
-
+        String type,
         String webTitle,
         String webUrl,
         String webPublicationDate,

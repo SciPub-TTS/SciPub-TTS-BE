@@ -83,8 +83,9 @@ public class JournalDailySyncServiceImpl implements JournalDailySyncService {
                 return 0;
             }
 
-            // Map DTO to Entity, filter out invalid records
+            // Map DTO to Entity, filter out non-articles and invalid records
             List<JournalDailyArticle> mappedArticles = items.stream()
+                    .filter(item -> "article".equalsIgnoreCase(item.type()))
                     .map(mapper::toEntity)
                     .filter(Objects::nonNull)
                     .filter(article -> article.getExternalId() != null)
