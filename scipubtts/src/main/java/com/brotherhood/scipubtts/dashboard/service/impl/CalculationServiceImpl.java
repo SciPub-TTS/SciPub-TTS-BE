@@ -212,7 +212,7 @@ public class CalculationServiceImpl implements CalculationService {
 
     return new KeywordCalculateResponse(topKeywords);
   }
-  
+
   private KeywordCalculateResponse.KeywordMetric toMetric(
           Keyword keyword,
           Double score
