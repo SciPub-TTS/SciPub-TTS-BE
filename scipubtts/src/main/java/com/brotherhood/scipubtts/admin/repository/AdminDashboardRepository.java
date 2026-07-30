@@ -43,25 +43,13 @@ public class AdminDashboardRepository {
     ) {
         return jdbcTemplate.query(
                 """
-                WITH consumer_counts AS (
-                    SELECT u.email AS consumer_label, COUNT(*) AS call_count
-                    FROM api_call_log acl
-                    JOIN users u ON u.id = acl.user_id
-                    WHERE acl.caller_type = 'USER'
-                      AND acl.user_id IS NOT NULL
-                      AND COALESCE(acl.started_at, acl.finished_at) >= ?
-                    GROUP BY u.id, u.email
-
-                    UNION ALL
-
-                    SELECT 'Guest' AS consumer_label, COUNT(*) AS call_count
-                    FROM api_call_log acl
-                    WHERE acl.caller_type = 'GUEST'
-                      AND COALESCE(acl.started_at, acl.finished_at) >= ?
-                )
-                SELECT consumer_label, call_count
-                FROM consumer_counts
-                WHERE call_count > 0
+                SELECT u.email AS consumer_label, COUNT(*) AS call_count
+                FROM api_call_log acl
+                JOIN users u ON u.id = acl.user_id
+                WHERE acl.caller_type = 'USER'
+                  AND acl.user_id IS NOT NULL
+                  AND COALESCE(acl.started_at, acl.finished_at) >= ?
+                GROUP BY u.id, u.email
                 ORDER BY call_count DESC, consumer_label ASC
                 LIMIT ?
                 """,
@@ -69,7 +57,6 @@ public class AdminDashboardRepository {
                         rs.getString("consumer_label"),
                         rs.getLong("call_count")
                 ),
-                from,
                 from,
                 limit
         );
