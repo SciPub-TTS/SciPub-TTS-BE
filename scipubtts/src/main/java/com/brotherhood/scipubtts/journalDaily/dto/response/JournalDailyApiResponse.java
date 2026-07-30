@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record JournalDailyApiResponse(
         @JsonProperty("response")
@@ -14,6 +15,12 @@ public record JournalDailyApiResponse(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record ResponseWrapper(
             String status,
+            int total,          // Tổng số bài báo tìm thấy
+            int startIndex,     // Vị trí bắt đầu
+            int pageSize,       // Kích thước 1 trang
+            int currentPage,    // Trang hiện tại
+            int pages,          // Tổng số trang (CẦN CHO VÒNG LẶP)
+            String orderBy,
             List<JournalDailyResultItem> results
     ) {}
 }

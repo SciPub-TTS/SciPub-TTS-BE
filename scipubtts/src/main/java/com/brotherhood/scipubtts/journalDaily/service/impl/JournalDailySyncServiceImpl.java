@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,102 +48,17 @@ public class JournalDailySyncServiceImpl implements JournalDailySyncService {
     @Override
     @Transactional
     public int syncNewArticles() {
-        log.info("[JournalDaily Sync] Starting article synchronization");
+        LocalDate toDate = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        LocalDate fromDate = toDate.minusDays(1);
 
-        // 1. Initialize and save RUNNING status for the Job
-        ApiJob job = ApiJob.builder()
-                .jobType(JOB_TYPE)
-                .status(STATUS_RUNNING)
-                .startedAt(OffsetDateTime.now())
-                .totalFetched(0)
-                .totalSaved(0)
-                .totalFailed(0)
-                .build();
-        ApiJob savedJob = apiJobRepository.save(job);
-
-        try {
-            // API client should return List.of() on error/null.
-            List<JournalDailyResultItem> items = Optional.ofNullable(
-                    journalDailyApiClient.fetchLatestArticles()
-            ).orElseGet(List::of);
-
-            if (items.isEmpty()) {
-                log.info("[JournalDaily Sync] API returned no articles");
-                completeJob(savedJob, 0, 0, 0, STATUS_SUCCESS);
-                return 0;
-            }
-
-            // Map DTO to Entity, filter out invalid records
-            List<JournalDailyArticle> mappedArticles = items.stream()
-                    .map(mapper::toEntity)
-                    .filter(Objects::nonNull)
-                    .filter(article -> article.getExternalId() != null)
-                    .toList();
-
-            int invalidCount = items.size() - mappedArticles.size();
-
-            if (mappedArticles.isEmpty()) {
-                log.warn("[JournalDaily Sync] All {} items are invalid after mapping", items.size());
-                // Mark as PARTIAL_SUCCESS because the API call succeeded but yielded empty valid data.
-                completeJob(savedJob, items.size(), 0, invalidCount, STATUS_PARTIAL_SUCCESS);
-                return 0;
-            }
-
-            // Remove duplicates within the API response itself
-            Map<String, JournalDailyArticle> uniqueArticlesMap = mappedArticles.stream()
-                    .collect(Collectors.toMap(
-                            JournalDailyArticle::getExternalId,
-                            Function.identity(),
-                            (first, duplicate) -> first,
-                            LinkedHashMap::new
-                    ));
-
-            List<JournalDailyArticle> uniqueArticles = new ArrayList<>(uniqueArticlesMap.values());
-            int responseDuplicateCount = mappedArticles.size() - uniqueArticles.size();
-
-            // Batch check for existing externalIds in the DB
-            List<String> externalIds = uniqueArticles.stream()
-                    .map(JournalDailyArticle::getExternalId)
-                    .toList();
-            Set<String> existingIds = articleRepository.findExistingExternalIds(externalIds);
-
-            List<JournalDailyArticle> newArticles = uniqueArticles.stream()
-                    .filter(article -> !existingIds.contains(article.getExternalId()))
-                    .toList();
-
-            if (newArticles.isEmpty()) {
-                log.info(
-                        "[JournalDaily Sync] No new articles found. API={}, invalid={}, responseDuplicate={}, existing={}",
-                        items.size(), invalidCount, responseDuplicateCount, existingIds.size()
-                );
-                completeJob(savedJob, items.size(), 0, invalidCount, STATUS_SUCCESS);
-                return 0;
-            }
-
-            // Save new articles
-            articleRepository.saveAll(newArticles);
-
-            log.info(
-                    "[JournalDaily Sync] Synchronization completed. API={}, invalid={}, responseDuplicate={}, existing={}, saved={}",
-                    items.size(), invalidCount, responseDuplicateCount, existingIds.size(), newArticles.size()
-            );
-
-            // Determine final status (If any articles failed mapping -> PARTIAL_SUCCESS)
-            String finalStatus = (invalidCount > 0) ? STATUS_PARTIAL_SUCCESS : STATUS_SUCCESS;
-            completeJob(savedJob, items.size(), newArticles.size(), invalidCount, finalStatus);
-
-            return newArticles.size();
-
-        } catch (Exception ex) {
-            log.error("[JournalDaily Sync] Unexpected error occurred during synchronization", ex);
-            failJob(savedJob, ex);
-            throw ex; // Rethrow to trigger Transaction rollback if necessary
-        }
+        log.info("[JournalDaily Sync] Triggering daily sync for range {} to {}", fromDate, toDate);
+        return syncArticles(fromDate, toDate);
     }
 
     @Override
+    @Transactional
     public int syncArticles(LocalDate fromDate, LocalDate toDate) {
-        log.info("[JournalDaily Sync] Starting article synchronization");
+        log.info("[JournalDaily Sync] Starting article synchronization between {} and {}", fromDate, toDate);
 
         // 1. Initialize and save RUNNING status for the Job
         ApiJob job = ApiJob.builder()
@@ -156,13 +72,13 @@ public class JournalDailySyncServiceImpl implements JournalDailySyncService {
         ApiJob savedJob = apiJobRepository.save(job);
 
         try {
-            // API client should return List.of() on error/null.
+            // API client will fetch all articles page-by-page for this date range
             List<JournalDailyResultItem> items = Optional.ofNullable(
-                    journalDailyApiClient.fetchLatestArticles(fromDate, toDate) // <-- Truyền đủ fromDate, toDate
+                    journalDailyApiClient.fetchLatestArticles(fromDate, toDate)
             ).orElseGet(List::of);
 
             if (items.isEmpty()) {
-                log.info("[JournalDaily Sync] API returned no articles");
+                log.info("[JournalDaily Sync] API returned no articles for range {} to {}", fromDate, toDate);
                 completeJob(savedJob, 0, 0, 0, STATUS_SUCCESS);
                 return 0;
             }
@@ -178,7 +94,6 @@ public class JournalDailySyncServiceImpl implements JournalDailySyncService {
 
             if (mappedArticles.isEmpty()) {
                 log.warn("[JournalDaily Sync] All {} items are invalid after mapping", items.size());
-                // Mark as PARTIAL_SUCCESS because the API call succeeded but yielded empty valid data.
                 completeJob(savedJob, items.size(), 0, invalidCount, STATUS_PARTIAL_SUCCESS);
                 return 0;
             }
