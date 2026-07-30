@@ -7,8 +7,11 @@ public record TopicMomentumResponse(
 ) {
   public record Momentum(
           String name,
-          Double currentAverage,
-          Double pastAverage,
-          Double growthPercentage
+          List<Point> history
+  ) {}
+
+  public record Point(
+          String name,
+          Double average
   ) {}
 }

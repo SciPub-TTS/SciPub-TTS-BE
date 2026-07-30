@@ -148,31 +148,115 @@ public class DataServiceImpl implements DataService {
 
   @Override
   public TopicMomentumResponse getTopicsMomentum(TopicDataRequest request) {
-    TopicCalculationContext context = prepareTopicCalculation(request);
+    LocalDate startDate = LocalDate.parse(request.startTime());
+    LocalDate endDate   = LocalDate.parse(request.endTime());
+    Integer fieldId     = Integer.parseInt(request.fieldId());
 
-    if (context.currentScores().isEmpty()) {
+    List<Topic> baseTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+            startDate, endDate, fieldId
+    );
+
+    if (baseTopics.isEmpty()) {
       return new TopicMomentumResponse(List.of());
     }
 
-    List<TopicMomentumResponse.Momentum> metrics = context.currentScores().stream()
-            .map(ts -> {
-              Topic topic = ts.topic();
-              ScoreComparison comparison = calculateScoreComparison(
-                      ts.score(),
-                      topic.getTopicId(),
-                      context.pastScoreMap()
-              );
+    // Calculate current score and keep Top 10 topics
+    Map<String, Double> currentScoreMap = buildScoreMap(baseTopics, request.formula());
+
+    List<Topic> topTopics = baseTopics.stream()
+            .sorted(Comparator.comparingDouble(
+                    (Topic topic) -> currentScoreMap.getOrDefault(topic.getTopicId(), 0D)
+            ).reversed())
+            .limit(10)
+            .toList();
+
+    Map<String, String> nameMap = new LinkedHashMap<>();
+    Set<String> topicIds = new LinkedHashSet<>();
+
+    for (Topic topic : topTopics) {
+      topicIds.add(topic.getTopicId());
+      nameMap.put(topic.getTopicId(), topic.getName());
+    }
+
+    List<WeekScoreSnapshot> weekSnapshots = new ArrayList<>();
+
+    for (int i = HISTORY_WEEKS - 1; i >= 0; i--) {
+      long shiftDays = (long) i * PERIOD_DAYS;
+
+      LocalDate wStart = startDate.minusDays(shiftDays);
+      LocalDate wEnd   = endDate.minusDays(shiftDays);
+
+      List<Topic> weekTopics = topicRepository.findByStartTimeAndEndTimeAndFieldId(
+              wStart,
+              wEnd,
+              fieldId
+      );
+
+      Map<String, Double> scoreMap = buildScoreMap(
+              weekTopics,
+              request.formula()
+      );
+
+      // Keep only Top 10 topics
+      Map<String, Double> filteredScoreMap = scoreMap.entrySet().stream()
+              .filter(entry -> topicIds.contains(entry.getKey()))
+              .collect(Collectors.toMap(
+                      Map.Entry::getKey,
+                      Map.Entry::getValue
+              ));
+
+      weekSnapshots.add(new WeekScoreSnapshot(
+              wStart,
+              wEnd,
+              filteredScoreMap
+      ));
+    }
+
+    List<TopicMomentumResponse.Momentum> result = nameMap.entrySet().stream()
+            .map(entry -> {
+              String topicId = entry.getKey();
+
+              List<TopicMomentumResponse.Point> history = weekSnapshots.stream()
+                      .map(snapshot -> new TopicMomentumResponse.Point(
+                              snapshot.startDate().toString(),
+                              snapshot.scoreMap().getOrDefault(topicId, 0D)
+                      ))
+                      .toList();
 
               return new TopicMomentumResponse.Momentum(
-                      topic.getName(),
-                      comparison.currentScore(),
-                      comparison.pastScore(),
-                      comparison.change()
+                      entry.getValue(),
+                      history
               );
             })
             .toList();
 
-    return new TopicMomentumResponse(metrics);
+    return new TopicMomentumResponse(result);
+  }
+
+  private Map<String, Double> buildScoreMap(
+          List<Topic> topics,
+          String formula
+  ) {
+
+    if (topics.isEmpty()) {
+      return Map.of();
+    }
+
+    return topics.stream()
+            .collect(Collectors.toMap(
+                    Topic::getTopicId,
+                    topic -> toScorePercent(
+                            calculationService.calculateTopicFinalScore(
+                                    formula,
+                                    topic.getTopicId(),
+                                    topics
+                            )
+                    )
+            ));
+  }
+
+  private double toScorePercent(double rawScore) {
+    return Math.round(rawScore * 10000.0) / 100.0;
   }
 
   @Override
@@ -321,6 +405,12 @@ public class DataServiceImpl implements DataService {
           LocalDate endDate,
           List<Topic> topics,
           TopicMetricStatistic stat
+  ) {}
+
+  private record WeekScoreSnapshot(
+          LocalDate startDate,
+          LocalDate endDate,
+          Map<String, Double> scoreMap
   ) {}
 
   private record ScoreComparison(
