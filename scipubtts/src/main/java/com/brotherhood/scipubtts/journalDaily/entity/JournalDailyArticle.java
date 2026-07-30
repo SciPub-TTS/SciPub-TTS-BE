@@ -2,6 +2,7 @@ package com.brotherhood.scipubtts.journalDaily.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -68,6 +69,7 @@ public class JournalDailyArticle {
 
     // tags[].webTitle — 1 bài có nhiều tag
     @Builder.Default
+    @BatchSize(size = 12)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @OneToMany(
