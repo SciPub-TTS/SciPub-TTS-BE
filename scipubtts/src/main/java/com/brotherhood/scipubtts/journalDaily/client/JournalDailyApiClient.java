@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClientException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -29,8 +30,8 @@ public class JournalDailyApiClient {
     @Value("${guardian.api.key}")
     private String apiKey;
 
-//    @Value("${guardian.api.page-size:10}")
-//    private int pageSize;
+    @Value("${guardian.api.page-size:10}")
+    private int pageSize;
 
     private final RestClient restClient;
 
@@ -41,98 +42,73 @@ public class JournalDailyApiClient {
                 .build();
     }
 
-    public List<JournalDailyResultItem> fetchLatestArticles() {
-        // Get today's date in YYYY-MM-DD format based on the Asia/Ho_Chi_Minh time zone
-        String todayStr = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))
-                .format(DateTimeFormatter.ISO_LOCAL_DATE);
-
-        log.info("[Guardian] Fetching articles published on date: {}", todayStr);
-
-        try {
-            JournalDailyApiResponse response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/search")
-                            .queryParam("q",            SEARCH_QUERY)
-                            .queryParam("section",      "science|technology")
-                            .queryParam("from-date",    todayStr) // Only retrieve articles starting FROM today
-                            .queryParam("to-date",      todayStr) // Up to the end of today
-                            .queryParam("show-fields",  "trailText,thumbnail,byline")
-                            .queryParam("show-tags",    "keyword")
-                            .queryParam("order-by",     "newest")
-//                            .queryParam("page-size",    pageSize)
-                            .queryParam("pillar",       "news")
-                            .queryParam("api-key",      apiKey)
-                            .build())
-                    .retrieve()
-                    .body(JournalDailyApiResponse.class);
-
-            if (response == null
-                    || response.response() == null
-                    || response.response().results() == null) {
-                log.warn("[Guardian] API returned null or empty response for date {}", todayStr);
-                return List.of();
-            }
-
-            if (!"ok".equalsIgnoreCase(response.response().status())) {
-                log.warn("[Guardian] API status is not 'ok': {}", response.response().status());
-                return List.of();
-            }
-
-            log.info("[Guardian] Successfully fetched {} articles for date {}",
-                    response.response().results().size(), todayStr);
-            return response.response().results();
-
-        } catch (RestClientException e) {
-            log.error("[Guardian] Error occurred while calling API for date {}: {}", todayStr, e.getMessage(), e);
-            return List.of();
-        }
-    }
-
     public List<JournalDailyResultItem> fetchLatestArticles(LocalDate fromDate, LocalDate toDate) {
-        // Chuyển LocalDate sang chuỗi YYYY-MM-DD
         String fromDateStr = (fromDate != null) ? fromDate.toString() : LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString();
         String toDateStr = (toDate != null) ? toDate.toString() : LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString();
 
-        log.info("[Guardian] Fetching articles between {} and {}", fromDateStr, toDateStr);
+        List<JournalDailyResultItem> allArticles = new ArrayList<>();
+        int currentPage = 1;
+        int totalPages = 1;
+        int pageSize = 50; // Lấy tối đa 50 bài/trang (Guardian cho phép max 50-100)
 
-        try {
-            JournalDailyApiResponse response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/search")
-                            .queryParam("q",           SEARCH_QUERY)
-                            .queryParam("section",     "science|technology")
-                            .queryParam("from-date",   fromDateStr) // Định dạng YYYY-MM-DD
-                            .queryParam("to-date",     toDateStr)   // Định dạng YYYY-MM-DD
-                            .queryParam("show-fields", "trailText,thumbnail,byline")
-                            .queryParam("show-tags",   "keyword")
-                            .queryParam("order-by",    "newest")
-                            .queryParam("pillar",      "news")
-                            .queryParam("api-key",     apiKey)
-                            .build())
-                    .retrieve()
-                    .body(JournalDailyApiResponse.class);
+        log.info("[Guardian] Starting to fetch ALL articles between {} and {}", fromDateStr, toDateStr);
 
-            if (response == null
-                    || response.response() == null
-                    || response.response().results() == null) {
-                log.warn("[Guardian] API returned null or empty response for range {} to {}", fromDateStr, toDateStr);
-                return List.of();
+        do {
+            final int pageToFetch = currentPage; // Biến tạm cho lambda uriBuilder
+            try {
+                JournalDailyApiResponse response = restClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/search")
+                                .queryParam("q",           SEARCH_QUERY)
+                                .queryParam("section",     "science|technology")
+                                .queryParam("from-date",   fromDateStr)
+                                .queryParam("to-date",     toDateStr)
+                                .queryParam("show-fields", "trailText,thumbnail,byline")
+                                .queryParam("show-tags",   "keyword")
+                                .queryParam("order-by",    "newest")
+                                .queryParam("pillar",      "news")
+                                .queryParam("page-size",   pageSize)
+                                .queryParam("page",        pageToFetch)
+                                .queryParam("api-key",     apiKey)
+                                .build())
+                        .retrieve()
+                        .body(JournalDailyApiResponse.class);
+
+                if (response == null || response.response() == null || response.response().results() == null) {
+                    log.warn("[Guardian] Null response on page {}", pageToFetch);
+                    break;
+                }
+
+                if (!"ok".equalsIgnoreCase(response.response().status())) {
+                    log.warn("[Guardian] Status not ok on page {}: {}", pageToFetch, response.response().status());
+                    break;
+                }
+
+                List<JournalDailyResultItem> results = response.response().results();
+                if (results.isEmpty()) {
+                    break;
+                }
+
+                allArticles.addAll(results);
+
+                totalPages = response.response().pages();
+                log.info("[Guardian] Fetched page {}/{} ({} items)", pageToFetch, totalPages, results.size());
+
+                currentPage++;
+
+                Thread.sleep(100);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("[Guardian] Interrupted while fetching pages", e);
+                break;
+            } catch (RestClientException e) {
+                log.error("[Guardian] Error on page {}: {}", pageToFetch, e.getMessage(), e);
+                break;
             }
+        } while (currentPage <= totalPages);
 
-            if (!"ok".equalsIgnoreCase(response.response().status())) {
-                log.warn("[Guardian] API status is not 'ok': {}", response.response().status());
-                return List.of();
-            }
-
-            List<JournalDailyResultItem> results = response.response().results();
-            log.info("[Guardian] Successfully fetched {} articles between {} and {}",
-                    results.size(), fromDateStr, toDateStr);
-            return results;
-
-        } catch (RestClientException e) {
-            log.error("[Guardian] Error occurred while calling API for range {} to {}: {}",
-                    fromDateStr, toDateStr, e.getMessage(), e);
-            return List.of();
-        }
+        log.info("[Guardian] Successfully fetched total {} articles across {} pages", allArticles.size(), totalPages);
+        return allArticles;
     }
 }
