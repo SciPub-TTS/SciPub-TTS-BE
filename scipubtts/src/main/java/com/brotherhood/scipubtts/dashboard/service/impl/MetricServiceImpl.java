@@ -111,7 +111,7 @@ public class MetricServiceImpl implements MetricService {
             ? getPreviousMetricValue(MetricTitle.ACTIVE_TRENDING_TOPICS.getTitle(), startDate, endDate, 4406L) : 4406L;
 
     double totalKeywordPreviousPeriod = calculatePrevious
-            ? getPreviousMetricValue(MetricTitle.RISING_KEYWORDS.getTitle(), startDate, endDate, 64904L) : 64904L;
+            ? getPreviousMetricValue(MetricTitle.ACTIVE_KEYWORDS.getTitle(), startDate, endDate, 64904L) : 64904L;
 
     long totalPapers = countAcrossFields(OpenAlexEntity.WORKS, endDate);
     long totalTopics = countAcrossFields(OpenAlexEntity.TOPICS, endDate);
@@ -126,7 +126,7 @@ public class MetricServiceImpl implements MetricService {
     return new MetricsResponse(List.of(
             new MetricsResponse.MetricItem(MetricTitle.TOTAL_PAPERS.getTitle(), totalPapers, calculateChange(totalPapers, totalPaperPreviousPeriod)),
             new MetricsResponse.MetricItem(MetricTitle.ACTIVE_TRENDING_TOPICS.getTitle(), totalTopics, calculateChange(totalTopics, totalTopicPreviousPeriod)),
-            new MetricsResponse.MetricItem(MetricTitle.RISING_KEYWORDS.getTitle(), totalKeywords, calculateChange(totalKeywords, totalKeywordPreviousPeriod)),
+            new MetricsResponse.MetricItem(MetricTitle.ACTIVE_KEYWORDS.getTitle(), totalKeywords, calculateChange(totalKeywords, totalKeywordPreviousPeriod)),
             new MetricsResponse.MetricItem(MetricTitle.NEW_PAPERS_THIS_WEEK.getTitle(), currentPeriodPapers, calculateChange(currentPeriodPapers, previousPeriodPapers))
     ));
   }
