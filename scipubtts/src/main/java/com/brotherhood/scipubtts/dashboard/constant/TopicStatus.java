@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum TopicStatus {
   BREAKOUT(100),
   HOT(50),
-  RISING(Double.NEGATIVE_INFINITY);
+  RISING(0),
+  DECLINING(Double.NEGATIVE_INFINITY);
 
   private final double threshold;
 
@@ -19,7 +20,7 @@ public enum TopicStatus {
         return trend;
       }
     }
-    return RISING;
+    return DECLINING;
   }
 
   @JsonValue
