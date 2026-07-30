@@ -8,7 +8,7 @@ public final class SearchConstants {
     public static final String SCOPED_DOMAIN_ID = "3";
     public static final String SCOPED_FIELD_IDS = "17|22";
     public static final int DEFAULT_PAGE = 1;
-    public static final int DEFAULT_WORKS_PER_PAGE = 20;
+    public static final int DEFAULT_WORKS_PER_PAGE = 10;
     public static final int DEFAULT_RECENT_SEARCH_LIMIT = 5;
     public static final int MAX_RECENT_SEARCH_LIMIT = 20;
     public static final int MIN_YEAR = 100;

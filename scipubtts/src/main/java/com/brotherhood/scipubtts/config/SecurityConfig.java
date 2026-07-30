@@ -129,6 +129,7 @@ public class SecurityConfig {
                                 "/api/data/**",
                                 "/api/report/**",
                                 "/api/home/landing/**",
+                                "/api/journal-daily/**",
                                 "/api/health"
                         )
                         .permitAll()

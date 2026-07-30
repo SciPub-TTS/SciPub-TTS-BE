@@ -7,10 +7,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.Year;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class DetailWorkResponseMapper {
@@ -159,18 +157,11 @@ public class DetailWorkResponseMapper {
 
     private String normalizeTypeLabel(String type) {
         String normalizedType = fallbackText(type, "Work");
-        String[] segments = normalizedType.split("-");
-        List<String> normalizedSegments = new ArrayList<>();
 
-        for (String segment : segments) {
-            if (!StringUtils.hasText(segment)) {
-                continue;
-            }
-
-            normalizedSegments.add(segment.substring(0, 1).toUpperCase(Locale.ROOT) + segment.substring(1));
-        }
-
-        return String.join(" ", normalizedSegments);
+        return Arrays.stream(normalizedType.split("-"))
+                .filter(StringUtils::hasText)
+                .map(StringUtils::capitalize)
+                .collect(Collectors.joining(" "));
     }
 
     private String normalizeDoiValue(String doi) {

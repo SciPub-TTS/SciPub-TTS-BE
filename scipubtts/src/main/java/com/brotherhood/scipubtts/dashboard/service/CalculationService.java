@@ -22,9 +22,8 @@ public interface CalculationService {
           String formula, List<Keyword> keywordList
   );
 
-  double calculateKeywordFinalScore (
-          String formula,String keywordId, List<Keyword> keywordList
-  );
+
+
 
   TopicMetricStatistic buildTopicMetricStatistic(List<Topic> topics);
 

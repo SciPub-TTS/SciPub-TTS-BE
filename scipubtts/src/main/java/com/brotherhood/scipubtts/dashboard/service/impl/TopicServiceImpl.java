@@ -689,16 +689,12 @@ public class TopicServiceImpl implements TopicService {
           );
 
           Topic result;
-          if (existing.isPresent()) {
-            result = existing.get();
-          } else {
-            result = calculateAndSaveTopicForPeriod(
+            result = existing.orElseGet(() -> calculateAndSaveTopicForPeriod(
                     currentTopic,
                     periodStart,
                     periodEnd,
                     useFake
-            );
-          }
+            ));
 
           double duration = (System.currentTimeMillis() - start) / 60000.0;
           System.out.printf("[PERIOD DONE] topic=%s period=%d duration=%.2f minutes%n",

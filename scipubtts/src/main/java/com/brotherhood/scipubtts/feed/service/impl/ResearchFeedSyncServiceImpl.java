@@ -407,10 +407,10 @@ public class ResearchFeedSyncServiceImpl implements ResearchFeedSyncService {
 
         StringBuilder sb = new StringBuilder();
         for (String word : positionToWord.values()) {
-            if (sb.length() > 0) sb.append(' ');
+            if (!sb.isEmpty()) sb.append(' ');
             sb.append(word);
         }
-        return sb.length() > 0 ? sb.toString() : null;
+        return !sb.isEmpty() ? sb.toString() : null;
     }
 
     private List<UUID> parseUserIds(String userIds) {

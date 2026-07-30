@@ -213,39 +213,6 @@ public class CalculationServiceImpl implements CalculationService {
     return new KeywordCalculateResponse(topKeywords);
   }
 
-  @Override
-  public double calculateKeywordFinalScore(
-          String formula,
-          String keywordId,
-          List<Keyword> keywordList
-  ) {
-
-    if (keywordList == null || keywordList.isEmpty()) {
-      return 0D;
-    }
-
-    FormulaType formulaType =
-            FormulaType.from(formula);
-
-    KeywordWeight weight =
-            resolveKeywordWeight(formulaType);
-
-    KeywordMetricStatistic stat =
-            buildKeywordStatistic(keywordList);
-
-    return keywordList.stream()
-            .filter(keyword -> keywordId.equals(keyword.getKeywordId()))
-            .findFirst()
-            .map(keyword ->
-                    calculateKeywordScore(
-                            keyword,
-                            weight,
-                            stat
-                    )
-            )
-            .orElse(0D);
-  }
-
   private KeywordCalculateResponse.KeywordMetric toMetric(
           Keyword keyword,
           Double score

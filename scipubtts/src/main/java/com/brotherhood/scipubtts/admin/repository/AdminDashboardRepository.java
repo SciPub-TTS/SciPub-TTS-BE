@@ -37,35 +37,24 @@ public class AdminDashboardRepository {
         return count("SELECT COUNT(*) FROM users WHERE is_banned = false");
     }
 
-    public long countApiCallsFrom(OffsetDateTime from) {
-        return count(
-                """
-                SELECT COUNT(*)
-                FROM api_call_log
-                WHERE COALESCE(started_at, finished_at) >= ?
-                """,
-                from
-        );
-    }
-
     public List<AdminApiCallConsumerResponse> findTopApiConsumersFromApiCallLog(
             OffsetDateTime from,
             int limit
     ) {
         return jdbcTemplate.query(
                 """
-                SELECT u.email, COUNT(*) AS call_count
+                SELECT u.email AS consumer_label, COUNT(*) AS call_count
                 FROM api_call_log acl
                 JOIN users u ON u.id = acl.user_id
                 WHERE acl.caller_type = 'USER'
                   AND acl.user_id IS NOT NULL
                   AND COALESCE(acl.started_at, acl.finished_at) >= ?
                 GROUP BY u.id, u.email
-                ORDER BY call_count DESC, u.email ASC
+                ORDER BY call_count DESC, consumer_label ASC
                 LIMIT ?
                 """,
                 (rs, rowNum) -> new AdminApiCallConsumerResponse(
-                        rs.getString("email"),
+                        rs.getString("consumer_label"),
                         rs.getLong("call_count")
                 ),
                 from,
@@ -170,7 +159,6 @@ public class AdminDashboardRepository {
                        acl.finished_at,
                        acl.error_log
                 """ + where + """
-                 
                 ORDER BY acl.started_at DESC NULLS LAST, acl.id DESC
                 LIMIT ? OFFSET ?
                 """,
@@ -201,24 +189,6 @@ public class AdminDashboardRepository {
                 totalElements,
                 totalPages,
                 page + 1 < totalPages
-        );
-    }
-
-    public Optional<OffsetDateTime> findLatestSynchronization() {
-        Optional<OffsetDateTime> latestJob = queryOptionalOffsetDateTime(
-                """
-                SELECT MAX(finished_at)
-                FROM api_job
-                WHERE status = 'SUCCESS'
-                """
-        );
-
-        if (latestJob.isPresent()) {
-            return latestJob;
-        }
-
-        return queryOptionalOffsetDateTime(
-                "SELECT MAX(finished_at) FROM api_call_log"
         );
     }
 

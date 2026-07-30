@@ -293,12 +293,12 @@ public class FeedServiceImpl implements FeedService {
         }
 
         if (matchesTopic) tabMatches.add("matched-topic");
-        if (matchesAuthor) tabKeyMatch(tabMatches, "matched-author");
+        if (matchesAuthor) tabKeyMatch(tabMatches);
         return tabMatches;
     }
 
-    private void tabKeyMatch(List<String> list, String val) {
-        if (!list.contains(val))
-            list.add(val);
+    private void tabKeyMatch(List<String> list) {
+        if (!list.contains("matched-author"))
+            list.add("matched-author");
     }
 }
