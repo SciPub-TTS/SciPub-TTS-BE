@@ -345,10 +345,14 @@ public class AdminServiceImpl implements AdminService {
         }
 
         String normalized = callerType.trim().toUpperCase();
-        if (!normalized.equals("USER") && !normalized.equals("SYSTEM")) {
+        if (
+                !normalized.equals("USER")
+                        && !normalized.equals("GUEST")
+                        && !normalized.equals("SYSTEM")
+        ) {
             throw new BusinessException(
                     ErrorCode.INVALID_SEARCH_FILTER_COMBINATION,
-                    "callerType must be USER or SYSTEM"
+                    "callerType must be USER, GUEST or SYSTEM"
             );
         }
 

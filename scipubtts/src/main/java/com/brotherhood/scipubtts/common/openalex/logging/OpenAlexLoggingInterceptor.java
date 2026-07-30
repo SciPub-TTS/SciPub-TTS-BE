@@ -123,7 +123,7 @@ public class OpenAlexLoggingInterceptor implements ClientHttpRequestInterceptor 
             return new Caller("USER", bearerUserId);
         }
 
-        return new Caller("SYSTEM", null);
+        return new Caller("GUEST", null);
     }
 
     private UUID resolveUserIdFromCurrentRequestBearerToken() {
